@@ -14,6 +14,12 @@ object AndroidLevelAssets {
         return LevelJson.parse(json)
     }
 
-    fun level01(context: Context): LevelDef =
-        load(context, "levels/level_01.json")
+    fun level(context: Context, levelId: String): LevelDef {
+        require(levelId.matches(Regex("level_\\d{2}"))) { "Invalid level id: $levelId" }
+        return load(context, "levels/$levelId.json")
+    }
+
+    fun level01(context: Context): LevelDef = level(context, "level_01")
+
+    fun level02(context: Context): LevelDef = level(context, "level_02")
 }
