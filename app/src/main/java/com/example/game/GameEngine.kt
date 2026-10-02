@@ -296,7 +296,6 @@ class GameEngine {
     }
 
     fun initLevel() {
-    fun initLevel() {
         platforms.clear()
         hazards.clear()
         breakables.clear()
@@ -311,7 +310,7 @@ class GameEngine {
         boss = LevelLoader.boss(levelDef)
     }
 
-) {
+    fun onJumpPressed() {
         player.jumpBuffer = 0.15f
     }
 
