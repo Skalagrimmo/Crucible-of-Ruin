@@ -35,6 +35,7 @@ class MainActivity : ComponentActivity() {
             MyApplicationTheme {
                 var currentScreen by remember { mutableStateOf("menu") }
                 var startCheckpoint by remember { mutableIntStateOf(0) }
+                var currentLevelId by remember { mutableStateOf("level_01") }
                 var targetFps by remember { mutableIntStateOf(30) }
 
                 when (currentScreen) {
@@ -42,6 +43,7 @@ class MainActivity : ComponentActivity() {
                         MainMenuScreen(
                             onStartGame = { checkpoint, fps ->
                                 startCheckpoint = checkpoint
+                                currentLevelId = "level_01"
                                 targetFps = fps
                                 currentScreen = "game"
                             }
@@ -52,8 +54,15 @@ class MainActivity : ComponentActivity() {
                             currentScreen = "menu"
                         }
                         GameScreen(
+                            levelId = currentLevelId,
                             startCheckpoint = startCheckpoint,
                             initialTargetFps = targetFps,
+                            onNextLevel = if (currentLevelId == "level_01") {
+                                {
+                                    currentLevelId = "level_02"
+                                    startCheckpoint = 0
+                                }
+                            } else null,
                             onReturnToMainMenu = {
                                 currentScreen = "menu"
                             }
