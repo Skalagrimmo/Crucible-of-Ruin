@@ -25,5 +25,5 @@
     {"id":1,"x":760,"y":930,"name":"Vertical Midpoint"},
     {"id":2,"x":940,"y":40,"name":"Vertical Summit"}
   ],
-  "boss": {"x":1080,"y":60}
+  "boss": {"x":1080,"y":60,"triggerX":1000}
 }
