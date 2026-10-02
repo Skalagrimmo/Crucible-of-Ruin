@@ -5,9 +5,16 @@ import org.junit.Test
 
 class LevelLoaderTest {
 
+    private fun canonicalLevel(): LevelDef {
+        val resource = requireNotNull(
+            javaClass.classLoader?.getResourceAsStream("levels/level_01.json")
+        )
+        return LevelJson.parse(resource.bufferedReader().use { it.readText() })
+    }
+
     @Test
     fun level01_matchesOriginalLayoutCountsAndBounds() {
-        val def = LevelCatalog.level01
+        val def = canonicalLevel()
 
         assertEquals(6200f, def.width, 0.001f)
         assertEquals(540f, def.height, 0.001f)
@@ -22,7 +29,7 @@ class LevelLoaderTest {
 
     @Test
     fun loader_createsFreshMutableRuntimeObjects() {
-        val def = LevelCatalog.level01
+        val def = canonicalLevel()
 
         val firstCheckpoints = LevelLoader.checkpoints(def)
         val secondCheckpoints = LevelLoader.checkpoints(def)
@@ -42,7 +49,7 @@ class LevelLoaderTest {
 
     @Test
     fun level01_checkpointIdentityAndOrder_areStable() {
-        val checkpoints = LevelCatalog.level01.checkpoints
+        val checkpoints = canonicalLevel().checkpoints
 
         assertEquals(listOf(0, 1, 2), checkpoints.map { it.id })
         assertEquals("Section 1: Ruined Bastion", checkpoints[0].name)
@@ -59,7 +66,7 @@ class LevelLoaderTest {
         val json = resource.bufferedReader().use { it.readText() }
         val parsed = LevelJson.parse(json)
 
-        assertEquals(LevelCatalog.level01, parsed)
+        assertEquals(canonicalLevel(), parsed)
         assertEquals(28, LevelLoader.platforms(parsed).size)
         assertEquals(12, LevelLoader.enemies(parsed).size)
     }
