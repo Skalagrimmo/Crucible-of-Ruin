@@ -108,7 +108,7 @@ class LevelLoaderTest {
         assertEquals("level_02", def.id)
         assertEquals(2200f, def.width, 0.001f)
         assertEquals(2160f, def.height, 0.001f)
-        assertEquals(16, def.platforms.size)
+        assertEquals(28, def.platforms.size)
         assertEquals(12, def.enemies.size)
         assertEquals(4, def.checkpoints.size)
 
@@ -217,9 +217,15 @@ class LevelLoaderTest {
 
         val startY = engine.player.y
         engine.inputJump = true
+        engine.jumpPressed()
         var highestY = startY
 
-        repeat(90) {
+        repeat(30) {
+            engine.update(1f / 60f)
+            highestY = minOf(highestY, engine.player.y)
+        }
+        engine.inputJump = false
+        repeat(60) {
             engine.update(1f / 60f)
             highestY = minOf(highestY, engine.player.y)
         }
