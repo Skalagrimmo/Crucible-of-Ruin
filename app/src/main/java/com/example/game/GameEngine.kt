@@ -348,15 +348,18 @@ class GameEngine(
         if (state == "paused") return
         timeElapsed += dt
 
-        // Checkpoint detection
-        for (cp in checkpoints) {
-            if (!cp.activated && abs(player.x - cp.x) < 50f && abs(player.y - cp.y) < 70f) {
-                cp.activated = true
-                activeCheckpoint = cp
-                audio.play("checkpoint")
-                camera.shake(5f)
-                particles.spawn(cp.x, cp.y, Color(0xFFFFD700), 28, 160f, 0.8f, 5f)
-                onCheckpointActivated?.invoke(cp.id)
+        // Checkpoint detection is a live-player interaction. A corpse waiting
+        // for its respawn timer must not advance progression.
+        if (!player.dead) {
+            for (cp in checkpoints) {
+                if (!cp.activated && abs(player.x - cp.x) < 50f && abs(player.y - cp.y) < 70f) {
+                    cp.activated = true
+                    activeCheckpoint = cp
+                    audio.play("checkpoint")
+                    camera.shake(5f)
+                    particles.spawn(cp.x, cp.y, Color(0xFFFFD700), 28, 160f, 0.8f, 5f)
+                    onCheckpointActivated?.invoke(cp.id)
+                }
             }
         }
 
