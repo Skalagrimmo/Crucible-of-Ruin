@@ -5,7 +5,14 @@ import org.junit.Test
 
 class GameEngineRegressionTest {
 
-    private fun freshEngine(): GameEngine = GameEngine().also {
+    private fun canonicalLevel(): LevelDef {
+        val resource = requireNotNull(
+            javaClass.classLoader?.getResourceAsStream("levels/level_01.json")
+        )
+        return LevelJson.parse(resource.bufferedReader().use { it.readText() })
+    }
+
+    private fun freshEngine(): GameEngine = GameEngine(canonicalLevel()).also {
         it.audio.isMuted = true
     }
 
