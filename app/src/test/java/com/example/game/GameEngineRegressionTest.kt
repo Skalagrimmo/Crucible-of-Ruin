@@ -15,6 +15,10 @@ class GameEngineRegressionTest {
 
         assertEquals(6200f, engine.levelWidth, 0.001f)
         assertEquals(540f, engine.levelHeight, 0.001f)
+        assertEquals(28, engine.platforms.size)
+        assertEquals(6, engine.hazards.size)
+        assertEquals(12, engine.enemies.size)
+        assertEquals(4, engine.breakables.size)
         assertEquals(3, engine.checkpoints.size)
         assertEquals(0, engine.activeCheckpoint.id)
         assertEquals(5750f, engine.boss.x, 0.001f)
