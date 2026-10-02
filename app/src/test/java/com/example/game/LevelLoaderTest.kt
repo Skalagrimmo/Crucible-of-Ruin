@@ -152,9 +152,14 @@ class LevelLoaderTest {
         engine.player.takeDamage(engine.player.maxHp, engine.player.x, engine)
         assertTrue(engine.player.dead)
 
-        repeat(100) { engine.update(1f / 60f) }
+        var frames = 0
+        while (engine.player.dead && frames < 120) {
+            engine.update(1f / 60f)
+            frames++
+        }
 
         assertFalse(engine.player.dead)
+        assertTrue(frames in 80..90)
         assertEquals(summit.x, engine.player.x, 0.001f)
         assertEquals(summit.y, engine.player.y, 0.001f)
         assertEquals(engine.player.maxHp, engine.player.hp, 0.001f)
