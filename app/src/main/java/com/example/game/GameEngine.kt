@@ -668,7 +668,7 @@ class GameEngine(
             e.x += e.vx * dt
             if (e.type != EnemyArchetype.CHERUB) {
                 for (p in platforms) {
-                    if (aabbIntersects(e.x, e.y, e.w, e.h, p.x, p.y, p.w, p.h)) {
+                    if (!p.oneWay && aabbIntersects(e.x, e.y, e.w, e.h, p.x, p.y, p.w, p.h)) {
                         if (e.vx > 0f) {
                             e.x = p.x - e.w
                             e.facing = -1
@@ -681,21 +681,27 @@ class GameEngine(
                 }
             }
 
-            e.y += e.vy * dt
             if (e.type != EnemyArchetype.CHERUB) {
+                val previousBottom = e.y + e.h
+                e.y += e.vy * dt
                 e.grounded = false
                 for (p in platforms) {
-                    if (aabbIntersects(e.x, e.y, e.w, e.h, p.x, p.y, p.w, p.h)) {
+                    val intersects = aabbIntersects(e.x, e.y, e.w, e.h, p.x, p.y, p.w, p.h)
+                    val landsOnOneWay = p.oneWay && e.vy > 0f &&
+                        previousBottom <= p.y && e.y + e.h >= p.y
+                    if ((!p.oneWay && intersects) || landsOnOneWay) {
                         if (e.vy > 0f) {
                             e.y = p.y - e.h
                             e.vy = 0f
                             e.grounded = true
-                        } else if (e.vy < 0f) {
+                        } else if (!p.oneWay && e.vy < 0f) {
                             e.y = p.y + p.h
                             e.vy = 0f
                         }
                     }
                 }
+            } else {
+                e.y += e.vy * dt
             }
 
             if (aabbIntersects(e.x, e.y, e.w, e.h, player.x, player.y, player.w, player.h)) {
