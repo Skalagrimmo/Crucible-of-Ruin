@@ -234,7 +234,8 @@ class BossEntity(var x: Float, var y: Float) {
     }
 }
 
-class GameEngine {
+class GameEngine(
+) {
     val audio = GameAudio()
     val camera = Camera2D()
     val particles = ParticlePool(160)
