@@ -18,7 +18,7 @@ class LevelLoaderTest {
 
         assertEquals(6200f, def.width, 0.001f)
         assertEquals(540f, def.height, 0.001f)
-        assertEquals(36, def.platforms.size)
+        assertEquals(28, def.platforms.size)
         assertEquals(6, def.hazards.size)
         assertEquals(12, def.enemies.size)
         assertEquals(4, def.breakables.size)
@@ -108,7 +108,7 @@ class LevelLoaderTest {
         assertEquals("level_02", def.id)
         assertEquals(2200f, def.width, 0.001f)
         assertEquals(2160f, def.height, 0.001f)
-        assertEquals(28, def.platforms.size)
+        assertEquals(36, def.platforms.size)
         assertEquals(12, def.enemies.size)
         assertEquals(4, def.checkpoints.size)
 
