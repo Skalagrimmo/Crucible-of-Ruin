@@ -199,6 +199,62 @@
       "w": 180,
       "h": 20,
       "style": "IRON_GIRDER"
+    },
+    {
+      "x": 300,
+      "y": 2000,
+      "w": 220,
+      "h": 20,
+      "style": "STONE_LEDGE"
+    },
+    {
+      "x": 430,
+      "y": 1920,
+      "w": 220,
+      "h": 20,
+      "style": "IRON_GIRDER"
+    },
+    {
+      "x": 610,
+      "y": 1840,
+      "w": 220,
+      "h": 20,
+      "style": "STONE_LEDGE"
+    },
+    {
+      "x": 760,
+      "y": 1760,
+      "w": 220,
+      "h": 20,
+      "style": "IRON_GIRDER"
+    },
+    {
+      "x": 920,
+      "y": 1680,
+      "w": 220,
+      "h": 20,
+      "style": "STONE_LEDGE"
+    },
+    {
+      "x": 1080,
+      "y": 1600,
+      "w": 220,
+      "h": 20,
+      "style": "IRON_GIRDER"
+    },
+    {
+      "x": 1240,
+      "y": 1520,
+      "w": 220,
+      "h": 20,
+      "style": "STONE_LEDGE"
+    },
+    {
+      "x": 1400,
+      "y": 1440,
+      "w": 220,
+      "h": 20,
+      "style": "IRON_GIRDER"
     }
   ],
   "hazards": [
