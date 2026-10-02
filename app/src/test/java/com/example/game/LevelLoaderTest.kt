@@ -207,6 +207,20 @@ class LevelLoaderTest {
     }
 
     @Test
+    fun playerJumpConstants_defineExpectedFullJumpEnvelope() {
+        val engine = GameEngine(verticalFixture())
+        val player = engine.player
+
+        val theoreticalRise = player.jumpForce * player.jumpForce / (2f * player.gravity)
+        val timeToApex = -player.jumpForce / player.gravity
+        val conservativeHorizontalTravel = player.airSpeed * timeToApex
+
+        assertTrue(theoreticalRise in 85f..90f)
+        assertTrue(timeToApex in 0.40f..0.42f)
+        assertTrue(conservativeHorizontalTravel in 64f..68f)
+    }
+
+    @Test
     fun playerJumpPhysics_reachesExpectedApexBand() {
         val def = verticalFixture()
         val engine = GameEngine(def)
