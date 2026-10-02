@@ -452,7 +452,7 @@ class GameEngine(
         // Physics X
         player.x += player.vx * dt
         for (p in platforms) {
-            if (aabbIntersects(player.x, player.y, player.w, player.h, p.x, p.y, p.w, p.h)) {
+            if (!p.oneWay && aabbIntersects(player.x, player.y, player.w, player.h, p.x, p.y, p.w, p.h)) {
                 if (player.vx > 0f) {
                     player.x = p.x - player.w
                 } else if (player.vx < 0f) {
@@ -463,16 +463,19 @@ class GameEngine(
         }
 
         // Physics Y
+        val previousBottom = player.y + player.h
         player.y += player.vy * dt
         player.grounded = false
         for (p in platforms) {
-            if (aabbIntersects(player.x, player.y, player.w, player.h, p.x, p.y, p.w, p.h)) {
+            val intersects = aabbIntersects(player.x, player.y, player.w, player.h, p.x, p.y, p.w, p.h)
+            val landsOnOneWay = p.oneWay && player.vy > 0f && previousBottom <= p.y && player.y + player.h >= p.y
+            if ((!p.oneWay && intersects) || landsOnOneWay) {
                 if (player.vy > 0f) {
                     player.y = p.y - player.h
                     player.vy = 0f
                     player.grounded = true
                     player.coyoteTime = 0.12f
-                } else if (player.vy < 0f) {
+                } else if (!p.oneWay && player.vy < 0f) {
                     player.y = p.y + p.h
                     player.vy = 0f
                 }
