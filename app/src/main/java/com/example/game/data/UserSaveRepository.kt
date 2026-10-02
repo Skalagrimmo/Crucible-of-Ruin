@@ -8,10 +8,6 @@ import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.tasks.await
 
 class UserSaveRepository(private val context: Context) {
-    private fun progressRank(levelId: String, checkpoint: Int): Int {
-        val levelNumber = levelId.removePrefix("level_").toIntOrNull() ?: 1
-        return levelNumber * 1000 + checkpoint.coerceAtLeast(0)
-    }
     private val prefs: SharedPreferences =
         context.getSharedPreferences("crucible_user_save", Context.MODE_PRIVATE)
 
@@ -74,15 +70,15 @@ class UserSaveRepository(private val context: Context) {
                     foesSlain = maxOf(doc.getLong("foesSlain")?.toInt() ?: 0, local.foesSlain),
                     lastLevelId = run {
                         val cloudLevel = doc.getString("lastLevelId") ?: "level_01"
-                        if (progressRank(cloudLevel, doc.getLong("lastCheckpoint")?.toInt() ?: 0) >
-                            progressRank(local.lastLevelId, local.lastCheckpoint)
+                        if (UserSave(lastLevelId = cloudLevel, lastCheckpoint = doc.getLong("lastCheckpoint")?.toInt() ?: 0)
+                                .isProgressAfter(local)
                         ) cloudLevel else local.lastLevelId
                     },
                     lastCheckpoint = run {
                         val cloudLevel = doc.getString("lastLevelId") ?: "level_01"
                         val cloudCheckpoint = doc.getLong("lastCheckpoint")?.toInt() ?: 0
-                        if (progressRank(cloudLevel, cloudCheckpoint) >
-                            progressRank(local.lastLevelId, local.lastCheckpoint)
+                        if (UserSave(lastLevelId = cloudLevel, lastCheckpoint = cloudCheckpoint)
+                                .isProgressAfter(local)
                         ) cloudCheckpoint else local.lastCheckpoint
                     },
                     targetFps = doc.getLong("targetFps")?.toInt() ?: local.targetFps,
