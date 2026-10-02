@@ -1,9 +1,14 @@
 package com.example.game
 
+import com.squareup.moshi.JsonClass
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+
 /**
  * Serializable level description. Behavior remains in GameEngine/entities;
  * this model only describes level content and placement.
  */
+@JsonClass(generateAdapter = true)
 data class LevelDef(
     val id: String,
     val name: String,
@@ -17,11 +22,17 @@ data class LevelDef(
     val boss: BossDef
 )
 
+@JsonClass(generateAdapter = true)
 data class PlatformDef(val x: Float, val y: Float, val w: Float, val h: Float, val style: PlatformStyle)
+@JsonClass(generateAdapter = true)
 data class HazardDef(val x: Float, val y: Float, val w: Float, val h: Float, val type: HazardType)
+@JsonClass(generateAdapter = true)
 data class EnemyDef(val x: Float, val y: Float, val archetype: EnemyArchetype, val patrolRange: Float)
+@JsonClass(generateAdapter = true)
 data class BreakableDef(val x: Float, val y: Float, val dropType: String)
+@JsonClass(generateAdapter = true)
 data class CheckpointDef(val id: Int, val x: Float, val y: Float, val name: String)
+@JsonClass(generateAdapter = true)
 data class BossDef(val x: Float, val y: Float)
 
 /**
@@ -44,4 +55,16 @@ object LevelLoader {
         def.checkpoints.map { Checkpoint(it.id, it.x, it.y, it.name) }
 
     fun boss(def: LevelDef): BossEntity = BossEntity(def.boss.x, def.boss.y)
+}
+
+
+object LevelJson {
+    private val moshi: Moshi = Moshi.Builder()
+        .add(KotlinJsonAdapterFactory())
+        .build()
+
+    private val adapter = moshi.adapter(LevelDef::class.java)
+
+    fun parse(json: String): LevelDef =
+        requireNotNull(adapter.fromJson(json)) { "Level JSON is empty or invalid" }
 }
