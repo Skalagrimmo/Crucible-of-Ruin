@@ -131,6 +131,25 @@ class LevelLoaderTest {
     }
 
     @Test
+    fun level02_checkpointsRespawnAboveSupportingPlatforms() {
+        val resource = requireNotNull(
+            javaClass.classLoader?.getResourceAsStream("levels/level_02.json")
+        )
+        val def = LevelJson.parse(resource.bufferedReader().use { it.readText() })
+        val playerHeight = 44f
+
+        def.checkpoints.forEach { cp ->
+            val support = def.platforms
+                .filter { cp.x >= it.x && cp.x <= it.x + it.w && it.y >= cp.y + playerHeight }
+                .minByOrNull { it.y - (cp.y + playerHeight) }
+
+            assertNotNull("Checkpoint ${cp.id} has no supporting platform", support)
+            val landingGap = support!!.y - (cp.y + playerHeight)
+            assertTrue("Checkpoint ${cp.id} is too far above its support", landingGap in 0f..60f)
+        }
+    }
+
+    @Test
     fun level02_hasVerticalProgressionAcrossMultipleViewports() {
         val resource = requireNotNull(
             javaClass.classLoader?.getResourceAsStream("levels/level_02.json")
