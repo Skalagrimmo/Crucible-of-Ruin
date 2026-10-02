@@ -144,6 +144,50 @@ class LevelLoaderTest {
     }
 
     @Test
+    fun level02_buildsRuntimeAndTraversesFullCameraHeight() {
+        val resource = requireNotNull(
+            javaClass.classLoader?.getResourceAsStream("levels/level_02.json")
+        )
+        val def = LevelJson.parse(resource.bufferedReader().use { it.readText() })
+        val engine = GameEngine(def)
+        engine.audio.isMuted = true
+
+        assertEquals(def.platforms.size, engine.platforms.size)
+        assertEquals(def.hazards.size, engine.hazards.size)
+        assertEquals(def.enemies.size, engine.enemies.size)
+        assertEquals(def.breakables.size, engine.breakables.size)
+        assertEquals(def.checkpoints.size, engine.checkpoints.size)
+
+        repeat(180) {
+            engine.camera.update(1100f, def.height + 500f, 1, def.width, def.height, 1f / 60f)
+        }
+        assertEquals(def.height - engine.camera.viewH, engine.camera.y, 0.001f)
+
+        repeat(180) {
+            engine.camera.update(1100f, -500f, 1, def.width, def.height, 1f / 60f)
+        }
+        assertEquals(0f, engine.camera.y, 0.001f)
+    }
+
+    @Test
+    fun level02_bossActivatesOnlyAfterItsConfiguredTrigger() {
+        val resource = requireNotNull(
+            javaClass.classLoader?.getResourceAsStream("levels/level_02.json")
+        )
+        val def = LevelJson.parse(resource.bufferedReader().use { it.readText() })
+        val engine = GameEngine(def)
+        engine.audio.isMuted = true
+
+        engine.player.x = def.boss.triggerX - 1f
+        engine.update(1f / 60f)
+        assertFalse(engine.boss.active)
+
+        engine.player.x = def.boss.triggerX + 1f
+        engine.update(1f / 60f)
+        assertTrue(engine.boss.active)
+    }
+
+    @Test
     fun camera_smallerThanViewport_clampsToOrigin() {
         val camera = Camera2D()
         camera.update(450f, 270f, 1, 900f, 500f, 1f / 60f)
