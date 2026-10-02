@@ -60,8 +60,8 @@ fun GameScreen(
     val saveRepo = remember { com.example.game.data.UserSaveRepository(context) }
     val user by authRepo.currentUser.collectAsState()
 
-    val engine = remember {
-        GameEngine().apply {
+    val engine = remember(context) {
+        GameEngine(AndroidLevelAssets.level01(context)).apply {
             setStartCheckpoint(startCheckpoint)
         }
     }
