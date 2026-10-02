@@ -255,6 +255,118 @@
       "w": 220,
       "h": 20,
       "style": "IRON_GIRDER"
+    },
+    {
+      "x": 1320,
+      "y": 1360,
+      "w": 220,
+      "h": 20,
+      "style": "STONE_LEDGE"
+    },
+    {
+      "x": 1160,
+      "y": 1280,
+      "w": 220,
+      "h": 20,
+      "style": "IRON_GIRDER"
+    },
+    {
+      "x": 1000,
+      "y": 1200,
+      "w": 220,
+      "h": 20,
+      "style": "STONE_LEDGE"
+    },
+    {
+      "x": 840,
+      "y": 1120,
+      "w": 220,
+      "h": 20,
+      "style": "IRON_GIRDER"
+    },
+    {
+      "x": 680,
+      "y": 1040,
+      "w": 220,
+      "h": 20,
+      "style": "STONE_LEDGE"
+    },
+    {
+      "x": 520,
+      "y": 960,
+      "w": 220,
+      "h": 20,
+      "style": "IRON_GIRDER"
+    },
+    {
+      "x": 360,
+      "y": 880,
+      "w": 220,
+      "h": 20,
+      "style": "STONE_LEDGE"
+    },
+    {
+      "x": 440,
+      "y": 800,
+      "w": 220,
+      "h": 20,
+      "style": "IRON_GIRDER"
+    },
+    {
+      "x": 600,
+      "y": 720,
+      "w": 220,
+      "h": 20,
+      "style": "STONE_LEDGE"
+    },
+    {
+      "x": 760,
+      "y": 640,
+      "w": 220,
+      "h": 20,
+      "style": "IRON_GIRDER"
+    },
+    {
+      "x": 920,
+      "y": 560,
+      "w": 220,
+      "h": 20,
+      "style": "STONE_LEDGE"
+    },
+    {
+      "x": 1080,
+      "y": 480,
+      "w": 220,
+      "h": 20,
+      "style": "IRON_GIRDER"
+    },
+    {
+      "x": 1240,
+      "y": 400,
+      "w": 220,
+      "h": 20,
+      "style": "STONE_LEDGE"
+    },
+    {
+      "x": 1400,
+      "y": 320,
+      "w": 220,
+      "h": 20,
+      "style": "IRON_GIRDER"
+    },
+    {
+      "x": 1560,
+      "y": 240,
+      "w": 220,
+      "h": 20,
+      "style": "STONE_LEDGE"
+    },
+    {
+      "x": 1720,
+      "y": 160,
+      "w": 220,
+      "h": 20,
+      "style": "IRON_GIRDER"
     }
   ],
   "hazards": [
