@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
-import com.example.R
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.FirebaseAuth
@@ -37,9 +36,18 @@ class AuthRepository(private val context: Context) {
         _isLoading.value = true
         _errorMessage.value = null
         try {
-            val serverClientId = context.getString(R.string.default_web_client_id)
-            val signInOption = GetSignInWithGoogleOption.Builder(serverClientId)
-                .build()
+            val clientIdResource = context.resources.getIdentifier(
+                "default_web_client_id",
+                "string",
+                context.packageName
+            )
+            if (clientIdResource == 0) {
+                _errorMessage.value = "Google Sign-In is not configured"
+                _isLoading.value = false
+                return false
+            }
+            val serverClientId = context.getString(clientIdResource)
+            val signInOption = GetSignInWithGoogleOption.Builder(serverClientId).build()
 
             val request = GetCredentialRequest.Builder()
                 .addCredentialOption(signInOption)
