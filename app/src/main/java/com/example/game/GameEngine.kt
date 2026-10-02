@@ -360,8 +360,12 @@ class GameEngine(
             }
         }
 
-        // Boss trigger
-        if (!boss.active && player.x > levelDef.boss.triggerX) {
+        // Boss trigger. Horizontal-only levels can omit triggerY; tall levels
+        // require the player to reach the configured vertical arena as well.
+        val bossTriggerY = levelDef.boss.triggerY
+        val bossTriggerReached = player.x > levelDef.boss.triggerX &&
+            (bossTriggerY == null || player.y <= bossTriggerY)
+        if (!boss.active && bossTriggerReached) {
             boss.active = true
             audio.play("boss_roar")
             camera.shake(12f)
