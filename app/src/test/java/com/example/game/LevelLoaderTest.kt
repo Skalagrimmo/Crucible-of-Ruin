@@ -203,7 +203,7 @@ class LevelLoaderTest {
         val sortedTops = def.platforms.map { it.y }.sortedDescending()
         val verticalGaps = sortedTops.zipWithNext().map { (lower, upper) -> lower - upper }
 
-        assertTrue(verticalGaps.any { it > jumpRise })
+        assertTrue(verticalGaps.maxOrNull()!! <= jumpRise)
     }
 
     @Test
@@ -252,6 +252,41 @@ class LevelLoaderTest {
             assertTrue(rise <= 80f)
             assertTrue(horizontalGap <= 66f)
         }
+    }
+
+    @Test
+    fun level02_hasContinuousReachableRouteFromSpawnToSummit() {
+        val resource = requireNotNull(
+            javaClass.classLoader?.getResourceAsStream("levels/level_02.json")
+        )
+        val def = LevelJson.parse(resource.bufferedReader().use { it.readText() })
+
+        val route = def.platforms.filter { it.w == 220f }.sortedByDescending { it.y }
+        assertEquals(24, route.size)
+
+        val start = route.first()
+        val summit = route.last()
+        assertTrue(start.y >= 2000f)
+        assertTrue(summit.y <= 160f)
+
+        val reachable = mutableSetOf(0)
+        for (i in route.indices) {
+            if (i !in reachable) continue
+            val from = route[i]
+            for (j in i + 1 until route.size) {
+                val to = route[j]
+                val rise = from.y - to.y
+                if (rise < 0f || rise > 80f) continue
+                val horizontalGap = when {
+                    to.x > from.x + from.w -> to.x - (from.x + from.w)
+                    from.x > to.x + to.w -> from.x - (to.x + to.w)
+                    else -> 0f
+                }
+                if (horizontalGap <= 66f) reachable += j
+            }
+        }
+
+        assertTrue(route.lastIndex in reachable)
     }
 
     @Test
