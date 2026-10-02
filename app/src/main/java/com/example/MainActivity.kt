@@ -3,12 +3,19 @@ package com.example
 import android.content.pm.ActivityInfo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.example.game.AssetCache
 import com.example.game.GameScreen
+import com.example.game.MainMenuScreen
 import com.example.ui.theme.MyApplicationTheme
 
 class MainActivity : ComponentActivity() {
@@ -26,7 +33,33 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             MyApplicationTheme {
-                GameScreen()
+                var currentScreen by remember { mutableStateOf("menu") }
+                var startCheckpoint by remember { mutableIntStateOf(0) }
+                var targetFps by remember { mutableIntStateOf(30) }
+
+                when (currentScreen) {
+                    "menu" -> {
+                        MainMenuScreen(
+                            onStartGame = { checkpoint, fps ->
+                                startCheckpoint = checkpoint
+                                targetFps = fps
+                                currentScreen = "game"
+                            }
+                        )
+                    }
+                    "game" -> {
+                        BackHandler {
+                            currentScreen = "menu"
+                        }
+                        GameScreen(
+                            startCheckpoint = startCheckpoint,
+                            initialTargetFps = targetFps,
+                            onReturnToMainMenu = {
+                                currentScreen = "menu"
+                            }
+                        )
+                    }
+                }
             }
         }
 

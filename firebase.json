@@ -1,0 +1,8 @@
+{
+  "firestore": [
+    {
+      "database": "ai-studio-android-crucible-0527fc31-601d-41f4-b4d8-27ae7aadfe2f",
+      "rules": "firestore.rules"
+    }
+  ]
+}

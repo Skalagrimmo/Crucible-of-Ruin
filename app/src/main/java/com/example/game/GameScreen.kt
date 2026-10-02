@@ -23,12 +23,17 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
+import com.example.game.data.AuthRepository
+import com.example.game.data.UserSave
+import com.example.game.data.UserSaveRepository
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,14 +48,45 @@ import androidx.compose.ui.unit.sp
 import kotlin.math.min
 
 @Composable
-fun GameScreen(modifier: Modifier = Modifier) {
-    val engine = remember { GameEngine() }
+fun GameScreen(
+    startCheckpoint: Int = 0,
+    initialTargetFps: Int = 30,
+    onReturnToMainMenu: () -> Unit = {},
+    modifier: Modifier = Modifier
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val authRepo = remember { com.example.game.data.AuthRepository(context) }
+    val saveRepo = remember { com.example.game.data.UserSaveRepository(context) }
+    val user by authRepo.currentUser.collectAsState()
+
+    val engine = remember {
+        GameEngine().apply {
+            setStartCheckpoint(startCheckpoint)
+        }
+    }
+
+    // Auto-save checkpoint progress to Firestore
+    engine.onCheckpointActivated = { cpId ->
+        val currentUid = user?.uid
+        if (!currentUid.isNullOrBlank()) {
+            scope.launch {
+                val current = saveRepo.getUserSave(currentUid) ?: UserSave(userId = currentUid)
+                saveRepo.saveUserSave(
+                    current.copy(
+                        lastCheckpoint = maxOf(current.lastCheckpoint, cpId),
+                        foesSlain = current.foesSlain + engine.enemiesDefeated
+                    )
+                )
+            }
+        }
+    }
 
     // Recomposition ticker triggered only on frame ticks
     var frameTick by remember { mutableIntStateOf(0) }
 
     // Target frame rate cap (default: 30 FPS for low-end hardware optimization)
-    var targetFps by remember { mutableIntStateOf(30) }
+    var targetFps by remember { mutableIntStateOf(initialTargetFps) }
 
     // Forced Frame Rate Capped Game Loop using withFrameNanos (zero GC allocation)
     LaunchedEffect(targetFps) {
@@ -379,6 +415,14 @@ fun GameScreen(modifier: Modifier = Modifier) {
                     ) {
                         Text("Restart Stage", color = Color.White)
                     }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Button(
+                        onClick = { onReturnToMainMenu() },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1B112B)),
+                        modifier = Modifier.testTag("pause_main_menu_button")
+                    ) {
+                        Text("Return to Main Menu", color = Color(0xFFDCCFF5))
+                    }
                 }
             }
         }
@@ -444,12 +488,21 @@ fun GameScreen(modifier: Modifier = Modifier) {
                         textAlign = TextAlign.Center
                     )
                     Spacer(modifier = Modifier.height(24.dp))
-                    Button(
-                        onClick = { engine.restart() },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B5CF6)),
-                        modifier = Modifier.testTag("play_again_button")
-                    ) {
-                        Text("Play Again", color = Color.White, fontWeight = FontWeight.Bold)
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Button(
+                            onClick = { engine.restart() },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B5CF6)),
+                            modifier = Modifier.testTag("play_again_button")
+                        ) {
+                            Text("Play Again", color = Color.White, fontWeight = FontWeight.Bold)
+                        }
+                        Button(
+                            onClick = { onReturnToMainMenu() },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E1C48)),
+                            modifier = Modifier.testTag("victory_main_menu_button")
+                        ) {
+                            Text("Main Menu", color = Color(0xFFFFD700), fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }

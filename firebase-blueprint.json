@@ -1,0 +1,17 @@
+{
+  "entities": {
+    "UserSave": {
+      "path": "/users/{userId}",
+      "fields": {
+        "userId": { "type": "string" },
+        "highScore": { "type": "number" },
+        "bestTimeSeconds": { "type": "number" },
+        "foesSlain": { "type": "number" },
+        "lastCheckpoint": { "type": "number" },
+        "targetFps": { "type": "number" },
+        "soundMuted": { "type": "boolean" },
+        "updatedAt": { "type": "number" }
+      }
+    }
+  }
+}

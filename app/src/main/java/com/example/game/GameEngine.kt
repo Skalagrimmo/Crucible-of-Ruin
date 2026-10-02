@@ -271,8 +271,21 @@ class GameEngine {
 
     private var attackCounter: Long = 1L
 
+    var onCheckpointActivated: ((Int) -> Unit)? = null
+
     init {
         initLevel()
+    }
+
+    fun setStartCheckpoint(index: Int) {
+        val idx = index.coerceIn(0, checkpoints.size - 1)
+        for (i in 0..idx) {
+            checkpoints[i].activated = true
+        }
+        activeCheckpoint = checkpoints[idx]
+        player.x = activeCheckpoint.x
+        player.y = activeCheckpoint.y
+        camera.x = (player.x - 300f).coerceAtLeast(0f)
     }
 
     fun restart() {
@@ -409,6 +422,7 @@ class GameEngine {
                 audio.play("checkpoint")
                 camera.shake(5f)
                 particles.spawn(cp.x, cp.y, Color(0xFFFFD700), 28, 160f, 0.8f, 5f)
+                onCheckpointActivated?.invoke(cp.id)
             }
         }
 
