@@ -409,7 +409,7 @@
       "x": 1120,
       "y": 1840,
       "archetype": "LURKER",
-      "patrolRange": 90
+      "patrolRange": 80
     },
     {
       "x": 1540,
@@ -421,7 +421,7 @@
       "x": 1900,
       "y": 1490,
       "archetype": "LURKER",
-      "patrolRange": 80
+      "patrolRange": 60
     },
     {
       "x": 1440,
