@@ -52,6 +52,7 @@ fun GameScreen(
     levelId: String = "level_01",
     startCheckpoint: Int = 0,
     initialTargetFps: Int = 30,
+    onNextLevel: (() -> Unit)? = null,
     onReturnToMainMenu: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -489,7 +490,7 @@ fun GameScreen(
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "The Crucible Chimera Has Been Purged",
+                        text = if (levelId == "level_01") "The Crucible Chimera Has Been Purged" else "Stage Guardian Has Been Purged",
                         color = Color(0xFF90FFC0),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Medium
@@ -506,6 +507,15 @@ fun GameScreen(
                     )
                     Spacer(modifier = Modifier.height(24.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        if (onNextLevel != null) {
+                            Button(
+                                onClick = onNextLevel,
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B5CF6)),
+                                modifier = Modifier.testTag("next_level_button")
+                            ) {
+                                Text("Next Stage", color = Color.White, fontWeight = FontWeight.Bold)
+                            }
+                        }
                         Button(
                             onClick = { engine.restart() },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B5CF6)),
