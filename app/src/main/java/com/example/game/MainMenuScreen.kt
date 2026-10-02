@@ -56,7 +56,7 @@ import kotlin.random.Random
 
 @Composable
 fun MainMenuScreen(
-    onStartGame: (startCheckpoint: Int, targetFps: Int) -> Unit,
+    onStartGame: (levelId: String, startCheckpoint: Int, targetFps: Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -246,10 +246,10 @@ fun MainMenuScreen(
             Spacer(modifier = Modifier.height(28.dp))
 
             // 1. CONTINUE GAME (If checkpoint reached)
-            val hasSaveProgress = userSave.lastCheckpoint > 0
+            val hasSaveProgress = userSave.lastLevelId != "level_01" || userSave.lastCheckpoint > 0
             Button(
                 onClick = {
-                    onStartGame(userSave.lastCheckpoint, targetFps)
+                    onStartGame(userSave.lastLevelId, userSave.lastCheckpoint, targetFps)
                 },
                 enabled = hasSaveProgress,
                 colors = ButtonDefaults.buttonColors(
@@ -268,7 +268,7 @@ fun MainMenuScreen(
                     .testTag("menu_continue_button")
             ) {
                 Text(
-                    text = if (hasSaveProgress) "CONTINUE (SECTION ${userSave.lastCheckpoint + 1})" else "CONTINUE",
+                    text = if (hasSaveProgress) "CONTINUE (${userSave.lastLevelId.uppercase()} • SECTION ${userSave.lastCheckpoint + 1})" else "CONTINUE",
                     color = if (hasSaveProgress) Color.White else Color(0x66FFFFFF),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
@@ -281,7 +281,7 @@ fun MainMenuScreen(
             // 2. NEW GAME
             Button(
                 onClick = {
-                    onStartGame(0, targetFps)
+                    onStartGame("level_01", 0, targetFps)
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2C1948)),
                 shape = RoundedCornerShape(10.dp),
