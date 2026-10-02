@@ -108,7 +108,7 @@ class LevelLoaderTest {
         assertEquals("level_02", def.id)
         assertEquals(2200f, def.width, 0.001f)
         assertEquals(2160f, def.height, 0.001f)
-        assertEquals(36, def.platforms.size)
+        assertEquals(52, def.platforms.size)
         assertEquals(12, def.enemies.size)
         assertEquals(4, def.checkpoints.size)
 
@@ -218,6 +218,30 @@ class LevelLoaderTest {
         }.sortedByDescending { it.y }
 
         assertEquals(8, route.size)
+        route.zipWithNext().forEach { (from, to) ->
+            val rise = from.y - to.y
+            val horizontalGap = when {
+                to.x > from.x + from.w -> to.x - (from.x + from.w)
+                from.x > to.x + to.w -> from.x - (to.x + to.w)
+                else -> 0f
+            }
+            assertTrue(rise <= 80f)
+            assertTrue(horizontalGap <= 66f)
+        }
+    }
+
+    @Test
+    fun level02_upperAscentHasReachableEdgeToEdgeSteps() {
+        val resource = requireNotNull(
+            javaClass.classLoader?.getResourceAsStream("levels/level_02.json")
+        )
+        val def = LevelJson.parse(resource.bufferedReader().use { it.readText() })
+
+        val route = def.platforms.filter {
+            it.y in 160f..1360f && it.w == 220f
+        }.sortedByDescending { it.y }
+
+        assertEquals(16, route.size)
         route.zipWithNext().forEach { (from, to) ->
             val rise = from.y - to.y
             val horizontalGap = when {
