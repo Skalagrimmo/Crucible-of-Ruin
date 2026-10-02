@@ -235,7 +235,7 @@ class BossEntity(var x: Float, var y: Float) {
 }
 
 class GameEngine(
-    private val levelDef: LevelDef = LevelCatalog.level01
+    private val levelDef: LevelDef
 ) {
     val audio = GameAudio()
     val camera = Camera2D()
