@@ -32,7 +32,8 @@ data class Platform(
     val y: Float,
     val w: Float,
     val h: Float,
-    val style: PlatformStyle
+    val style: PlatformStyle,
+    val oneWay: Boolean = false
 )
 
 data class Hazard(
