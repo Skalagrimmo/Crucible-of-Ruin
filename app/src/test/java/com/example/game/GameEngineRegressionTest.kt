@@ -107,6 +107,26 @@ class GameEngineRegressionTest {
     }
 
     @Test
+    fun deadPlayer_freezesBossCombatUntilRespawn() {
+        val engine = freshEngine()
+        val boss = engine.boss
+        boss.active = true
+        boss.state = "chase"
+        engine.player.takeDamage(engine.player.maxHp, engine.player.x, engine)
+
+        val bossX = boss.x
+        val bossY = boss.y
+        val projectileCount = engine.projectiles.size
+
+        repeat(30) { engine.update(1f / 60f) }
+
+        assertTrue(engine.player.dead)
+        assertEquals(bossX, boss.x, 0.001f)
+        assertEquals(bossY, boss.y, 0.001f)
+        assertEquals(projectileCount, engine.projectiles.size)
+    }
+
+    @Test
     fun bossCrossingHalfHealth_entersPhaseTwo() {
         val engine = freshEngine()
         val boss = engine.boss
