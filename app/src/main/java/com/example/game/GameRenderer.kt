@@ -55,15 +55,20 @@ object GameRenderer {
             drawRect(COLOR_SKY_BOT, size = Size(960f, 540f))
             drawRect(COLOR_SKY_TOP, size = Size(960f, 270f))
 
-            drawCircle(COLOR_MOON, radius = 65f, center = Offset(680f - camX * 0.05f, 120f))
+            drawCircle(
+                COLOR_MOON,
+                radius = 65f,
+                center = Offset(680f - camX * 0.05f, 120f - camY * 0.03f)
+            )
 
             // Background Ruin Spires (Speed: 0.15)
             var rx = -100f
             while (rx < 6400f) {
                 val sx = rx - camX * 0.15f
+                val sy = 160f - camY * 0.08f
                 if (sx in -120f..1060f) {
-                    drawRect(COLOR_PARALLAX_RUIN, topLeft = Offset(sx, 160f), size = Size(90f, 380f))
-                    drawCircle(COLOR_PARALLAX_RUIN, radius = 45f, center = Offset(sx + 45f, 160f))
+                    drawRect(COLOR_PARALLAX_RUIN, topLeft = Offset(sx, sy), size = Size(90f, 380f))
+                    drawCircle(COLOR_PARALLAX_RUIN, radius = 45f, center = Offset(sx + 45f, sy))
                 }
                 rx += 280f
             }
@@ -72,11 +77,12 @@ object GameRenderer {
             var px = 100f
             while (px < 6100f) {
                 val dx = px - camX * 0.35f
+                val parallaxY = camY * 0.18f
                 if (dx in -80f..1040f) {
                     if ((px.toInt() % 640) == 0) {
-                        drawImage(AssetCache.texStainedGlass, topLeft = Offset(dx, 140f))
+                        drawImage(AssetCache.texStainedGlass, topLeft = Offset(dx, 140f - parallaxY))
                     } else {
-                        drawImage(AssetCache.texPillar, topLeft = Offset(dx, 80f))
+                        drawImage(AssetCache.texPillar, topLeft = Offset(dx, 80f - parallaxY))
                     }
                 }
                 px += 320f
