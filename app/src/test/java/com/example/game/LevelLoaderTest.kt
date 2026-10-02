@@ -214,6 +214,7 @@ class LevelLoaderTest {
         engine.player.x = 500f
         engine.player.y = 1190f - engine.player.h
         engine.player.grounded = true
+        engine.player.coyoteTime = 0.12f
 
         val startY = engine.player.y
         engine.inputJump = true
