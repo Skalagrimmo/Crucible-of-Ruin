@@ -6,7 +6,7 @@ import org.junit.Test
 class GameEngineRegressionTest {
 
     private fun freshEngine(): GameEngine = GameEngine().also {
-        it.audio.muted = true
+        it.audio.isMuted = true
     }
 
     @Test
