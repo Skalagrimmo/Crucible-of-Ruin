@@ -49,4 +49,18 @@ class LevelLoaderTest {
         assertEquals("Section 2: Crucible Laboratories", checkpoints[1].name)
         assertEquals("Section 3: Sanctum Approach", checkpoints[2].name)
     }
+
+
+    @Test
+    fun jsonParser_reconstructsCanonicalLevel() {
+        val resource = requireNotNull(
+            javaClass.classLoader?.getResourceAsStream("levels/level_01.json")
+        )
+        val json = resource.bufferedReader().use { it.readText() }
+        val parsed = LevelJson.parse(json)
+
+        assertEquals(LevelCatalog.level01, parsed)
+        assertEquals(28, LevelLoader.platforms(parsed).size)
+        assertEquals(12, LevelLoader.enemies(parsed).size)
+    }
 }
