@@ -138,6 +138,21 @@ class GameEngineRegressionTest {
     }
 
     @Test
+    fun deadPlayer_cannotActivateNearbyCheckpointDuringRespawnCountdown() {
+        val engine = freshEngine()
+        val next = engine.checkpoints[1]
+        engine.player.x = next.x
+        engine.player.y = next.y
+        engine.player.takeDamage(engine.player.maxHp, engine.player.x, engine)
+
+        engine.update(1f / 60f)
+
+        assertTrue(engine.player.dead)
+        assertFalse(next.activated)
+        assertEquals(0, engine.activeCheckpoint.id)
+    }
+
+    @Test
     fun deadPlayer_freezesBossCombatUntilRespawn() {
         val engine = freshEngine()
         val boss = engine.boss
