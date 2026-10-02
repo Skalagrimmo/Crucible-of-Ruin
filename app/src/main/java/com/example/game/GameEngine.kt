@@ -368,10 +368,12 @@ class GameEngine(
         }
 
         updatePlayer(dt)
-        updateEnemies(dt)
-        updateBoss(dt)
-        updateProjectiles(dt)
-        updatePickups(dt)
+        if (!player.dead) {
+            updateEnemies(dt)
+            updateBoss(dt)
+            updateProjectiles(dt)
+            updatePickups(dt)
+        }
         particles.update(dt)
 
         camera.update(player.x, player.y, player.facing, levelWidth, levelHeight, dt)
