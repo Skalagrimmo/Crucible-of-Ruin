@@ -391,7 +391,10 @@ class GameEngine(
             player.respawnTimer -= dt
             if (player.respawnTimer <= 0f) {
                 player.respawn(activeCheckpoint)
-                camera.x = player.x - 400f
+                camera.x = (player.x - camera.viewW / 2f)
+                    .coerceIn(0f, (levelWidth - camera.viewW).coerceAtLeast(0f))
+                camera.y = (player.y - camera.viewH / 2f - 20f)
+                    .coerceIn(0f, (levelHeight - camera.viewH).coerceAtLeast(0f))
             }
             return
         }
