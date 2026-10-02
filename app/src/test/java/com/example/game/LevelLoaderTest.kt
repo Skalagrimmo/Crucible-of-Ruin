@@ -99,6 +99,51 @@ class LevelLoaderTest {
 
 
     @Test
+    fun level02_structuralDataStaysInsideLevelBounds() {
+        val resource = requireNotNull(
+            javaClass.classLoader?.getResourceAsStream("levels/level_02.json")
+        )
+        val def = LevelJson.parse(resource.bufferedReader().use { it.readText() })
+
+        assertEquals("level_02", def.id)
+        assertEquals(2200f, def.width, 0.001f)
+        assertEquals(2160f, def.height, 0.001f)
+        assertEquals(16, def.platforms.size)
+        assertEquals(12, def.enemies.size)
+        assertEquals(4, def.checkpoints.size)
+
+        def.platforms.forEach {
+            assertTrue(it.x >= 0f && it.y >= 0f)
+            assertTrue(it.x + it.w <= def.width)
+            assertTrue(it.y + it.h <= def.height)
+        }
+        def.enemies.forEach {
+            assertTrue(it.x in 0f..def.width)
+            assertTrue(it.y in 0f..def.height)
+        }
+        def.checkpoints.forEach {
+            assertTrue(it.x in 0f..def.width)
+            assertTrue(it.y in 0f..def.height)
+        }
+        assertTrue(def.boss.x in 0f..def.width)
+        assertTrue(def.boss.y in 0f..def.height)
+        assertTrue(def.boss.triggerX in 0f..def.width)
+    }
+
+    @Test
+    fun level02_hasVerticalProgressionAcrossMultipleViewports() {
+        val resource = requireNotNull(
+            javaClass.classLoader?.getResourceAsStream("levels/level_02.json")
+        )
+        val def = LevelJson.parse(resource.bufferedReader().use { it.readText() })
+
+        assertTrue(def.height >= 4f * 540f)
+        assertEquals(listOf(0, 1, 2, 3), def.checkpoints.map { it.id })
+        assertTrue(def.checkpoints.zipWithNext().all { (lower, upper) -> upper.y < lower.y })
+        assertTrue(def.boss.y < def.checkpoints.last().y)
+    }
+
+    @Test
     fun camera_smallerThanViewport_clampsToOrigin() {
         val camera = Camera2D()
         camera.update(450f, 270f, 1, 900f, 500f, 1f / 60f)
