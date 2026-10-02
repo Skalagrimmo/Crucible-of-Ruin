@@ -49,6 +49,7 @@ import kotlin.math.min
 
 @Composable
 fun GameScreen(
+    levelId: String = "level_01",
     startCheckpoint: Int = 0,
     initialTargetFps: Int = 30,
     onReturnToMainMenu: () -> Unit = {},
@@ -60,8 +61,8 @@ fun GameScreen(
     val saveRepo = remember { com.example.game.data.UserSaveRepository(context) }
     val user by authRepo.currentUser.collectAsState()
 
-    val engine = remember(context) {
-        GameEngine(AndroidLevelAssets.level01(context)).apply {
+    val engine = remember(context, levelId) {
+        GameEngine(AndroidLevelAssets.level(context, levelId)).apply {
             setStartCheckpoint(startCheckpoint)
         }
     }
