@@ -205,168 +205,192 @@
       "y": 2000,
       "w": 220,
       "h": 20,
-      "style": "STONE_LEDGE"
+      "style": "STONE_LEDGE",
+      "oneWay": true
     },
     {
       "x": 430,
       "y": 1920,
       "w": 220,
       "h": 20,
-      "style": "IRON_GIRDER"
+      "style": "IRON_GIRDER",
+      "oneWay": true
     },
     {
       "x": 610,
       "y": 1840,
       "w": 220,
       "h": 20,
-      "style": "STONE_LEDGE"
+      "style": "STONE_LEDGE",
+      "oneWay": true
     },
     {
       "x": 760,
       "y": 1760,
       "w": 220,
       "h": 20,
-      "style": "IRON_GIRDER"
+      "style": "IRON_GIRDER",
+      "oneWay": true
     },
     {
       "x": 920,
       "y": 1680,
       "w": 220,
       "h": 20,
-      "style": "STONE_LEDGE"
+      "style": "STONE_LEDGE",
+      "oneWay": true
     },
     {
       "x": 1080,
       "y": 1600,
       "w": 220,
       "h": 20,
-      "style": "IRON_GIRDER"
+      "style": "IRON_GIRDER",
+      "oneWay": true
     },
     {
       "x": 1240,
       "y": 1520,
       "w": 220,
       "h": 20,
-      "style": "STONE_LEDGE"
+      "style": "STONE_LEDGE",
+      "oneWay": true
     },
     {
       "x": 1400,
       "y": 1440,
       "w": 220,
       "h": 20,
-      "style": "IRON_GIRDER"
+      "style": "IRON_GIRDER",
+      "oneWay": true
     },
     {
       "x": 1320,
       "y": 1360,
       "w": 220,
       "h": 20,
-      "style": "STONE_LEDGE"
+      "style": "STONE_LEDGE",
+      "oneWay": true
     },
     {
       "x": 1160,
       "y": 1280,
       "w": 220,
       "h": 20,
-      "style": "IRON_GIRDER"
+      "style": "IRON_GIRDER",
+      "oneWay": true
     },
     {
       "x": 1000,
       "y": 1200,
       "w": 220,
       "h": 20,
-      "style": "STONE_LEDGE"
+      "style": "STONE_LEDGE",
+      "oneWay": true
     },
     {
       "x": 840,
       "y": 1120,
       "w": 220,
       "h": 20,
-      "style": "IRON_GIRDER"
+      "style": "IRON_GIRDER",
+      "oneWay": true
     },
     {
       "x": 680,
       "y": 1040,
       "w": 220,
       "h": 20,
-      "style": "STONE_LEDGE"
+      "style": "STONE_LEDGE",
+      "oneWay": true
     },
     {
       "x": 520,
       "y": 960,
       "w": 220,
       "h": 20,
-      "style": "IRON_GIRDER"
+      "style": "IRON_GIRDER",
+      "oneWay": true
     },
     {
       "x": 360,
       "y": 880,
       "w": 220,
       "h": 20,
-      "style": "STONE_LEDGE"
+      "style": "STONE_LEDGE",
+      "oneWay": true
     },
     {
       "x": 440,
       "y": 800,
       "w": 220,
       "h": 20,
-      "style": "IRON_GIRDER"
+      "style": "IRON_GIRDER",
+      "oneWay": true
     },
     {
       "x": 600,
       "y": 720,
       "w": 220,
       "h": 20,
-      "style": "STONE_LEDGE"
+      "style": "STONE_LEDGE",
+      "oneWay": true
     },
     {
       "x": 760,
       "y": 640,
       "w": 220,
       "h": 20,
-      "style": "IRON_GIRDER"
+      "style": "IRON_GIRDER",
+      "oneWay": true
     },
     {
       "x": 920,
       "y": 560,
       "w": 220,
       "h": 20,
-      "style": "STONE_LEDGE"
+      "style": "STONE_LEDGE",
+      "oneWay": true
     },
     {
       "x": 1080,
       "y": 480,
       "w": 220,
       "h": 20,
-      "style": "IRON_GIRDER"
+      "style": "IRON_GIRDER",
+      "oneWay": true
     },
     {
       "x": 1240,
       "y": 400,
       "w": 220,
       "h": 20,
-      "style": "STONE_LEDGE"
+      "style": "STONE_LEDGE",
+      "oneWay": true
     },
     {
       "x": 1400,
       "y": 320,
       "w": 220,
       "h": 20,
-      "style": "IRON_GIRDER"
+      "style": "IRON_GIRDER",
+      "oneWay": true
     },
     {
       "x": 1560,
       "y": 240,
       "w": 220,
       "h": 20,
-      "style": "STONE_LEDGE"
+      "style": "STONE_LEDGE",
+      "oneWay": true
     },
     {
       "x": 1720,
       "y": 160,
       "w": 220,
       "h": 20,
-      "style": "IRON_GIRDER"
+      "style": "IRON_GIRDER",
+      "oneWay": true
     }
   ],
   "hazards": [
