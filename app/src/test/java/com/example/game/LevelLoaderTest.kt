@@ -216,7 +216,7 @@ class LevelLoaderTest {
         engine.player.grounded = true
 
         val startY = engine.player.y
-        engine.input.jumpPressed = true
+        engine.inputJump = true
         var highestY = startY
 
         repeat(90) {
