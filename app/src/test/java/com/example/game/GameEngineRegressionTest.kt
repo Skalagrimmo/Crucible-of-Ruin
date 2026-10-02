@@ -101,6 +101,58 @@ class GameEngineRegressionTest {
     }
 
     @Test
+    fun oneWayPlatform_allowsPlayerToPassUpThroughItsUnderside() {
+        val base = freshEngine()
+        val def = base.levelDef.copy(
+            platforms = listOf(PlatformDef(300f, 300f, 220f, 20f, PlatformStyle.STONE_LEDGE, oneWay = true)),
+            hazards = emptyList(),
+            enemies = emptyList(),
+            breakables = emptyList(),
+            checkpoints = listOf(CheckpointDef(0, 360f, 420f, "Below")),
+            boss = BossDef(900f, 0f, 1000f)
+        )
+        val engine = GameEngine(def)
+        engine.audio.isMuted = true
+        engine.player.x = 360f
+        engine.player.y = 340f
+        engine.player.vy = -430f
+        engine.player.grounded = false
+
+        var crossedAboveTop = false
+        repeat(30) {
+            engine.update(1f / 60f)
+            if (engine.player.y + engine.player.h < 300f) crossedAboveTop = true
+        }
+
+        assertTrue("Player was blocked by one-way platform underside", crossedAboveTop)
+    }
+
+    @Test
+    fun oneWayPlatform_catchesPlayerWhenFallingFromAbove() {
+        val base = freshEngine()
+        val def = base.levelDef.copy(
+            platforms = listOf(PlatformDef(300f, 300f, 220f, 20f, PlatformStyle.STONE_LEDGE, oneWay = true)),
+            hazards = emptyList(),
+            enemies = emptyList(),
+            breakables = emptyList(),
+            checkpoints = listOf(CheckpointDef(0, 360f, 180f, "Above")),
+            boss = BossDef(900f, 0f, 1000f)
+        )
+        val engine = GameEngine(def)
+        engine.audio.isMuted = true
+        engine.player.x = 360f
+        engine.player.y = 200f
+        engine.player.vy = 120f
+        engine.player.grounded = false
+
+        repeat(60) { engine.update(1f / 60f) }
+
+        assertTrue(engine.player.grounded)
+        assertEquals(300f - engine.player.h, engine.player.y, 0.001f)
+        assertEquals(0f, engine.player.vy, 0.001f)
+    }
+
+    @Test
     fun jumpPress_setsJumpBuffer() {
         val engine = freshEngine()
 
