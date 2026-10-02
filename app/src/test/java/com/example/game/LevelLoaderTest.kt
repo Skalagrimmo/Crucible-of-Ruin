@@ -84,7 +84,7 @@ class LevelLoaderTest {
             enemies = emptyList(),
             breakables = emptyList(),
             checkpoints = listOf(CheckpointDef(0, 40f, 900f, "Start")),
-            boss = BossDef(800f, 900f)
+            boss = BossDef(800f, 900f, 700f)
         )
 
         val engine = GameEngine(tiny)
@@ -97,6 +97,27 @@ class LevelLoaderTest {
         assertEquals(40f, engine.player.x, 0.001f)
     }
 
+
+    @Test
+    fun camera_smallerThanViewport_clampsToOrigin() {
+        val camera = Camera2D()
+        camera.update(450f, 270f, 1, 900f, 500f, 1f / 60f)
+
+        assertEquals(0f, camera.x, 0.001f)
+        assertEquals(0f, camera.y, 0.001f)
+    }
+
+    @Test
+    fun injectedLevel_usesItsOwnBossTrigger() {
+        val def = verticalFixture()
+        val engine = GameEngine(def)
+        engine.audio.isMuted = true
+        engine.player.x = def.boss.triggerX + 1f
+
+        engine.update(1f / 60f)
+
+        assertTrue(engine.boss.active)
+    }
 
     @Test
     fun verticalFixture_allowsCameraToTravelAndClampAcrossMultipleScreens() {
