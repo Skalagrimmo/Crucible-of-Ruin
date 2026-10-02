@@ -75,7 +75,12 @@ fun GameScreen(
             val current = saveRepo.getUserSave(currentUid)
             saveRepo.saveUserSave(
                 current.copy(
-                    lastCheckpoint = maxOf(current.lastCheckpoint, cpId),
+                    lastLevelId = levelId,
+                    lastCheckpoint = if (current.lastLevelId == levelId) {
+                        maxOf(current.lastCheckpoint, cpId)
+                    } else {
+                        cpId
+                    },
                     foesSlain = current.foesSlain + engine.enemiesDefeated
                 )
             )
