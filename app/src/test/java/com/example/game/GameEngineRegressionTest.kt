@@ -153,6 +153,29 @@ class GameEngineRegressionTest {
     }
 
     @Test
+    fun groundEnemy_landsOnOneWayPlatformFromAbove() {
+        val base = freshEngine()
+        val def = base.levelDef.copy(
+            platforms = listOf(PlatformDef(300f, 300f, 220f, 20f, PlatformStyle.STONE_LEDGE, oneWay = true)),
+            hazards = emptyList(),
+            enemies = listOf(EnemyDef(360f, 200f, EnemyArchetype.GOLEM, 0f)),
+            breakables = emptyList(),
+            checkpoints = listOf(CheckpointDef(0, 50f, 50f, "Safe")),
+            boss = BossDef(900f, 0f, 1000f)
+        )
+        val engine = GameEngine(def)
+        engine.audio.isMuted = true
+        val enemy = engine.enemies.single()
+        enemy.vy = 120f
+
+        repeat(60) { engine.update(1f / 60f) }
+
+        assertTrue(enemy.grounded)
+        assertEquals(300f - enemy.h, enemy.y, 0.001f)
+        assertEquals(0f, enemy.vy, 0.001f)
+    }
+
+    @Test
     fun jumpPress_setsJumpBuffer() {
         val engine = freshEngine()
 
