@@ -116,14 +116,14 @@ class GameEngineRegressionTest {
 
         val bossX = boss.x
         val bossY = boss.y
-        val projectileCount = engine.projectiles.size
+        val projectileCount = engine.projectiles.activeCount
 
         repeat(30) { engine.update(1f / 60f) }
 
         assertTrue(engine.player.dead)
         assertEquals(bossX, boss.x, 0.001f)
         assertEquals(bossY, boss.y, 0.001f)
-        assertEquals(projectileCount, engine.projectiles.size)
+        assertEquals(projectileCount, engine.projectiles.activeCount)
     }
 
     @Test
