@@ -6,6 +6,7 @@ data class UserSave(
     val highScore: Int = 0,
     val bestTimeSeconds: Float = 0f,
     val foesSlain: Int = 0,
+    val lastLevelId: String = "level_01",
     val lastCheckpoint: Int = 0,
     val targetFps: Int = 30,
     val soundMuted: Boolean = false,
