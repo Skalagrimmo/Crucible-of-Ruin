@@ -89,4 +89,32 @@ class LevelLoaderTest {
         assertEquals(800f, engine.boss.x, 0.001f)
         assertEquals(40f, engine.player.x, 0.001f)
     }
+
+
+    @Test
+    fun verticalFixture_allowsCameraToTravelAndClampAcrossMultipleScreens() {
+        val resource = requireNotNull(
+            javaClass.classLoader?.getResourceAsStream("levels/level_vertical_test.json")
+        )
+        val def = LevelJson.parse(resource.bufferedReader().use { it.readText() })
+        val engine = GameEngine(def)
+
+        assertEquals(1620f, engine.levelHeight, 0.001f)
+
+        repeat(90) {
+            engine.camera.update(600f, 810f, 1, engine.levelWidth, engine.levelHeight, 1f / 60f)
+        }
+        assertTrue(engine.camera.y > 0f)
+        assertTrue(engine.camera.y < engine.levelHeight - engine.camera.viewH)
+
+        repeat(180) {
+            engine.camera.update(600f, 2000f, 1, engine.levelWidth, engine.levelHeight, 1f / 60f)
+        }
+        assertEquals(engine.levelHeight - engine.camera.viewH, engine.camera.y, 0.001f)
+
+        repeat(180) {
+            engine.camera.update(600f, -500f, 1, engine.levelWidth, engine.levelHeight, 1f / 60f)
+        }
+        assertEquals(0f, engine.camera.y, 0.001f)
+    }
 }
