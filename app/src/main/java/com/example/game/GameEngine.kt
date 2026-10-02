@@ -27,8 +27,8 @@ class Camera2D(val viewW: Float = 960f, val viewH: Float = 540f) {
         x += (desiredX - x) * 6f * dt
         y += (desiredY - y) * 4f * dt
 
-        x = x.coerceIn(0f, maxW - viewW)
-        y = y.coerceIn(0f, maxH - viewH)
+        x = x.coerceIn(0f, (maxW - viewW).coerceAtLeast(0f))
+        y = y.coerceIn(0f, (maxH - viewH).coerceAtLeast(0f))
 
         if (shakeIntensity > 0.1f) {
             shakeIntensity *= (0.9f).coerceAtLeast(0f)
@@ -361,7 +361,7 @@ class GameEngine(
         }
 
         // Boss trigger
-        if (!boss.active && player.x > 5340f) {
+        if (!boss.active && player.x > levelDef.boss.triggerX) {
             boss.active = true
             audio.play("boss_roar")
             camera.shake(12f)
