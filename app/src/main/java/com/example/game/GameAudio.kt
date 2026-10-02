@@ -11,9 +11,6 @@ class GameAudio {
             AssetCache.isMuted = value
         }
 
-    init {
-        AssetCache.init()
-    }
 
     fun play(soundKey: String) {
         AssetCache.playSound(soundKey)
