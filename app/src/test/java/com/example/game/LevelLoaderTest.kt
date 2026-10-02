@@ -170,20 +170,44 @@ class LevelLoaderTest {
     }
 
     @Test
-    fun level02_bossActivatesOnlyAfterItsConfiguredTrigger() {
+    fun level02_bossRequiresBothHorizontalAndVerticalArenaTrigger() {
         val resource = requireNotNull(
             javaClass.classLoader?.getResourceAsStream("levels/level_02.json")
         )
         val def = LevelJson.parse(resource.bufferedReader().use { it.readText() })
         val engine = GameEngine(def)
         engine.audio.isMuted = true
+        val triggerY = requireNotNull(def.boss.triggerY)
 
         engine.player.x = def.boss.triggerX - 1f
+        engine.player.y = triggerY - 1f
         engine.update(1f / 60f)
         assertFalse(engine.boss.active)
 
         engine.player.x = def.boss.triggerX + 1f
+        engine.player.y = triggerY + 100f
         engine.update(1f / 60f)
+        assertFalse(engine.boss.active)
+
+        engine.player.x = def.boss.triggerX + 1f
+        engine.player.y = triggerY - 1f
+        engine.update(1f / 60f)
+        assertTrue(engine.boss.active)
+    }
+
+    @Test
+    fun level01_bossKeepsLegacyHorizontalOnlyTrigger() {
+        val resource = requireNotNull(
+            javaClass.classLoader?.getResourceAsStream("levels/level_01.json")
+        )
+        val def = LevelJson.parse(resource.bufferedReader().use { it.readText() })
+        val engine = GameEngine(def)
+        engine.audio.isMuted = true
+
+        assertNull(def.boss.triggerY)
+        engine.player.x = def.boss.triggerX + 1f
+        engine.update(1f / 60f)
+
         assertTrue(engine.boss.active)
     }
 
