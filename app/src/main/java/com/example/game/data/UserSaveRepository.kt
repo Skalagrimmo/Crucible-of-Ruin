@@ -8,6 +8,10 @@ import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.tasks.await
 
 class UserSaveRepository(private val context: Context) {
+    private fun progressRank(levelId: String, checkpoint: Int): Int {
+        val levelNumber = levelId.removePrefix("level_").toIntOrNull() ?: 1
+        return levelNumber * 1000 + checkpoint.coerceAtLeast(0)
+    }
     private val prefs: SharedPreferences =
         context.getSharedPreferences("crucible_user_save", Context.MODE_PRIVATE)
 
@@ -23,6 +27,7 @@ class UserSaveRepository(private val context: Context) {
             highScore = prefs.getInt("highScore", 0),
             bestTimeSeconds = prefs.getFloat("bestTimeSeconds", 0f),
             foesSlain = prefs.getInt("foesSlain", 0),
+            lastLevelId = prefs.getString("lastLevelId", "level_01") ?: "level_01",
             lastCheckpoint = prefs.getInt("lastCheckpoint", 0),
             targetFps = prefs.getInt("targetFps", 30),
             soundMuted = prefs.getBoolean("soundMuted", false),
@@ -37,6 +42,7 @@ class UserSaveRepository(private val context: Context) {
             .putInt("highScore", save.highScore)
             .putFloat("bestTimeSeconds", save.bestTimeSeconds)
             .putInt("foesSlain", save.foesSlain)
+.putString("lastLevelId", save.lastLevelId)
             .putInt("lastCheckpoint", save.lastCheckpoint)
             .putInt("targetFps", save.targetFps)
             .putBoolean("soundMuted", save.soundMuted)
@@ -66,7 +72,19 @@ class UserSaveRepository(private val context: Context) {
                         else minOf(cloudTime, local.bestTimeSeconds)
                     },
                     foesSlain = maxOf(doc.getLong("foesSlain")?.toInt() ?: 0, local.foesSlain),
-                    lastCheckpoint = maxOf(doc.getLong("lastCheckpoint")?.toInt() ?: 0, local.lastCheckpoint),
+                    lastLevelId = run {
+                        val cloudLevel = doc.getString("lastLevelId") ?: "level_01"
+                        if (progressRank(cloudLevel, doc.getLong("lastCheckpoint")?.toInt() ?: 0) >
+                            progressRank(local.lastLevelId, local.lastCheckpoint)
+                        ) cloudLevel else local.lastLevelId
+                    },
+                    lastCheckpoint = run {
+                        val cloudLevel = doc.getString("lastLevelId") ?: "level_01"
+                        val cloudCheckpoint = doc.getLong("lastCheckpoint")?.toInt() ?: 0
+                        if (progressRank(cloudLevel, cloudCheckpoint) >
+                            progressRank(local.lastLevelId, local.lastCheckpoint)
+                        ) cloudCheckpoint else local.lastCheckpoint
+                    },
                     targetFps = doc.getLong("targetFps")?.toInt() ?: local.targetFps,
                     soundMuted = doc.getBoolean("soundMuted") ?: local.soundMuted,
                     updatedAt = maxOf(doc.getLong("updatedAt") ?: 0L, local.updatedAt)
@@ -94,6 +112,7 @@ class UserSaveRepository(private val context: Context) {
                 "highScore" to save.highScore,
                 "bestTimeSeconds" to save.bestTimeSeconds,
                 "foesSlain" to save.foesSlain,
+                "lastLevelId" to save.lastLevelId,
                 "lastCheckpoint" to save.lastCheckpoint,
                 "targetFps" to save.targetFps,
                 "soundMuted" to save.soundMuted,
