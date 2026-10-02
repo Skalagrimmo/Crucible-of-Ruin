@@ -12,3 +12,10 @@ data class UserSave(
     val soundMuted: Boolean = false,
     val updatedAt: Long = System.currentTimeMillis()
 )
+
+fun UserSave.progressRank(): Int {
+    val levelNumber = lastLevelId.removePrefix("level_").toIntOrNull() ?: 1
+    return levelNumber * 1000 + lastCheckpoint.coerceAtLeast(0)
+}
+
+fun UserSave.isProgressAfter(other: UserSave): Boolean = progressRank() > other.progressRank()
