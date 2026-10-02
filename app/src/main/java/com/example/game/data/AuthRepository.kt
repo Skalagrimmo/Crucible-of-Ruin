@@ -61,10 +61,12 @@ class AuthRepository(private val context: Context) {
                 return false
             }
         } catch (e: GetCredentialCancellationException) {
+            android.util.Log.w("AuthRepository", "Sign-in cancelled by user", e)
             _errorMessage.value = "Sign-in cancelled"
             _isLoading.value = false
             return false
         } catch (e: Exception) {
+            android.util.Log.e("AuthRepository", "Authentication error", e)
             _errorMessage.value = e.localizedMessage ?: "Authentication failed"
             _isLoading.value = false
             return false

@@ -68,36 +68,23 @@ fun MainMenuScreen(
     val isAuthLoading by authRepo.isLoading.collectAsState()
     val authError by authRepo.errorMessage.collectAsState()
 
-    var userSave by remember { mutableStateOf(UserSave()) }
-    var targetFps by remember { mutableIntStateOf(30) }
-    var soundMuted by remember { mutableStateOf(AssetCache.isMuted) }
+    var userSave by remember { mutableStateOf(saveRepo.getLocalUserSave()) }
+    var targetFps by remember { mutableIntStateOf(userSave.targetFps) }
+    var soundMuted by remember { mutableStateOf(userSave.soundMuted) }
 
     // Dialog toggles
     var showSettingsDialog by remember { mutableStateOf(false) }
     var showStatsDialog by remember { mutableStateOf(false) }
     var showControlsDialog by remember { mutableStateOf(false) }
 
-    // Load user cloud save whenever user logs in
+    // Load user cloud save whenever user logs in or app launches
     LaunchedEffect(user) {
-        val uid = user?.uid
-        if (!uid.isNullOrBlank()) {
-            val save = saveRepo.getUserSave(uid)
-            if (save != null) {
-                userSave = save
-                targetFps = save.targetFps
-                soundMuted = save.soundMuted
-                AssetCache.isMuted = soundMuted
-            } else {
-                val initialSave = UserSave(
-                    userId = uid,
-                    displayName = user?.displayName ?: "Alchemist",
-                    targetFps = targetFps,
-                    soundMuted = soundMuted
-                )
-                saveRepo.saveUserSave(initialSave)
-                userSave = initialSave
-            }
-        }
+        val uid = user?.uid ?: ""
+        val save = saveRepo.getUserSave(uid)
+        userSave = save
+        targetFps = save.targetFps
+        soundMuted = save.soundMuted
+        AssetCache.isMuted = soundMuted
     }
 
     Box(

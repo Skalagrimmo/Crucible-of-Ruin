@@ -66,16 +66,32 @@ fun GameScreen(
         }
     }
 
-    // Auto-save checkpoint progress to Firestore
+    // Auto-save checkpoint progress to local storage and Firestore
     engine.onCheckpointActivated = { cpId ->
-        val currentUid = user?.uid
-        if (!currentUid.isNullOrBlank()) {
+        val currentUid = user?.uid ?: ""
+        scope.launch {
+            val current = saveRepo.getUserSave(currentUid)
+            saveRepo.saveUserSave(
+                current.copy(
+                    lastCheckpoint = maxOf(current.lastCheckpoint, cpId),
+                    foesSlain = current.foesSlain + engine.enemiesDefeated
+                )
+            )
+        }
+    }
+
+    // Auto-save victory stats
+    LaunchedEffect(engine.state) {
+        if (engine.state == "victory") {
+            val currentUid = user?.uid ?: ""
             scope.launch {
-                val current = saveRepo.getUserSave(currentUid) ?: UserSave(userId = currentUid)
+                val current = saveRepo.getUserSave(currentUid)
+                val bestTime = if (current.bestTimeSeconds <= 0f) engine.timeElapsed else minOf(current.bestTimeSeconds, engine.timeElapsed)
                 saveRepo.saveUserSave(
                     current.copy(
-                        lastCheckpoint = maxOf(current.lastCheckpoint, cpId),
-                        foesSlain = current.foesSlain + engine.enemiesDefeated
+                        bestTimeSeconds = bestTime,
+                        foesSlain = current.foesSlain + engine.enemiesDefeated,
+                        highScore = maxOf(current.highScore, (engine.enemiesDefeated * 100 + engine.player.hp.toInt() * 10))
                     )
                 )
             }

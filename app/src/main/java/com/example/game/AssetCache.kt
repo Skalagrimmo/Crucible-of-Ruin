@@ -107,8 +107,12 @@ object AssetCache {
                     .setTransferMode(AudioTrack.MODE_STATIC)
                     .build()
 
-                track.write(pcm, 0, pcm.size)
-                audioTrackPool[key] = track
+                if (track.state == AudioTrack.STATE_INITIALIZED) {
+                    track.write(pcm, 0, pcm.size)
+                    audioTrackPool[key] = track
+                } else {
+                    track.release()
+                }
             } catch (_: Exception) {}
         }
     }
@@ -117,9 +121,11 @@ object AssetCache {
         if (isMuted) return
         val track = audioTrackPool[soundKey] ?: return
         try {
-            track.pause()
-            track.playbackHeadPosition = 0
-            track.play()
+            if (track.state == AudioTrack.STATE_INITIALIZED) {
+                track.pause()
+                track.playbackHeadPosition = 0
+                track.play()
+            }
         } catch (_: Exception) {}
     }
 

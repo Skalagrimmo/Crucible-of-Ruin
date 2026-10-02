@@ -32,6 +32,7 @@ object GameRenderer {
     private val COLOR_SLASH_ARC = Color(0xFF40F0FF)
 
     fun render(drawScope: DrawScope, engine: GameEngine) {
+        AssetCache.init()
         val canvasW = drawScope.size.width
         val canvasH = drawScope.size.height
 
