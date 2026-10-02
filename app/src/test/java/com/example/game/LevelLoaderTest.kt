@@ -117,4 +117,47 @@ class LevelLoaderTest {
         }
         assertEquals(0f, engine.camera.y, 0.001f)
     }
+
+
+    private fun verticalFixture(): LevelDef {
+        val resource = requireNotNull(
+            javaClass.classLoader?.getResourceAsStream("levels/level_vertical_test.json")
+        )
+        return LevelJson.parse(resource.bufferedReader().use { it.readText() })
+    }
+
+    @Test
+    fun verticalFixture_playerFallsAndLandsOnElevatedPlatform() {
+        val engine = GameEngine(verticalFixture())
+        engine.audio.isMuted = true
+        engine.player.x = 470f
+        engine.player.y = 1040f
+        engine.player.vx = 0f
+        engine.player.vy = 0f
+
+        repeat(120) { engine.update(1f / 60f) }
+
+        assertTrue(engine.player.grounded)
+        assertEquals(1190f - engine.player.h, engine.player.y, 0.75f)
+        assertEquals(0f, engine.player.vy, 0.001f)
+    }
+
+    @Test
+    fun verticalFixture_respawnsAtElevatedCheckpointCoordinates() {
+        val engine = GameEngine(verticalFixture())
+        engine.audio.isMuted = true
+        engine.setStartCheckpoint(2)
+        val summit = engine.checkpoints[2]
+
+        engine.player.takeDamage(engine.player.maxHp, engine.player.x, engine)
+        assertTrue(engine.player.dead)
+
+        repeat(100) { engine.update(1f / 60f) }
+
+        assertFalse(engine.player.dead)
+        assertEquals(summit.x, engine.player.x, 0.001f)
+        assertEquals(summit.y, engine.player.y, 0.001f)
+        assertEquals(engine.player.maxHp, engine.player.hp, 0.001f)
+        assertSame(summit, engine.activeCheckpoint)
+    }
 }
