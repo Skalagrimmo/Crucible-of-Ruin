@@ -33,7 +33,7 @@ data class BreakableDef(val x: Float, val y: Float, val dropType: String)
 @JsonClass(generateAdapter = true)
 data class CheckpointDef(val id: Int, val x: Float, val y: Float, val name: String)
 @JsonClass(generateAdapter = true)
-data class BossDef(val x: Float, val y: Float)
+data class BossDef(val x: Float, val y: Float, val triggerX: Float)
 
 /**
  * Converts immutable level data into fresh runtime entities.
