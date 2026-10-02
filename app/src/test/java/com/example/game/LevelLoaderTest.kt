@@ -428,6 +428,55 @@ class LevelLoaderTest {
     }
 
     @Test
+    fun level02_eachMainAscentStepIsLandableByRealPlayerPhysics() {
+        val resource = requireNotNull(
+            javaClass.classLoader?.getResourceAsStream("levels/level_02.json")
+        )
+        val source = LevelJson.parse(resource.bufferedReader().use { it.readText() })
+        val route = source.platforms.filter { it.w == 220f }.sortedByDescending { it.y }
+        assertEquals(24, route.size)
+
+        route.zipWithNext().forEachIndexed { index, (from, to) ->
+            val isolated = source.copy(
+                platforms = listOf(from, to),
+                hazards = emptyList(),
+                enemies = emptyList(),
+                breakables = emptyList(),
+                checkpoints = listOf(CheckpointDef(0, from.x + from.w / 2f, from.y - 100f, "Jump Test")),
+                boss = BossDef(source.width - 1f, 0f, source.width + 100f)
+            )
+            val engine = GameEngine(isolated)
+            engine.audio.isMuted = true
+            val player = engine.player
+            player.x = if (to.x >= from.x) from.x + from.w - player.w - 4f else from.x + 4f
+            player.y = from.y - player.h
+            player.grounded = true
+            player.coyoteTime = 0.12f
+            engine.inputRight = to.x >= from.x
+            engine.inputLeft = to.x < from.x
+            engine.inputJump = true
+            engine.onJumpPressed()
+
+            var landed = false
+            repeat(90) {
+                engine.update(1f / 60f)
+                if (it == 20) engine.inputJump = false
+                val feet = player.y + player.h
+                val overTarget = player.x + player.w > to.x && player.x < to.x + to.w
+                if (player.grounded && overTarget && kotlin.math.abs(feet - to.y) < 1f) {
+                    landed = true
+                    return@repeat
+                }
+            }
+
+            assertTrue(
+                "Real physics cannot land ascent step $index: (${from.x},${from.y}) -> (${to.x},${to.y})",
+                landed
+            )
+        }
+    }
+
+    @Test
     fun playerJumpConstants_defineExpectedFullJumpEnvelope() {
         val engine = GameEngine(verticalFixture())
         val player = engine.player
