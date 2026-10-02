@@ -41,9 +41,9 @@ class MainActivity : ComponentActivity() {
                 when (currentScreen) {
                     "menu" -> {
                         MainMenuScreen(
-                            onStartGame = { checkpoint, fps ->
+                            onStartGame = { levelId, checkpoint, fps ->
                                 startCheckpoint = checkpoint
-                                currentLevelId = "level_01"
+                                currentLevelId = levelId
                                 targetFps = fps
                                 currentScreen = "game"
                             }
