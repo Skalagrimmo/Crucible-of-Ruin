@@ -131,6 +131,48 @@ class LevelLoaderTest {
     }
 
     @Test
+    fun level02_gameplayObjectsStayInsideWorldBounds() {
+        val resource = requireNotNull(
+            javaClass.classLoader?.getResourceAsStream("levels/level_02.json")
+        )
+        val def = LevelJson.parse(resource.bufferedReader().use { it.readText() })
+
+        def.enemies.forEachIndexed { index, e ->
+            assertTrue("Enemy $index x out of bounds", e.x in 0f..def.width)
+            assertTrue("Enemy $index y out of bounds", e.y in 0f..def.height)
+        }
+        def.breakables.forEachIndexed { index, b ->
+            assertTrue("Breakable $index x out of bounds", b.x in 0f..def.width)
+            assertTrue("Breakable $index y out of bounds", b.y in 0f..def.height)
+        }
+        def.hazards.forEachIndexed { index, h ->
+            assertTrue("Hazard $index exceeds horizontal bounds", h.x >= 0f && h.x + h.w <= def.width)
+            assertTrue("Hazard $index exceeds vertical bounds", h.y >= 0f && h.y + h.h <= def.height)
+        }
+    }
+
+    @Test
+    fun level02_groundEnemiesAndBreakablesHaveNearbySupport() {
+        val resource = requireNotNull(
+            javaClass.classLoader?.getResourceAsStream("levels/level_02.json")
+        )
+        val def = LevelJson.parse(resource.bufferedReader().use { it.readText() })
+
+        fun hasSupport(x: Float, y: Float, maxDrop: Float): Boolean =
+            def.platforms.any { p ->
+                x >= p.x && x <= p.x + p.w &&
+                    p.y >= y && p.y - y <= maxDrop
+            }
+
+        def.enemies.filter { it.archetype != EnemyArchetype.CHERUB }.forEachIndexed { index, e ->
+            assertTrue("Ground enemy $index has no nearby support", hasSupport(e.x, e.y, 140f))
+        }
+        def.breakables.forEachIndexed { index, b ->
+            assertTrue("Breakable $index has no nearby support", hasSupport(b.x, b.y, 80f))
+        }
+    }
+
+    @Test
     fun level02_checkpointsRespawnAboveSupportingPlatforms() {
         val resource = requireNotNull(
             javaClass.classLoader?.getResourceAsStream("levels/level_02.json")
