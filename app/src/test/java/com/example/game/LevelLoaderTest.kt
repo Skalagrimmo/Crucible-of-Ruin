@@ -150,6 +150,35 @@ class LevelLoaderTest {
     }
 
     @Test
+    fun level02_checkpointsConnectToMainAscentRoute() {
+        val resource = requireNotNull(
+            javaClass.classLoader?.getResourceAsStream("levels/level_02.json")
+        )
+        val def = LevelJson.parse(resource.bufferedReader().use { it.readText() })
+        val route = def.platforms.filter { it.w == 220f }
+        val playerHeight = 44f
+
+        fun horizontalGap(a: PlatformDef, b: PlatformDef): Float = when {
+            b.x > a.x + a.w -> b.x - (a.x + a.w)
+            a.x > b.x + b.w -> a.x - (b.x + b.w)
+            else -> 0f
+        }
+
+        def.checkpoints.forEach { cp ->
+            val support = def.platforms
+                .filter { cp.x >= it.x && cp.x <= it.x + it.w && it.y >= cp.y + playerHeight }
+                .minByOrNull { it.y - (cp.y + playerHeight) }
+            assertNotNull("Checkpoint ${cp.id} has no support", support)
+
+            val connected = route.any { step ->
+                kotlin.math.abs(step.y - support!!.y) <= 100f &&
+                    horizontalGap(step, support) <= 66f
+            }
+            assertTrue("Checkpoint ${cp.id} is isolated from ascent route", connected)
+        }
+    }
+
+    @Test
     fun level02_hasVerticalProgressionAcrossMultipleViewports() {
         val resource = requireNotNull(
             javaClass.classLoader?.getResourceAsStream("levels/level_02.json")
