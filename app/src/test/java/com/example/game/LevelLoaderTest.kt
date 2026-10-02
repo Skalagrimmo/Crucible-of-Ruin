@@ -63,4 +63,30 @@ class LevelLoaderTest {
         assertEquals(28, LevelLoader.platforms(parsed).size)
         assertEquals(12, LevelLoader.enemies(parsed).size)
     }
+
+
+    @Test
+    fun engine_acceptsInjectedLevelDefinition() {
+        val tiny = LevelDef(
+            id = "test",
+            name = "Injected",
+            width = 900f,
+            height = 1080f,
+            platforms = listOf(PlatformDef(0f, 1000f, 900f, 80f, PlatformStyle.STONE)),
+            hazards = emptyList(),
+            enemies = emptyList(),
+            breakables = emptyList(),
+            checkpoints = listOf(CheckpointDef(0, 40f, 900f, "Start")),
+            boss = BossDef(800f, 900f)
+        )
+
+        val engine = GameEngine(tiny)
+
+        assertEquals(900f, engine.levelWidth, 0.001f)
+        assertEquals(1080f, engine.levelHeight, 0.001f)
+        assertEquals(1, engine.platforms.size)
+        assertEquals(0, engine.enemies.size)
+        assertEquals(800f, engine.boss.x, 0.001f)
+        assertEquals(40f, engine.player.x, 0.001f)
+    }
 }
