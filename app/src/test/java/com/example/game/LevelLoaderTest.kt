@@ -173,6 +173,30 @@ class LevelLoaderTest {
     }
 
     @Test
+    fun level02_groundEnemyPatrolsStayOnSupportingPlatforms() {
+        val resource = requireNotNull(
+            javaClass.classLoader?.getResourceAsStream("levels/level_02.json")
+        )
+        val def = LevelJson.parse(resource.bufferedReader().use { it.readText() })
+
+        def.enemies.filter { it.archetype != EnemyArchetype.CHERUB }.forEachIndexed { index, e ->
+            val support = def.platforms
+                .filter { e.x >= it.x && e.x <= it.x + it.w && it.y >= e.y && it.y - e.y <= 140f }
+                .minByOrNull { it.y - e.y }
+
+            assertNotNull("Ground enemy $index has no supporting platform", support)
+            assertTrue(
+                "Ground enemy $index patrol leaves left platform edge",
+                e.x - e.patrolRange >= support!!.x
+            )
+            assertTrue(
+                "Ground enemy $index patrol leaves right platform edge",
+                e.x + e.patrolRange <= support.x + support.w
+            )
+        }
+    }
+
+    @Test
     fun level02_checkpointsRespawnAboveSupportingPlatforms() {
         val resource = requireNotNull(
             javaClass.classLoader?.getResourceAsStream("levels/level_02.json")
