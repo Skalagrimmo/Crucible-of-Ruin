@@ -517,6 +517,7 @@
   "boss": {
     "x": 2020,
     "y": 20,
-    "triggerX": 1840
+    "triggerX": 1840,
+    "triggerY": 220
   }
 }
