@@ -47,6 +47,37 @@ class GameEngineRegressionTest {
     }
 
     @Test
+    fun level02_eachCheckpointSurvivesDeathAndRespawnsAtSelectedStage() {
+        val resource = requireNotNull(
+            javaClass.classLoader?.getResourceAsStream("levels/level_02.json")
+        )
+        val def = LevelJson.parse(resource.bufferedReader().use { it.readText() })
+
+        def.checkpoints.indices.forEach { checkpointIndex ->
+            val engine = GameEngine(def)
+            engine.audio.isMuted = true
+            engine.setStartCheckpoint(checkpointIndex)
+            val expected = def.checkpoints[checkpointIndex]
+
+            assertEquals(expected.id, engine.activeCheckpoint.id)
+            assertEquals(expected.x, engine.player.x, 0.001f)
+            assertEquals(expected.y, engine.player.y, 0.001f)
+
+            engine.player.takeDamage(engine.player.maxHp, engine.player.x, engine)
+            assertTrue(engine.player.dead)
+
+            repeat(240) {
+                if (engine.player.dead) engine.update(1f / 60f)
+            }
+
+            assertFalse("Checkpoint ${expected.id} did not respawn", engine.player.dead)
+            assertEquals(expected.id, engine.activeCheckpoint.id)
+            assertEquals(expected.x, engine.player.x, 0.001f)
+            assertEquals(expected.y, engine.player.y, 0.001f)
+        }
+    }
+
+    @Test
     fun jumpPress_setsJumpBuffer() {
         val engine = freshEngine()
 
