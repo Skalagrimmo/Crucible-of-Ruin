@@ -194,9 +194,9 @@ class LevelLoaderTest {
         )
         val def = LevelJson.parse(resource.bufferedReader().use { it.readText() })
 
-        // Player jump apex: v² / 2g ~= 88 px. Platforms in the current
-        // greybox are intentionally ~160-180 px apart vertically, so the
-        // ascent requires intermediate geometry rather than impossible jumps.
+        // Full-height jump apex: v² / 2g ~= 88 px. The greybox uses
+        // intermediate geometry so large floor-to-floor gaps are not expected
+        // to be cleared in a single jump.
         val jumpRise = 430f * 430f / (2f * 1050f)
         assertTrue(jumpRise in 85f..90f)
 
