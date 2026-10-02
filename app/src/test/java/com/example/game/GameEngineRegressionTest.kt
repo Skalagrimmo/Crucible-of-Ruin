@@ -78,6 +78,29 @@ class GameEngineRegressionTest {
     }
 
     @Test
+    fun level02_verticalRespawnSnapsCameraNearCheckpoint() {
+        val resource = requireNotNull(
+            javaClass.classLoader?.getResourceAsStream("levels/level_02.json")
+        )
+        val def = LevelJson.parse(resource.bufferedReader().use { it.readText() })
+        val engine = GameEngine(def)
+        engine.audio.isMuted = true
+        engine.setStartCheckpoint(2)
+        val checkpoint = engine.activeCheckpoint
+
+        engine.camera.y = 0f
+        engine.player.takeDamage(engine.player.maxHp, engine.player.x, engine)
+        repeat(240) {
+            if (engine.player.dead) engine.update(1f / 60f)
+        }
+
+        val expectedY = (checkpoint.y - engine.camera.viewH / 2f - 20f)
+            .coerceIn(0f, (engine.levelHeight - engine.camera.viewH).coerceAtLeast(0f))
+        assertFalse(engine.player.dead)
+        assertEquals(expectedY, engine.camera.y, 0.001f)
+    }
+
+    @Test
     fun jumpPress_setsJumpBuffer() {
         val engine = freshEngine()
 
