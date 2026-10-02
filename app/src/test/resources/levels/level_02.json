@@ -4,53 +4,351 @@
   "width": 2200,
   "height": 2160,
   "platforms": [
-    {"x":0,"y":2080,"w":760,"h":80,"style":"STONE"},
-    {"x":900,"y":2080,"w":1300,"h":80,"style":"STONE"},
-    {"x":180,"y":1900,"w":300,"h":24,"style":"STONE_LEDGE"},
-    {"x":600,"y":1740,"w":340,"h":24,"style":"IRON_GIRDER"},
-    {"x":1040,"y":1900,"w":300,"h":24,"style":"STONE_LEDGE"},
-    {"x":1450,"y":1730,"w":360,"h":24,"style":"IRON_GIRDER"},
-    {"x":1840,"y":1550,"w":300,"h":24,"style":"STONE_LEDGE"},
-    {"x":1360,"y":1390,"w":360,"h":24,"style":"IRON_GIRDER"},
-    {"x":900,"y":1230,"w":320,"h":24,"style":"STONE_LEDGE"},
-    {"x":430,"y":1070,"w":340,"h":24,"style":"IRON_GIRDER"},
-    {"x":40,"y":900,"w":320,"h":24,"style":"STONE_LEDGE"},
-    {"x":480,"y":740,"w":360,"h":24,"style":"IRON_GIRDER"},
-    {"x":940,"y":580,"w":340,"h":24,"style":"STONE_LEDGE"},
-    {"x":1380,"y":420,"w":360,"h":24,"style":"IRON_GIRDER"},
-    {"x":1760,"y":260,"w":440,"h":24,"style":"STONE"},
-    {"x":1660,"y":80,"w":540,"h":24,"style":"STONE"}
+    {
+      "x": 0,
+      "y": 2080,
+      "w": 760,
+      "h": 80,
+      "style": "STONE"
+    },
+    {
+      "x": 900,
+      "y": 2080,
+      "w": 1300,
+      "h": 80,
+      "style": "STONE"
+    },
+    {
+      "x": 180,
+      "y": 1900,
+      "w": 300,
+      "h": 24,
+      "style": "STONE_LEDGE"
+    },
+    {
+      "x": 600,
+      "y": 1740,
+      "w": 340,
+      "h": 24,
+      "style": "IRON_GIRDER"
+    },
+    {
+      "x": 1040,
+      "y": 1900,
+      "w": 300,
+      "h": 24,
+      "style": "STONE_LEDGE"
+    },
+    {
+      "x": 1450,
+      "y": 1730,
+      "w": 360,
+      "h": 24,
+      "style": "IRON_GIRDER"
+    },
+    {
+      "x": 1840,
+      "y": 1550,
+      "w": 300,
+      "h": 24,
+      "style": "STONE_LEDGE"
+    },
+    {
+      "x": 1360,
+      "y": 1390,
+      "w": 360,
+      "h": 24,
+      "style": "IRON_GIRDER"
+    },
+    {
+      "x": 900,
+      "y": 1230,
+      "w": 320,
+      "h": 24,
+      "style": "STONE_LEDGE"
+    },
+    {
+      "x": 430,
+      "y": 1070,
+      "w": 340,
+      "h": 24,
+      "style": "IRON_GIRDER"
+    },
+    {
+      "x": 40,
+      "y": 900,
+      "w": 320,
+      "h": 24,
+      "style": "STONE_LEDGE"
+    },
+    {
+      "x": 480,
+      "y": 740,
+      "w": 360,
+      "h": 24,
+      "style": "IRON_GIRDER"
+    },
+    {
+      "x": 940,
+      "y": 580,
+      "w": 340,
+      "h": 24,
+      "style": "STONE_LEDGE"
+    },
+    {
+      "x": 1380,
+      "y": 420,
+      "w": 360,
+      "h": 24,
+      "style": "IRON_GIRDER"
+    },
+    {
+      "x": 1760,
+      "y": 260,
+      "w": 440,
+      "h": 24,
+      "style": "STONE"
+    },
+    {
+      "x": 1660,
+      "y": 80,
+      "w": 540,
+      "h": 24,
+      "style": "STONE"
+    },
+    {
+      "x": 500,
+      "y": 1820,
+      "w": 180,
+      "h": 20,
+      "style": "STONE_LEDGE"
+    },
+    {
+      "x": 820,
+      "y": 1660,
+      "w": 180,
+      "h": 20,
+      "style": "IRON_GIRDER"
+    },
+    {
+      "x": 1120,
+      "y": 1580,
+      "w": 180,
+      "h": 20,
+      "style": "STONE_LEDGE"
+    },
+    {
+      "x": 1420,
+      "y": 1500,
+      "w": 180,
+      "h": 20,
+      "style": "IRON_GIRDER"
+    },
+    {
+      "x": 1640,
+      "y": 1310,
+      "w": 180,
+      "h": 20,
+      "style": "STONE_LEDGE"
+    },
+    {
+      "x": 1240,
+      "y": 1150,
+      "w": 180,
+      "h": 20,
+      "style": "IRON_GIRDER"
+    },
+    {
+      "x": 800,
+      "y": 990,
+      "w": 180,
+      "h": 20,
+      "style": "STONE_LEDGE"
+    },
+    {
+      "x": 380,
+      "y": 820,
+      "w": 180,
+      "h": 20,
+      "style": "IRON_GIRDER"
+    },
+    {
+      "x": 660,
+      "y": 660,
+      "w": 180,
+      "h": 20,
+      "style": "STONE_LEDGE"
+    },
+    {
+      "x": 1100,
+      "y": 500,
+      "w": 180,
+      "h": 20,
+      "style": "IRON_GIRDER"
+    },
+    {
+      "x": 1500,
+      "y": 340,
+      "w": 180,
+      "h": 20,
+      "style": "STONE_LEDGE"
+    },
+    {
+      "x": 1800,
+      "y": 180,
+      "w": 180,
+      "h": 20,
+      "style": "IRON_GIRDER"
+    }
   ],
   "hazards": [
-    {"x":760,"y":2050,"w":140,"h":30,"type":"SPIKES"},
-    {"x":1280,"y":2050,"w":120,"h":30,"type":"SPIKES"},
-    {"x":800,"y":1200,"w":90,"h":30,"type":"SPIKES"}
+    {
+      "x": 760,
+      "y": 2050,
+      "w": 140,
+      "h": 30,
+      "type": "SPIKES"
+    },
+    {
+      "x": 1280,
+      "y": 2050,
+      "w": 120,
+      "h": 30,
+      "type": "SPIKES"
+    },
+    {
+      "x": 800,
+      "y": 1200,
+      "w": 90,
+      "h": 30,
+      "type": "SPIKES"
+    }
   ],
   "enemies": [
-    {"x":280,"y":1840,"archetype":"LURKER","patrolRange":100},
-    {"x":700,"y":1680,"archetype":"GOLEM","patrolRange":80},
-    {"x":1120,"y":1840,"archetype":"LURKER","patrolRange":90},
-    {"x":1540,"y":1670,"archetype":"CHERUB","patrolRange":120},
-    {"x":1900,"y":1490,"archetype":"LURKER","patrolRange":80},
-    {"x":1440,"y":1330,"archetype":"GOLEM","patrolRange":80},
-    {"x":980,"y":1170,"archetype":"CHERUB","patrolRange":130},
-    {"x":520,"y":1010,"archetype":"LURKER","patrolRange":90},
-    {"x":100,"y":840,"archetype":"CHERUB","patrolRange":120},
-    {"x":560,"y":680,"archetype":"GOLEM","patrolRange":70},
-    {"x":1020,"y":520,"archetype":"LURKER","patrolRange":80},
-    {"x":1460,"y":360,"archetype":"CHERUB","patrolRange":100}
+    {
+      "x": 280,
+      "y": 1840,
+      "archetype": "LURKER",
+      "patrolRange": 100
+    },
+    {
+      "x": 700,
+      "y": 1680,
+      "archetype": "GOLEM",
+      "patrolRange": 80
+    },
+    {
+      "x": 1120,
+      "y": 1840,
+      "archetype": "LURKER",
+      "patrolRange": 90
+    },
+    {
+      "x": 1540,
+      "y": 1670,
+      "archetype": "CHERUB",
+      "patrolRange": 120
+    },
+    {
+      "x": 1900,
+      "y": 1490,
+      "archetype": "LURKER",
+      "patrolRange": 80
+    },
+    {
+      "x": 1440,
+      "y": 1330,
+      "archetype": "GOLEM",
+      "patrolRange": 80
+    },
+    {
+      "x": 980,
+      "y": 1170,
+      "archetype": "CHERUB",
+      "patrolRange": 130
+    },
+    {
+      "x": 520,
+      "y": 1010,
+      "archetype": "LURKER",
+      "patrolRange": 90
+    },
+    {
+      "x": 100,
+      "y": 840,
+      "archetype": "CHERUB",
+      "patrolRange": 120
+    },
+    {
+      "x": 560,
+      "y": 680,
+      "archetype": "GOLEM",
+      "patrolRange": 70
+    },
+    {
+      "x": 1020,
+      "y": 520,
+      "archetype": "LURKER",
+      "patrolRange": 80
+    },
+    {
+      "x": 1460,
+      "y": 360,
+      "archetype": "CHERUB",
+      "patrolRange": 100
+    }
   ],
   "breakables": [
-    {"x":360,"y":1876,"dropType":"health"},
-    {"x":760,"y":1716,"dropType":"flask"},
-    {"x":1510,"y":1366,"dropType":"health"},
-    {"x":1060,"y":556,"dropType":"flask"}
+    {
+      "x": 360,
+      "y": 1876,
+      "dropType": "health"
+    },
+    {
+      "x": 760,
+      "y": 1716,
+      "dropType": "flask"
+    },
+    {
+      "x": 1510,
+      "y": 1366,
+      "dropType": "health"
+    },
+    {
+      "x": 1060,
+      "y": 556,
+      "dropType": "flask"
+    }
   ],
   "checkpoints": [
-    {"id":0,"x":80,"y":1980,"name":"Belfry Foundations"},
-    {"id":1,"x":1880,"y":1450,"name":"Broken Bellworks"},
-    {"id":2,"x":520,"y":640,"name":"Ashen Gallery"},
-    {"id":3,"x":1800,"y":160,"name":"Crown of the Belfry"}
+    {
+      "id": 0,
+      "x": 80,
+      "y": 1980,
+      "name": "Belfry Foundations"
+    },
+    {
+      "id": 1,
+      "x": 1880,
+      "y": 1450,
+      "name": "Broken Bellworks"
+    },
+    {
+      "id": 2,
+      "x": 520,
+      "y": 640,
+      "name": "Ashen Gallery"
+    },
+    {
+      "id": 3,
+      "x": 1800,
+      "y": 160,
+      "name": "Crown of the Belfry"
+    }
   ],
-  "boss": {"x":2020,"y":20,"triggerX":1840}
+  "boss": {
+    "x": 2020,
+    "y": 20,
+    "triggerX": 1840
+  }
 }
