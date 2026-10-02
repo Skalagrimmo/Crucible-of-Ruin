@@ -23,7 +23,7 @@ data class LevelDef(
 )
 
 @JsonClass(generateAdapter = true)
-data class PlatformDef(val x: Float, val y: Float, val w: Float, val h: Float, val style: PlatformStyle)
+data class PlatformDef(val x: Float, val y: Float, val w: Float, val h: Float, val style: PlatformStyle, val oneWay: Boolean = false)
 @JsonClass(generateAdapter = true)
 data class HazardDef(val x: Float, val y: Float, val w: Float, val h: Float, val type: HazardType)
 @JsonClass(generateAdapter = true)
@@ -40,7 +40,7 @@ data class BossDef(val x: Float, val y: Float, val triggerX: Float, val triggerY
  */
 object LevelLoader {
     fun platforms(def: LevelDef): List<Platform> =
-        def.platforms.map { Platform(it.x, it.y, it.w, it.h, it.style) }
+        def.platforms.map { Platform(it.x, it.y, it.w, it.h, it.style, it.oneWay) }
 
     fun hazards(def: LevelDef): List<Hazard> =
         def.hazards.map { Hazard(it.x, it.y, it.w, it.h, it.type) }
