@@ -30,5 +30,5 @@
   "checkpoints": [
     {"id":0,"x":80,"y":380,"name":"Section 1: Ruined Bastion"},{"id":1,"x":1980,"y":340,"name":"Section 2: Crucible Laboratories"},{"id":2,"x":4400,"y":340,"name":"Section 3: Sanctum Approach"}
   ],
-  "boss": {"x":5750,"y":360}
+  "boss": {"x":5750,"y":360,"triggerX":5340}
 }
