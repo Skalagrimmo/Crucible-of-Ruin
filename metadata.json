@@ -1,0 +1,6 @@
+{
+  "name": "Crucible of Ruin",
+  "description": "A gothic 2D action platformer prototype featuring dark alchemy, melee combat, and boss battles.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
