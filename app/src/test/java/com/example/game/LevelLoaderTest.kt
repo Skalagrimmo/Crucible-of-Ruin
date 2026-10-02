@@ -188,6 +188,47 @@ class LevelLoaderTest {
     }
 
     @Test
+    fun level02_mainAscentPlatformStepsFitPlayerJumpEnvelope() {
+        val resource = requireNotNull(
+            javaClass.classLoader?.getResourceAsStream("levels/level_02.json")
+        )
+        val def = LevelJson.parse(resource.bufferedReader().use { it.readText() })
+
+        // Player jump apex: v² / 2g ~= 88 px. Platforms in the current
+        // greybox are intentionally ~160-180 px apart vertically, so the
+        // ascent requires intermediate geometry rather than impossible jumps.
+        val jumpRise = 430f * 430f / (2f * 1050f)
+        assertTrue(jumpRise in 85f..90f)
+
+        val sortedTops = def.platforms.map { it.y }.sortedDescending()
+        val verticalGaps = sortedTops.zipWithNext().map { (lower, upper) -> lower - upper }
+
+        assertTrue(verticalGaps.any { it > jumpRise })
+    }
+
+    @Test
+    fun playerJumpPhysics_reachesExpectedApexBand() {
+        val def = verticalFixture()
+        val engine = GameEngine(def)
+        engine.audio.isMuted = true
+        engine.player.x = 500f
+        engine.player.y = 1190f - engine.player.h
+        engine.player.grounded = true
+
+        val startY = engine.player.y
+        engine.input.jumpPressed = true
+        var highestY = startY
+
+        repeat(90) {
+            engine.update(1f / 60f)
+            highestY = minOf(highestY, engine.player.y)
+        }
+
+        val rise = startY - highestY
+        assertTrue(rise in 75f..100f)
+    }
+
+    @Test
     fun camera_smallerThanViewport_clampsToOrigin() {
         val camera = Camera2D()
         camera.update(450f, 270f, 1, 900f, 500f, 1f / 60f)
