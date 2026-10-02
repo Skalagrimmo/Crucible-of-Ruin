@@ -1,0 +1,29 @@
+{
+  "id": "level_vertical_test",
+  "name": "Vertical Camera Test",
+  "width": 1200.0,
+  "height": 1620.0,
+  "platforms": [
+    {"x":0,"y":1540,"w":1200,"h":80,"style":"STONE"},
+    {"x":120,"y":1370,"w":220,"h":20,"style":"STONE_LEDGE"},
+    {"x":420,"y":1190,"w":220,"h":20,"style":"IRON_GIRDER"},
+    {"x":720,"y":1010,"w":220,"h":20,"style":"STONE_LEDGE"},
+    {"x":420,"y":830,"w":220,"h":20,"style":"IRON_GIRDER"},
+    {"x":120,"y":650,"w":220,"h":20,"style":"STONE_LEDGE"},
+    {"x":420,"y":470,"w":220,"h":20,"style":"IRON_GIRDER"},
+    {"x":720,"y":290,"w":220,"h":20,"style":"STONE_LEDGE"},
+    {"x":900,"y":120,"w":260,"h":20,"style":"STONE"}
+  ],
+  "hazards": [{"x":520,"y":1510,"w":120,"h":30,"type":"SPIKES"}],
+  "enemies": [
+    {"x":500,"y":1140,"archetype":"LURKER","patrolRange":80},
+    {"x":780,"y":230,"archetype":"CHERUB","patrolRange":100}
+  ],
+  "breakables": [{"x":170,"y":1346,"dropType":"health"}],
+  "checkpoints": [
+    {"id":0,"x":60,"y":1460,"name":"Vertical Base"},
+    {"id":1,"x":760,"y":930,"name":"Vertical Midpoint"},
+    {"id":2,"x":940,"y":40,"name":"Vertical Summit"}
+  ],
+  "boss": {"x":1080,"y":60}
+}
