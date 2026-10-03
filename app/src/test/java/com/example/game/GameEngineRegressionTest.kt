@@ -113,7 +113,7 @@ class GameEngineRegressionTest {
         val engine = GameEngine(def)
         engine.audio.isMuted = true
         engine.player.x = 360f
-        engine.player.y = 350f
+        engine.player.y = 321f
         engine.player.vy = -430f
         engine.player.grounded = false
 
