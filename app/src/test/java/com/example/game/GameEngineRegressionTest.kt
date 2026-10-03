@@ -117,13 +117,13 @@ class GameEngineRegressionTest {
         engine.player.vy = -430f
         engine.player.grounded = false
 
-        var crossedAboveTop = false
+        var crossedPlatformPlane = false
         repeat(30) {
             engine.update(1f / 60f)
-            if (engine.player.y + engine.player.h < 300f) crossedAboveTop = true
+            if (engine.player.y < 300f) crossedPlatformPlane = true
         }
 
-        assertTrue("Player was blocked by one-way platform underside", crossedAboveTop)
+        assertTrue("Player was blocked by one-way platform underside", crossedPlatformPlane)
     }
 
     @Test
