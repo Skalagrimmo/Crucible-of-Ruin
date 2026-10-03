@@ -102,8 +102,7 @@ class GameEngineRegressionTest {
 
     @Test
     fun oneWayPlatform_allowsPlayerToPassUpThroughItsUnderside() {
-        val base = freshEngine()
-        val def = base.levelDef.copy(
+        val def = canonicalLevel().copy(
             platforms = listOf(PlatformDef(300f, 300f, 220f, 20f, PlatformStyle.STONE_LEDGE, oneWay = true)),
             hazards = emptyList(),
             enemies = emptyList(),
@@ -129,8 +128,7 @@ class GameEngineRegressionTest {
 
     @Test
     fun oneWayPlatform_catchesPlayerWhenFallingFromAbove() {
-        val base = freshEngine()
-        val def = base.levelDef.copy(
+        val def = canonicalLevel().copy(
             platforms = listOf(PlatformDef(300f, 300f, 220f, 20f, PlatformStyle.STONE_LEDGE, oneWay = true)),
             hazards = emptyList(),
             enemies = emptyList(),
@@ -154,8 +152,7 @@ class GameEngineRegressionTest {
 
     @Test
     fun groundEnemy_landsOnOneWayPlatformFromAbove() {
-        val base = freshEngine()
-        val def = base.levelDef.copy(
+        val def = canonicalLevel().copy(
             platforms = listOf(PlatformDef(300f, 300f, 220f, 20f, PlatformStyle.STONE_LEDGE, oneWay = true)),
             hazards = emptyList(),
             enemies = listOf(EnemyDef(360f, 200f, EnemyArchetype.GOLEM, 0f)),
