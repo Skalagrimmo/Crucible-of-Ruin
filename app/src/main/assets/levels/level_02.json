@@ -488,6 +488,12 @@
       "y": 360,
       "archetype": "CHERUB",
       "patrolRange": 100
+    },
+    {
+      "x": 1510,
+      "y": 360,
+      "archetype": "GOLEM",
+      "patrolRange": 70
     }
   ],
   "breakables": [
@@ -510,6 +516,11 @@
       "x": 1060,
       "y": 556,
       "dropType": "flask"
+    },
+    {
+      "x": 1650,
+      "y": 216,
+      "dropType": "health"
     }
   ],
   "checkpoints": [
