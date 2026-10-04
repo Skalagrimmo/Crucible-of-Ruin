@@ -417,6 +417,32 @@ class GameEngineRegressionTest {
     }
 
     @Test
+    fun level02_restartResetsBossEncounterButKeepsFinalCheckpoint() {
+        val resource = requireNotNull(
+            javaClass.classLoader?.getResourceAsStream("levels/level_02.json")
+        )
+        val def = LevelJson.parse(resource.bufferedReader().use { it.readText() })
+        val engine = GameEngine(def)
+        engine.audio.isMuted = true
+        engine.setStartCheckpoint(3)
+
+        engine.player.x = def.boss.triggerX + 1f
+        engine.player.y = def.boss.triggerY ?: engine.player.y
+        engine.update(1f / 60f)
+        assertTrue(engine.boss.active)
+        engine.boss.hp = engine.boss.maxHp / 2f
+
+        engine.restart()
+
+        assertEquals(3, engine.activeCheckpoint.id)
+        assertFalse(engine.boss.active)
+        assertFalse(engine.boss.dead)
+        assertEquals(engine.boss.maxHp, engine.boss.hp, 0.001f)
+        assertEquals(engine.activeCheckpoint.x, engine.player.x, 0.001f)
+        assertEquals(engine.activeCheckpoint.y, engine.player.y, 0.001f)
+    }
+
+    @Test
     fun level02_restartPreservesActiveCheckpointProgress() {
         val resource = requireNotNull(
             javaClass.classLoader?.getResourceAsStream("levels/level_02.json")
