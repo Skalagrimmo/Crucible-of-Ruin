@@ -203,6 +203,30 @@ class GameEngineRegressionTest {
     }
 
     @Test
+    fun lurkerLungeReturnsToOneWaySupportAfterAttack() {
+        val platformY = 300f
+        val def = canonicalLevel().copy(
+            platforms = listOf(PlatformDef(300f, platformY, 220f, 20f, PlatformStyle.STONE_LEDGE, oneWay = true)),
+            hazards = emptyList(),
+            enemies = listOf(EnemyDef(360f, platformY - 40f, EnemyArchetype.LURKER, 60f)),
+            breakables = emptyList(),
+            checkpoints = listOf(CheckpointDef(0, 500f, platformY - 44f, "Bait")),
+            boss = BossDef(900f, 0f, 1000f)
+        )
+        val engine = GameEngine(def)
+        engine.audio.isMuted = true
+        val lurker = engine.enemies.single()
+        engine.player.x = 470f
+        engine.player.y = platformY - engine.player.h
+
+        repeat(180) { engine.update(1f / 60f) }
+
+        assertTrue("Lurker failed to return to its one-way support", lurker.grounded)
+        assertEquals(platformY - lurker.h, lurker.y, 0.01f)
+        assertTrue("Lurker fell through its one-way support", lurker.y + lurker.h <= platformY + 0.01f)
+    }
+
+    @Test
     fun groundEnemy_landsOnOneWayPlatformFromAbove() {
         val def = canonicalLevel().copy(
             platforms = listOf(PlatformDef(300f, 300f, 220f, 20f, PlatformStyle.STONE_LEDGE, oneWay = true)),
