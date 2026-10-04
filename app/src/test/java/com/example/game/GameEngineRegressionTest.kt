@@ -253,6 +253,43 @@ class GameEngineRegressionTest {
     }
 
     @Test
+    fun level02_finalCheckpointIsSafeUntilPlayerEntersBossArena() {
+        val resource = requireNotNull(
+            javaClass.classLoader?.getResourceAsStream("levels/level_02.json")
+        )
+        val def = LevelJson.parse(resource.bufferedReader().use { it.readText() })
+        val engine = GameEngine(def)
+        engine.audio.isMuted = true
+
+        engine.setStartCheckpoint(3)
+        engine.update(1f / 60f)
+        assertFalse("Boss activated while resting at final checkpoint", engine.boss.active)
+
+        engine.player.x = def.boss.triggerX + 1f
+        engine.player.y = def.boss.triggerY ?: engine.player.y
+        engine.update(1f / 60f)
+        assertTrue("Entering the upper arena did not activate boss", engine.boss.active)
+    }
+
+    @Test
+    fun level02_bossTriggerHasUpperArenaSupport() {
+        val resource = requireNotNull(
+            javaClass.classLoader?.getResourceAsStream("levels/level_02.json")
+        )
+        val def = LevelJson.parse(resource.bufferedReader().use { it.readText() })
+        val triggerY = requireNotNull(def.boss.triggerY)
+
+        val supportsTrigger = def.platforms.any { platform ->
+            def.boss.triggerX >= platform.x &&
+                def.boss.triggerX <= platform.x + platform.w &&
+                platform.y >= triggerY &&
+                platform.y - triggerY <= 100f
+        }
+
+        assertTrue("Boss trigger is not positioned over a usable upper-arena platform", supportsTrigger)
+    }
+
+    @Test
     fun deadPlayer_cannotActivateNearbyCheckpointDuringRespawnCountdown() {
         val engine = freshEngine()
         val next = engine.checkpoints[1]
