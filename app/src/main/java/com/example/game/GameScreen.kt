@@ -33,6 +33,7 @@ import androidx.compose.runtime.withFrameNanos
 import com.example.game.data.AuthRepository
 import com.example.game.data.UserSave
 import com.example.game.data.UserSaveRepository
+import com.example.game.data.withProgressAtLeast
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -73,14 +74,9 @@ fun GameScreen(
         val currentUid = user?.uid ?: ""
         scope.launch {
             val current = saveRepo.getUserSave(currentUid)
+            val progressed = current.withProgressAtLeast(levelId, cpId)
             saveRepo.saveUserSave(
-                current.copy(
-                    lastLevelId = levelId,
-                    lastCheckpoint = if (current.lastLevelId == levelId) {
-                        maxOf(current.lastCheckpoint, cpId)
-                    } else {
-                        cpId
-                    },
+                progressed.copy(
                     foesSlain = current.foesSlain + engine.enemiesDefeated
                 )
             )
