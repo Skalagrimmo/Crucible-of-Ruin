@@ -171,6 +171,23 @@ class GameEngineRegressionTest {
     }
 
     @Test
+    fun hazardDoesNotReapplyBounceWhilePlayerIsInvulnerable() {
+        val source = canonicalLevel()
+        val hazard = requireNotNull(source.hazards.firstOrNull())
+        val engine = GameEngine(source)
+        engine.audio.isMuted = true
+        engine.player.x = hazard.x
+        engine.player.y = hazard.y
+        engine.player.invulnTimer = 1f
+        engine.player.vy = 40f
+
+        engine.update(1f / 60f)
+
+        assertTrue("Invulnerable player was bounced again by hazard", engine.player.vy > -280f)
+        assertEquals(engine.player.maxHp, engine.player.hp, 0.001f)
+    }
+
+    @Test
     fun groundEnemy_landsOnOneWayPlatformFromAbove() {
         val def = canonicalLevel().copy(
             platforms = listOf(PlatformDef(300f, 300f, 220f, 20f, PlatformStyle.STONE_LEDGE, oneWay = true)),
