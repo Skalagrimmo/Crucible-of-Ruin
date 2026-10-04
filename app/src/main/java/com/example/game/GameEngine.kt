@@ -285,7 +285,14 @@ class GameEngine(
         activeCheckpoint = checkpoints[idx]
         player.x = activeCheckpoint.x
         player.y = activeCheckpoint.y
-        camera.x = (player.x - 300f).coerceAtLeast(0f)
+        snapCameraToPlayer()
+    }
+
+    private fun snapCameraToPlayer() {
+        camera.x = (player.x - camera.viewW / 2f)
+            .coerceIn(0f, (levelWidth - camera.viewW).coerceAtLeast(0f))
+        camera.y = (player.y - camera.viewH / 2f - 20f)
+            .coerceIn(0f, (levelHeight - camera.viewH).coerceAtLeast(0f))
     }
 
     fun restart() {
@@ -391,10 +398,7 @@ class GameEngine(
             player.respawnTimer -= dt
             if (player.respawnTimer <= 0f) {
                 player.respawn(activeCheckpoint)
-                camera.x = (player.x - camera.viewW / 2f)
-                    .coerceIn(0f, (levelWidth - camera.viewW).coerceAtLeast(0f))
-                camera.y = (player.y - camera.viewH / 2f - 20f)
-                    .coerceIn(0f, (levelHeight - camera.viewH).coerceAtLeast(0f))
+                snapCameraToPlayer()
             }
             return
         }
