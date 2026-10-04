@@ -472,7 +472,7 @@
       "patrolRange": 120
     },
     {
-      "x": 560,
+      "x": 720,
       "y": 680,
       "archetype": "GOLEM",
       "patrolRange": 70
