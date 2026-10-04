@@ -223,14 +223,14 @@ class GameEngineRegressionTest {
         var enteredSwoop = false
         var enteredAscend = false
         var recoveredToFly = false
-        repeat(240) {
+        for (frame in 0 until 240) {
             engine.update(1f / 60f)
             when (cherub.state) {
                 "swoop" -> enteredSwoop = true
                 "ascend" -> if (enteredSwoop) enteredAscend = true
                 "fly" -> if (enteredAscend) recoveredToFly = true
             }
-            if (recoveredToFly) return@repeat
+            if (recoveredToFly) break
         }
 
         assertTrue("Cherub never entered swoop despite nearby lower player", enteredSwoop)
