@@ -625,9 +625,7 @@ class GameEngine(
                                 e.y = e.startY
                                 e.vy = 0f
                                 e.state = "fly"
-                            } else if (e.stateTimer <= 0f) {
-                                e.state = "fly"
-                            }
+
                         }
                     }
                 }
