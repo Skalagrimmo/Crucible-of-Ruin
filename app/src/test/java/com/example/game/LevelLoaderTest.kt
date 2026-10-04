@@ -197,6 +197,29 @@ class LevelLoaderTest {
     }
 
     @Test
+    fun level02_checkpointRespawnsKeepDistanceFromGroundEnemyPatrols() {
+        val resource = requireNotNull(
+            javaClass.classLoader?.getResourceAsStream("levels/level_02.json")
+        )
+        val def = LevelJson.parse(resource.bufferedReader().use { it.readText() })
+
+        def.checkpoints.forEach { cp ->
+            def.enemies.filter { it.archetype != EnemyArchetype.CHERUB }.forEachIndexed { index, e ->
+                val sameVerticalBand = kotlin.math.abs(e.y - cp.y) <= 100f
+                if (sameVerticalBand) {
+                    val patrolLeft = e.x - e.patrolRange
+                    val patrolRight = e.x + e.patrolRange
+                    val safePadding = 100f
+                    assertTrue(
+                        "Checkpoint ${cp.id} is too close to ground enemy ${index} patrol",
+                        cp.x + safePadding <= patrolLeft || cp.x - safePadding >= patrolRight
+                    )
+                }
+            }
+        }
+    }
+
+    @Test
     fun level02_checkpointsRespawnAboveSupportingPlatforms() {
         val resource = requireNotNull(
             javaClass.classLoader?.getResourceAsStream("levels/level_02.json")
