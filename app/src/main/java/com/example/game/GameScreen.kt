@@ -87,9 +87,15 @@ fun GameScreen(
         }
     }
 
-    // Auto-save victory stats
-    LaunchedEffect(engine.state) {
-        if (engine.state == "victory") {
+    var victorySaved by remember(engine) { mutableStateOf(false) }
+
+    // Recomposition ticker triggered only on frame ticks
+    var frameTick by remember { mutableIntStateOf(0) }
+
+    // Auto-save victory stats after the engine frame that enters victory.
+    LaunchedEffect(frameTick) {
+        if (engine.state == "victory" && !victorySaved) {
+            victorySaved = true
             val currentUid = user?.uid ?: ""
             scope.launch {
                 val current = saveRepo.getUserSave(currentUid)
@@ -106,9 +112,6 @@ fun GameScreen(
             }
         }
     }
-
-    // Recomposition ticker triggered only on frame ticks
-    var frameTick by remember { mutableIntStateOf(0) }
 
     // Target frame rate cap (default: 30 FPS for low-end hardware optimization)
     var targetFps by remember { mutableIntStateOf(initialTargetFps) }
