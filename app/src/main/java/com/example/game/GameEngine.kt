@@ -298,6 +298,7 @@ class GameEngine(
     fun restart() {
         initLevel()
         player.respawn(activeCheckpoint)
+        snapCameraToPlayer()
         state = "playing"
         timeElapsed = 0f
         enemiesDefeated = 0
