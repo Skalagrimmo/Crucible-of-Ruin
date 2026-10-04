@@ -220,6 +220,24 @@ class LevelLoaderTest {
     }
 
     @Test
+    fun level02_checkpointRespawnsStartOutsideCherubAggroRange() {
+        val resource = requireNotNull(
+            javaClass.classLoader?.getResourceAsStream("levels/level_02.json")
+        )
+        val def = LevelJson.parse(resource.bufferedReader().use { it.readText() })
+
+        def.checkpoints.forEach { cp ->
+            def.enemies.filter { it.archetype == EnemyArchetype.CHERUB }.forEachIndexed { index, e ->
+                val distance = kotlin.math.hypot(cp.x - e.x, cp.y - e.y)
+                assertTrue(
+                    "Checkpoint ${cp.id} starts inside cherub ${index} aggro range",
+                    distance >= 240f
+                )
+            }
+        }
+    }
+
+    @Test
     fun level02_checkpointsRespawnAboveSupportingPlatforms() {
         val resource = requireNotNull(
             javaClass.classLoader?.getResourceAsStream("levels/level_02.json")
