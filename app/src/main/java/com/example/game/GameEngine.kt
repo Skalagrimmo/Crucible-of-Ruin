@@ -102,6 +102,16 @@ class PlayerEntity(var x: Float, var y: Float) {
         return true
     }
 
+    fun kill(engine: GameEngine) {
+        if (dead) return
+        hp = 0f
+        dead = true
+        respawnTimer = 1.4f
+        engine.audio.play("hurt")
+        engine.camera.shake(8f)
+        engine.particles.spawnEnemyDeath(x + w / 2f, y + h / 2f, Color(0xFF8020A0))
+    }
+
     fun respawn(cp: Checkpoint) {
         x = cp.x
         y = cp.y
@@ -499,7 +509,7 @@ class GameEngine(
 
         // Pit fall
         if (player.y > levelHeight + 100f) {
-            player.takeDamage(100f, player.x, this)
+            player.kill(this)
         }
 
         // Melee combat checks
