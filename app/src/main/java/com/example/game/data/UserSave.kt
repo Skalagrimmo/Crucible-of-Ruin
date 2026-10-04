@@ -19,3 +19,11 @@ fun UserSave.progressRank(): Int {
 }
 
 fun UserSave.isProgressAfter(other: UserSave): Boolean = progressRank() > other.progressRank()
+
+fun UserSave.withProgressAtLeast(levelId: String, checkpoint: Int): UserSave {
+    val candidate = copy(
+        lastLevelId = levelId,
+        lastCheckpoint = checkpoint.coerceAtLeast(0)
+    )
+    return if (candidate.isProgressAfter(this)) candidate else this
+}
