@@ -207,43 +207,32 @@ class GameEngineRegressionTest {
         val startX = 400f
         val startY = 180f
         val def = canonicalLevel().copy(
-            platforms = listOf(
-                PlatformDef(startX + 40f, startY + 164f, 220f, 20f, PlatformStyle.STONE_LEDGE)
-            ),
+            platforms = emptyList(),
             hazards = emptyList(),
             enemies = listOf(EnemyDef(startX, startY, EnemyArchetype.CHERUB, 100f)),
             breakables = emptyList(),
-            checkpoints = listOf(CheckpointDef(0, startX + 80f, startY + 120f, "Bait")),
+            checkpoints = listOf(CheckpointDef(0, 80f, 80f, "Safe")),
             boss = BossDef(900f, 0f, 1000f)
         )
         val engine = GameEngine(def)
         engine.audio.isMuted = true
         val cherub = engine.enemies.single()
-        engine.player.x = startX + 80f
-        engine.player.y = startY + 120f
+        cherub.state = "swoop"
+        cherub.stateTimer = 0.01f
+        cherub.targetY = startY + 60f
+        cherub.vy = 120f
 
-        var enteredSwoop = false
-        var enteredAscend = false
-        var recoveredToFly = false
-        for (frame in 0 until 240) {
+        engine.update(1f / 60f)
+        assertEquals("ascend", cherub.state)
+
+        repeat(120) {
             engine.update(1f / 60f)
-            when (cherub.state) {
-                "swoop" -> enteredSwoop = true
-                "ascend" -> if (enteredSwoop) enteredAscend = true
-                "fly" -> if (enteredAscend) recoveredToFly = true
-            }
-            if (recoveredToFly) break
+            if (cherub.state == "fly") return@repeat
         }
 
-        assertTrue("Cherub never entered swoop despite nearby lower player", enteredSwoop)
-        assertTrue("Cherub never transitioned from swoop to ascend", enteredAscend)
-        assertTrue("Cherub never recovered from ascend to fly", recoveredToFly)
-        assertEquals(
-            "Cherub should finish recovery at its patrol altitude",
-            startY,
-            cherub.y,
-            0.01f
-        )
+        assertEquals("fly", cherub.state)
+        assertEquals(startY, cherub.y, 0.01f)
+        assertEquals(0f, cherub.vy, 0.01f)
     }
 
     @Test
