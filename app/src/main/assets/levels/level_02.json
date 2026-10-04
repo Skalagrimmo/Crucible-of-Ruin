@@ -448,10 +448,10 @@
       "patrolRange": 60
     },
     {
-      "x": 1440,
+      "x": 1640,
       "y": 1330,
       "archetype": "GOLEM",
-      "patrolRange": 80
+      "patrolRange": 40
     },
     {
       "x": 980,
