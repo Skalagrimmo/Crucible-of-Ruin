@@ -79,8 +79,8 @@ class PlayerEntity(var x: Float, var y: Float) {
     var respawnTimer: Float = 0f
     var walkAnimTimer: Float = 0f
 
-    fun takeDamage(amount: Float, fromX: Float, engine: GameEngine) {
-        if (invulnTimer > 0f || dead) return
+    fun takeDamage(amount: Float, fromX: Float, engine: GameEngine): Boolean {
+        if (invulnTimer > 0f || dead) return false
         hp -= amount
         engine.audio.play("hurt")
         engine.camera.shake(8f)
@@ -91,7 +91,7 @@ class PlayerEntity(var x: Float, var y: Float) {
             dead = true
             respawnTimer = 1.4f
             engine.particles.spawnEnemyDeath(x + w / 2f, y + h / 2f, Color(0xFF8020A0))
-            return
+            return true
         }
 
         invulnTimer = 1.1f
@@ -490,8 +490,9 @@ class GameEngine(
         // Hazards
         for (h in hazards) {
             if (aabbIntersects(player.x, player.y, player.w, player.h, h.x, h.y, h.w, h.h)) {
-                player.takeDamage(25f, h.x + h.w / 2f, this)
-                player.vy = -280f
+                if (player.takeDamage(25f, h.x + h.w / 2f, this)) {
+                    player.vy = -280f
+                }
             }
         }
 
