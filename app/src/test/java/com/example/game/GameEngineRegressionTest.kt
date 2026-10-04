@@ -221,13 +221,21 @@ class GameEngineRegressionTest {
         engine.player.y = startY + 120f
 
         var enteredSwoop = false
+        var enteredAscend = false
+        var recoveredToFly = false
         repeat(240) {
             engine.update(1f / 60f)
-            if (cherub.state == "swoop") enteredSwoop = true
+            when (cherub.state) {
+                "swoop" -> enteredSwoop = true
+                "ascend" -> if (enteredSwoop) enteredAscend = true
+                "fly" -> if (enteredAscend) recoveredToFly = true
+            }
+            if (recoveredToFly) return@repeat
         }
 
         assertTrue("Cherub never entered swoop despite nearby lower player", enteredSwoop)
-        assertEquals("fly", cherub.state)
+        assertTrue("Cherub never transitioned from swoop to ascend", enteredAscend)
+        assertTrue("Cherub never recovered from ascend to fly", recoveredToFly)
         assertTrue(
             "Cherub failed to recover near its patrol altitude",
             kotlin.math.abs(cherub.y - startY) <= 25f
