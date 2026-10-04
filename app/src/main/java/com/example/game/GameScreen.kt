@@ -69,17 +69,21 @@ fun GameScreen(
         }
     }
 
+    var lastSavedDefeats by remember(engine) { mutableIntStateOf(0) }
+
     // Auto-save checkpoint progress to local storage and Firestore
     engine.onCheckpointActivated = { cpId ->
         val currentUid = user?.uid ?: ""
         scope.launch {
             val current = saveRepo.getUserSave(currentUid)
             val progressed = current.withProgressAtLeast(levelId, cpId)
+            val defeatDelta = (engine.enemiesDefeated - lastSavedDefeats).coerceAtLeast(0)
             saveRepo.saveUserSave(
                 progressed.copy(
-                    foesSlain = current.foesSlain + engine.enemiesDefeated
+                    foesSlain = current.foesSlain + defeatDelta
                 )
             )
+            lastSavedDefeats = engine.enemiesDefeated
         }
     }
 
@@ -90,13 +94,15 @@ fun GameScreen(
             scope.launch {
                 val current = saveRepo.getUserSave(currentUid)
                 val bestTime = if (current.bestTimeSeconds <= 0f) engine.timeElapsed else minOf(current.bestTimeSeconds, engine.timeElapsed)
+                val defeatDelta = (engine.enemiesDefeated - lastSavedDefeats).coerceAtLeast(0)
                 saveRepo.saveUserSave(
                     current.copy(
                         bestTimeSeconds = bestTime,
-                        foesSlain = current.foesSlain + engine.enemiesDefeated,
+                        foesSlain = current.foesSlain + defeatDelta,
                         highScore = maxOf(current.highScore, (engine.enemiesDefeated * 100 + engine.player.hp.toInt() * 10))
                     )
                 )
+                lastSavedDefeats = engine.enemiesDefeated
             }
         }
     }
