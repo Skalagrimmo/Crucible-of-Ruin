@@ -614,13 +614,20 @@ class GameEngine(
                             e.vy = 120f
                             if (e.y >= e.targetY || e.stateTimer <= 0f) {
                                 e.state = "ascend"
-                                e.stateTimer = 0.9f
+                                // Height controls recovery; timer is only a watchdog for malformed/off-map states.
+                                e.stateTimer = 2.5f
                             }
                         }
                         "ascend" -> {
                             e.stateTimer -= dt
                             e.vy = -130f
-                            if (e.y <= e.startY || e.stateTimer <= 0f) e.state = "fly"
+                            if (e.y <= e.startY) {
+                                e.y = e.startY
+                                e.vy = 0f
+                                e.state = "fly"
+                            } else if (e.stateTimer <= 0f) {
+                                e.state = "fly"
+                            }
                         }
                     }
                 }
