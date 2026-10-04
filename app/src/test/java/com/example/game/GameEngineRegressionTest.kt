@@ -203,6 +203,38 @@ class GameEngineRegressionTest {
     }
 
     @Test
+    fun cherubSwoopRecoversToPatrolAltitude() {
+        val startX = 400f
+        val startY = 180f
+        val def = canonicalLevel().copy(
+            platforms = emptyList(),
+            hazards = emptyList(),
+            enemies = listOf(EnemyDef(startX, startY, EnemyArchetype.CHERUB, 100f)),
+            breakables = emptyList(),
+            checkpoints = listOf(CheckpointDef(0, startX + 80f, startY + 120f, "Bait")),
+            boss = BossDef(900f, 0f, 1000f)
+        )
+        val engine = GameEngine(def)
+        engine.audio.isMuted = true
+        val cherub = engine.enemies.single()
+        engine.player.x = startX + 80f
+        engine.player.y = startY + 120f
+
+        var enteredSwoop = false
+        repeat(240) {
+            engine.update(1f / 60f)
+            if (cherub.state == "swoop") enteredSwoop = true
+        }
+
+        assertTrue("Cherub never entered swoop despite nearby lower player", enteredSwoop)
+        assertEquals("fly", cherub.state)
+        assertTrue(
+            "Cherub failed to recover near its patrol altitude",
+            kotlin.math.abs(cherub.y - startY) <= 25f
+        )
+    }
+
+    @Test
     fun lurkerLungeReturnsToOneWaySupportAfterAttack() {
         val platformY = 300f
         val def = canonicalLevel().copy(
