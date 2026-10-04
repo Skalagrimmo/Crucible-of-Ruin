@@ -417,6 +417,27 @@ class GameEngineRegressionTest {
     }
 
     @Test
+    fun level02_restartPreservesActiveCheckpointProgress() {
+        val resource = requireNotNull(
+            javaClass.classLoader?.getResourceAsStream("levels/level_02.json")
+        )
+        val def = LevelJson.parse(resource.bufferedReader().use { it.readText() })
+        val engine = GameEngine(def)
+        engine.audio.isMuted = true
+        engine.setStartCheckpoint(2)
+
+        engine.restart()
+
+        assertEquals(2, engine.activeCheckpoint.id)
+        assertTrue(engine.checkpoints[0].activated)
+        assertTrue(engine.checkpoints[1].activated)
+        assertTrue(engine.checkpoints[2].activated)
+        assertFalse(engine.checkpoints[3].activated)
+        assertEquals(engine.activeCheckpoint.x, engine.player.x, 0.001f)
+        assertEquals(engine.activeCheckpoint.y, engine.player.y, 0.001f)
+    }
+
+    @Test
     fun level02_restartSnapsCameraBackToActiveCheckpoint() {
         val resource = requireNotNull(
             javaClass.classLoader?.getResourceAsStream("levels/level_02.json")
