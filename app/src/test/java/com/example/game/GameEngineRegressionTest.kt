@@ -78,6 +78,26 @@ class GameEngineRegressionTest {
     }
 
     @Test
+    fun level02_startCheckpointImmediatelySnapsCameraToVerticalPosition() {
+        val resource = requireNotNull(
+            javaClass.classLoader?.getResourceAsStream("levels/level_02.json")
+        )
+        val def = LevelJson.parse(resource.bufferedReader().use { it.readText() })
+        val engine = GameEngine(def)
+        engine.audio.isMuted = true
+
+        engine.setStartCheckpoint(2)
+
+        val checkpoint = engine.activeCheckpoint
+        val expectedX = (checkpoint.x - engine.camera.viewW / 2f)
+            .coerceIn(0f, (engine.levelWidth - engine.camera.viewW).coerceAtLeast(0f))
+        val expectedY = (checkpoint.y - engine.camera.viewH / 2f - 20f)
+            .coerceIn(0f, (engine.levelHeight - engine.camera.viewH).coerceAtLeast(0f))
+        assertEquals(expectedX, engine.camera.x, 0.001f)
+        assertEquals(expectedY, engine.camera.y, 0.001f)
+    }
+
+    @Test
     fun level02_verticalRespawnSnapsCameraNearCheckpoint() {
         val resource = requireNotNull(
             javaClass.classLoader?.getResourceAsStream("levels/level_02.json")
