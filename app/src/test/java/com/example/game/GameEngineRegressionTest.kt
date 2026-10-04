@@ -207,7 +207,9 @@ class GameEngineRegressionTest {
         val startX = 400f
         val startY = 180f
         val def = canonicalLevel().copy(
-            platforms = emptyList(),
+            platforms = listOf(
+                PlatformDef(startX + 40f, startY + 164f, 220f, 20f, PlatformStyle.STONE_LEDGE)
+            ),
             hazards = emptyList(),
             enemies = listOf(EnemyDef(startX, startY, EnemyArchetype.CHERUB, 100f)),
             breakables = emptyList(),
