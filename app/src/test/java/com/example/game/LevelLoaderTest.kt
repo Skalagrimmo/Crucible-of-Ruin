@@ -152,6 +152,30 @@ class LevelLoaderTest {
     }
 
     @Test
+    fun level02_platformHazardsLeaveWalkableSpaceOnTheirSupport() {
+        val resource = requireNotNull(
+            javaClass.classLoader?.getResourceAsStream("levels/level_02.json")
+        )
+        val def = LevelJson.parse(resource.bufferedReader().use { it.readText() })
+        val minimumPassage = 58f // player width (26) plus comfortable clearance
+
+        def.hazards.forEachIndexed { index, h ->
+            val support = def.platforms
+                .filter { h.x >= it.x && h.x + h.w <= it.x + it.w && it.y >= h.y }
+                .minByOrNull { it.y - h.y }
+
+            if (support != null && support.y - h.y <= h.h + 40f) {
+                val freeLeft = h.x - support.x
+                val freeRight = support.x + support.w - (h.x + h.w)
+                assertTrue(
+                    "Hazard ${index} blocks its supporting platform",
+                    maxOf(freeLeft, freeRight) >= minimumPassage
+                )
+            }
+        }
+    }
+
+    @Test
     fun level02_groundEnemiesAndBreakablesHaveNearbySupport() {
         val resource = requireNotNull(
             javaClass.classLoader?.getResourceAsStream("levels/level_02.json")
