@@ -171,6 +171,21 @@ class GameEngineRegressionTest {
     }
 
     @Test
+    fun pitFallKillsPlayerEvenDuringInvulnerability() {
+        val engine = GameEngine(canonicalLevel())
+        engine.audio.isMuted = true
+        engine.player.invulnTimer = 1f
+        engine.player.hp = engine.player.maxHp
+        engine.player.y = engine.levelHeight + 101f
+
+        engine.update(1f / 60f)
+
+        assertTrue("Pit fall must bypass temporary invulnerability", engine.player.dead)
+        assertEquals(0f, engine.player.hp, 0.001f)
+        assertTrue(engine.player.respawnTimer > 0f)
+    }
+
+    @Test
     fun hazardDoesNotReapplyBounceWhilePlayerIsInvulnerable() {
         val source = canonicalLevel()
         val hazard = requireNotNull(source.hazards.firstOrNull())
