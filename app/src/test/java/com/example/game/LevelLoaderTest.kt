@@ -109,7 +109,7 @@ class LevelLoaderTest {
         assertEquals(2200f, def.width, 0.001f)
         assertEquals(2160f, def.height, 0.001f)
         assertEquals(52, def.platforms.size)
-        assertEquals(13, def.enemies.size)
+        assertEquals(14, def.enemies.size)
         assertEquals(4, def.checkpoints.size)
 
         def.platforms.forEach {
