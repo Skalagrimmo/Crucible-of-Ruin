@@ -810,6 +810,13 @@ class GameEngine(
         if (boss.vy > 750f) boss.vy = 750f
 
         boss.x += boss.vx * dt
+        val maxBossX = (levelWidth - boss.w).coerceAtLeast(0f)
+        val clampedBossX = boss.x.coerceIn(0f, maxBossX)
+        if (clampedBossX != boss.x) {
+            boss.x = clampedBossX
+            boss.vx = 0f
+            if (boss.state == "dash") boss.stateTimer = 0f
+        }
         for (p in platforms) {
             if (aabbIntersects(boss.x, boss.y, boss.w, boss.h, p.x, p.y, p.w, p.h)) {
                 if (boss.vx > 0f) {
