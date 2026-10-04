@@ -349,6 +349,49 @@ class GameEngineRegressionTest {
     }
 
     @Test
+    fun level02_bossSlamCompletesOnUpperArenaFloor() {
+        val resource = requireNotNull(
+            javaClass.classLoader?.getResourceAsStream("levels/level_02.json")
+        )
+        val def = LevelJson.parse(resource.bufferedReader().use { it.readText() })
+        val engine = GameEngine(def)
+        engine.audio.isMuted = true
+        val boss = engine.boss
+        boss.active = true
+        boss.x = 1900f
+        boss.y = 80f - boss.h
+        boss.vx = 0f
+        boss.vy = 0f
+        boss.state = "telegraph_slam"
+        boss.stateTimer = 0f
+        engine.player.x = 1840f
+        engine.player.y = 160f
+
+        var enteredAir = false
+        var completedLanding = false
+        repeat(180) {
+            engine.update(1f / 60f)
+            if (boss.state == "slam_air") enteredAir = true
+            if (enteredAir && boss.state == "idle" && boss.vy == 0f) {
+                completedLanding = true
+            }
+        }
+
+        assertTrue("Boss never entered slam air state", enteredAir)
+        assertTrue("Boss slam did not return to idle after landing", completedLanding)
+        assertTrue("Boss landed outside upper arena", boss.x >= 1660f && boss.x + boss.w <= 2200f)
+        assertTrue(
+            "Boss did not land on an upper arena platform",
+            def.platforms.any { p ->
+                p.y <= 280f &&
+                    boss.x + boss.w > p.x &&
+                    boss.x < p.x + p.w &&
+                    kotlin.math.abs((boss.y + boss.h) - p.y) < 1f
+            }
+        )
+    }
+
+    @Test
     fun bossCrossingHalfHealth_entersPhaseTwo() {
         val engine = freshEngine()
         val boss = engine.boss
