@@ -484,6 +484,12 @@
       "patrolRange": 80
     },
     {
+      "x": 1180,
+      "y": 520,
+      "archetype": "LURKER",
+      "patrolRange": 70
+    },
+    {
       "x": 1460,
       "y": 360,
       "archetype": "CHERUB",
