@@ -325,6 +325,30 @@ class GameEngineRegressionTest {
     }
 
     @Test
+    fun activeBossCannotDashOutsideLevelBounds() {
+        val engine = GameEngine(canonicalLevel())
+        engine.audio.isMuted = true
+        val boss = engine.boss
+        boss.active = true
+        boss.state = "dash"
+        boss.stateTimer = 1f
+
+        boss.x = 1f
+        boss.vx = -1000f
+        engine.update(1f / 60f)
+        assertEquals(0f, boss.x, 0.001f)
+        assertTrue(boss.vx >= 0f)
+
+        boss.state = "dash"
+        boss.stateTimer = 1f
+        boss.x = engine.levelWidth - boss.w - 1f
+        boss.vx = 1000f
+        engine.update(1f / 60f)
+        assertEquals(engine.levelWidth - boss.w, boss.x, 0.001f)
+        assertTrue(boss.vx <= 0f)
+    }
+
+    @Test
     fun bossCrossingHalfHealth_entersPhaseTwo() {
         val engine = freshEngine()
         val boss = engine.boss
