@@ -99,6 +99,7 @@ class PlayerEntity(var x: Float, var y: Float) {
         val dir = if (fromX > x + w / 2f) -1 else 1
         vx = dir * 180f
         vy = -210f
+        return true
     }
 
     fun respawn(cp: Checkpoint) {
