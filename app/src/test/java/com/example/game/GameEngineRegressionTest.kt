@@ -236,9 +236,11 @@ class GameEngineRegressionTest {
         assertTrue("Cherub never entered swoop despite nearby lower player", enteredSwoop)
         assertTrue("Cherub never transitioned from swoop to ascend", enteredAscend)
         assertTrue("Cherub never recovered from ascend to fly", recoveredToFly)
-        assertTrue(
-            "Cherub failed to recover near its patrol altitude",
-            kotlin.math.abs(cherub.y - startY) <= 25f
+        assertEquals(
+            "Cherub should finish recovery at its patrol altitude",
+            startY,
+            cherub.y,
+            0.01f
         )
     }
 
