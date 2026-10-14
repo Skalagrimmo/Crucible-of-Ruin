@@ -1,7 +1,9 @@
 package com.example.game.data
 
 import android.content.Context
+import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import com.example.R
@@ -12,20 +14,21 @@ import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.tasks.await
 
 class AuthRepository(private val context: Context) {
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+    private val auth = FirebaseAuth.getInstance()
     private val credentialManager = CredentialManager.create(context)
 
     private val _currentUser = MutableStateFlow<FirebaseUser?>(auth.currentUser)
-    val currentUser: StateFlow<FirebaseUser?> = _currentUser
+    val currentUser: StateFlow<FirebaseUser?> = _currentUser.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
     private val _errorMessage = MutableStateFlow<String?>(null)
-    val errorMessage: StateFlow<String?> = _errorMessage
+    val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
     init {
         auth.addAuthStateListener { firebaseAuth ->
@@ -33,48 +36,46 @@ class AuthRepository(private val context: Context) {
         }
     }
 
-    suspend fun signInWithGoogle(): Boolean {
+    suspend fun signInWithGoogle(): Result<FirebaseUser?> {
         _isLoading.value = true
         _errorMessage.value = null
-        try {
+        return try {
             val serverClientId = context.getString(R.string.default_web_client_id)
-            val signInOption = GetSignInWithGoogleOption.Builder(serverClientId)
+            val googleOption = GetSignInWithGoogleOption.Builder(serverClientId)
                 .build()
 
             val request = GetCredentialRequest.Builder()
-                .addCredentialOption(signInOption)
+                .addCredentialOption(googleOption)
                 .build()
 
-            val result = credentialManager.getCredential(context = context, request = request)
+            val result = credentialManager.getCredential(context, request)
             val credential = result.credential
 
-            if (credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+            if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
                 val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
                 val authCredential = GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
-                auth.signInWithCredential(authCredential).await()
-                _currentUser.value = auth.currentUser
+                val authResult = auth.signInWithCredential(authCredential).await()
                 _isLoading.value = false
-                return true
+                Result.success(authResult.user)
             } else {
-                _errorMessage.value = "Unexpected credential type"
                 _isLoading.value = false
-                return false
+                _errorMessage.value = "Unrecognized credential type"
+                Result.failure(IllegalStateException("Unrecognized credential type"))
             }
         } catch (e: GetCredentialCancellationException) {
-            android.util.Log.w("AuthRepository", "Sign-in cancelled by user", e)
-            _errorMessage.value = "Sign-in cancelled"
             _isLoading.value = false
-            return false
+            Result.failure(e)
         } catch (e: Exception) {
-            android.util.Log.e("AuthRepository", "Authentication error", e)
-            _errorMessage.value = e.localizedMessage ?: "Authentication failed"
             _isLoading.value = false
-            return false
+            _errorMessage.value = e.localizedMessage ?: "Sign in failed"
+            Result.failure(e)
         }
     }
 
-    fun signOut() {
+    suspend fun signOut() {
+        try {
+            credentialManager.clearCredentialState(ClearCredentialStateRequest())
+        } catch (_: Exception) {}
         auth.signOut()
-        _currentUser.value = null
     }
 }

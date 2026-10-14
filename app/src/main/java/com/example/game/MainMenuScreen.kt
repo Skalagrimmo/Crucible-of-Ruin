@@ -56,7 +56,7 @@ import kotlin.random.Random
 
 @Composable
 fun MainMenuScreen(
-    onStartGame: (startCheckpoint: Int, targetFps: Int) -> Unit,
+    onStartGame: (startCheckpoint: Int, targetFps: Int, hapticsEnabled: Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -71,6 +71,7 @@ fun MainMenuScreen(
     var userSave by remember { mutableStateOf(saveRepo.getLocalUserSave()) }
     var targetFps by remember { mutableIntStateOf(userSave.targetFps) }
     var soundMuted by remember { mutableStateOf(userSave.soundMuted) }
+    var hapticsEnabled by remember { mutableStateOf(userSave.hapticsEnabled) }
 
     // Dialog toggles
     var showSettingsDialog by remember { mutableStateOf(false) }
@@ -84,6 +85,7 @@ fun MainMenuScreen(
         userSave = save
         targetFps = save.targetFps
         soundMuted = save.soundMuted
+        hapticsEnabled = save.hapticsEnabled
         AssetCache.isMuted = soundMuted
     }
 
@@ -194,7 +196,7 @@ fun MainMenuScreen(
                         color = Color(0xFFFFA0A0),
                         fontSize = 10.sp,
                         modifier = Modifier
-                            .clickable { authRepo.signOut() }
+                            .clickable { scope.launch { authRepo.signOut() } }
                             .padding(horizontal = 4.dp)
                             .testTag("sign_out_button")
                     )
@@ -249,7 +251,7 @@ fun MainMenuScreen(
             val hasSaveProgress = userSave.lastCheckpoint > 0
             Button(
                 onClick = {
-                    onStartGame(userSave.lastCheckpoint, targetFps)
+                    onStartGame(userSave.lastCheckpoint, targetFps, hapticsEnabled)
                 },
                 enabled = hasSaveProgress,
                 colors = ButtonDefaults.buttonColors(
@@ -281,7 +283,7 @@ fun MainMenuScreen(
             // 2. NEW GAME
             Button(
                 onClick = {
-                    onStartGame(0, targetFps)
+                    onStartGame(0, targetFps, hapticsEnabled)
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2C1948)),
                 shape = RoundedCornerShape(10.dp),
@@ -443,6 +445,34 @@ fun MainMenuScreen(
                                 scope.launch { saveRepo.saveUserSave(userSave) }
                             },
                             colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFFFFD700))
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Haptics Option
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text("Tactile Haptics", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                            Text(
+                                text = if (hapticsEnabled) "Vibrations for attacks, hits & damage" else "Disabled",
+                                color = Color(0xFFB0A2C8),
+                                fontSize = 11.sp
+                            )
+                        }
+                        Switch(
+                            checked = hapticsEnabled,
+                            onCheckedChange = { isEnabled ->
+                                hapticsEnabled = isEnabled
+                                userSave = userSave.copy(hapticsEnabled = hapticsEnabled)
+                                scope.launch { saveRepo.saveUserSave(userSave) }
+                            },
+                            colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFFFFD700)),
+                            modifier = Modifier.testTag("dialog_toggle_haptics")
                         )
                     }
 

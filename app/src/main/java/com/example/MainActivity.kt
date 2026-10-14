@@ -36,13 +36,15 @@ class MainActivity : ComponentActivity() {
                 var currentScreen by remember { mutableStateOf("menu") }
                 var startCheckpoint by remember { mutableIntStateOf(0) }
                 var targetFps by remember { mutableIntStateOf(30) }
+                var hapticsEnabled by remember { mutableStateOf(true) }
 
                 when (currentScreen) {
                     "menu" -> {
                         MainMenuScreen(
-                            onStartGame = { checkpoint, fps ->
+                            onStartGame = { checkpoint, fps, haptics ->
                                 startCheckpoint = checkpoint
                                 targetFps = fps
+                                hapticsEnabled = haptics
                                 currentScreen = "game"
                             }
                         )
@@ -54,6 +56,7 @@ class MainActivity : ComponentActivity() {
                         GameScreen(
                             startCheckpoint = startCheckpoint,
                             initialTargetFps = targetFps,
+                            initialHapticsEnabled = hapticsEnabled,
                             onReturnToMainMenu = {
                                 currentScreen = "menu"
                             }

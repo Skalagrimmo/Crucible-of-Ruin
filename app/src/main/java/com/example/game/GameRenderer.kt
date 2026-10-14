@@ -147,11 +147,35 @@ object GameRenderer {
                 }
             }
 
-            // 6. Pickups (Dense object pool + Pre-loaded textures)
+            // 6. Pickups (Dense object pool + Pre-loaded textures & alchemical orbs)
             for (i in 0 until engine.pickups.activeCount) {
                 val pk = engine.pickups.get(i)
-                val tex = if (pk.type == "health") AssetCache.texPickupHealth else AssetCache.texPickupFlask
-                drawImage(tex, topLeft = Offset(pk.x - camX, pk.y - camY))
+                when (pk.type) {
+                    "health" -> drawImage(AssetCache.texPickupHealth, topLeft = Offset(pk.x - camX, pk.y - camY))
+                    "flask" -> drawImage(AssetCache.texPickupFlask, topLeft = Offset(pk.x - camX, pk.y - camY))
+                    "sulfur" -> {
+                        // Glowing Sulfur Crystal
+                        val cx = pk.x - camX + 8f
+                        val cy = pk.y - camY + 8f
+                        drawCircle(Color(0xFFFFB039), radius = 7f, center = Offset(cx, cy))
+                        drawCircle(Color(0xFFFFE082), radius = 3.5f, center = Offset(cx, cy))
+                    }
+                    "mercury" -> {
+                        // Liquid Quicksilver Sphere
+                        val cx = pk.x - camX + 8f
+                        val cy = pk.y - camY + 8f
+                        drawCircle(Color(0xFF64D8CB), radius = 7f, center = Offset(cx, cy))
+                        drawCircle(Color(0xFFE0F7FA), radius = 3.5f, center = Offset(cx, cy))
+                    }
+                    "vitriol" -> {
+                        // Resonant Vitriol Jewel
+                        val cx = pk.x - camX + 8f
+                        val cy = pk.y - camY + 8f
+                        drawCircle(Color(0xFFB388FF), radius = 7.5f, center = Offset(cx, cy))
+                        drawCircle(Color(0xFFEDE7F6), radius = 4f, center = Offset(cx, cy))
+                    }
+                    else -> drawImage(AssetCache.texPickupFlask, topLeft = Offset(pk.x - camX, pk.y - camY))
+                }
             }
 
             // 7. Enemies (Pre-loaded texture blits)
@@ -183,14 +207,71 @@ object GameRenderer {
                         drawImage(tex, topLeft = Offset(ex - 6f, ey - 2f))
                     }
                 }
+
+                // Enemy Status Effect Indicators (Floating aura/dots above enemy)
+                val enemyEffects = e.statusController.getActiveEffects()
+                if (enemyEffects.isNotEmpty()) {
+                    var offX = -((enemyEffects.size - 1) * 6f)
+                    for (eff in enemyEffects) {
+                        val dotX = ex + e.w / 2f + offX
+                        val dotY = ey - 8f
+                        drawCircle(Color(0xCC100A1C), radius = 5f, center = Offset(dotX, dotY))
+                        drawCircle(eff.type.primaryColor, radius = 3.5f, center = Offset(dotX, dotY))
+                        drawCircle(Color.White, radius = 1.2f, center = Offset(dotX, dotY))
+                        offX += 12f
+                    }
+                }
             }
 
-            // 8. Boss (Pre-loaded textures)
+            // 8. Boss (Pre-loaded textures, telegraphed attack indicators, and weak-point reticle)
             val boss = engine.boss
             if (boss.active && !boss.dead) {
                 val bx = boss.x - camX
                 val by = boss.y - camY
 
+                // Telegraph Warning Indicator
+                if (boss.state == com.example.game.boss.BossState.TELEGRAPHING) {
+                    val atk = boss.currentAttack
+                    if (atk != null) {
+                        val warnX = if (boss.facing > 0) bx + boss.w else bx - atk.warningWidth
+                        val warnY = by + boss.h - atk.warningHeight
+                        val prog = boss.telegraphProgress
+                        val pulse = (sin(prog * 16f) * 0.2f + 0.4f).coerceIn(0.15f, 0.85f)
+
+                        // Telegraph Hazard Area
+                        drawRect(
+                            color = atk.warningColor.copy(alpha = pulse * 0.45f),
+                            topLeft = Offset(warnX, warnY),
+                            size = Size(atk.warningWidth, atk.warningHeight)
+                        )
+                        drawRect(
+                            color = atk.warningColor.copy(alpha = 0.9f),
+                            topLeft = Offset(warnX, warnY),
+                            size = Size(atk.warningWidth, atk.warningHeight),
+                            style = Stroke(width = 2f)
+                        )
+                        // Telegraph Charge Progress Bar
+                        val fillW = atk.warningWidth * prog
+                        val fillStartX = if (boss.facing > 0) warnX else (warnX + atk.warningWidth - fillW)
+                        drawRect(
+                            color = Color(0xFFFFFFFF).copy(alpha = 0.85f),
+                            topLeft = Offset(fillStartX, warnY + atk.warningHeight - 4f),
+                            size = Size(fillW, 4f)
+                        )
+                    }
+                }
+
+                // Phase 3 Crucible Overload Aura
+                if (boss.currentPhase == com.example.game.boss.BossPhase.PHASE_3) {
+                    val auraPulse = (sin(System.currentTimeMillis() / 150.0) * 0.25f + 0.4f).toFloat()
+                    drawCircle(
+                        color = Color(0xFFC020FF).copy(alpha = auraPulse * 0.35f),
+                        radius = boss.w * 0.65f,
+                        center = Offset(bx + boss.w / 2f, by + boss.h / 2f)
+                    )
+                }
+
+                // Boss Body
                 if (boss.hurtTimer > 0f) {
                     drawRect(Color.White, topLeft = Offset(bx, by), size = Size(boss.w, boss.h))
                 } else {
@@ -201,6 +282,70 @@ object GameRenderer {
                     }
                     drawImage(tex, topLeft = Offset(bx - 3f, by - 2f))
                 }
+
+                // Weak Point Reticle & Core Indicator
+                if (boss.weakPoint.isExposed && boss.state != com.example.game.boss.BossState.DEAD) {
+                    val wpBounds = boss.weakPoint.getWorldBounds(boss.x, boss.y, boss.w, boss.facing)
+                    val wpx = wpBounds[0] - camX
+                    val wpy = wpBounds[1] - camY
+                    val pulse = (sin(boss.weakPoint.glowPulseTimer) * 0.3f + 0.7f).coerceIn(0.4f, 1.0f)
+                    val coreCenterX = wpx + wpBounds[2] / 2f
+                    val coreCenterY = wpy + wpBounds[3] / 2f
+
+                    // Outer Target Diamond Reticle
+                    drawCircle(
+                        color = Color(0xFFFFD700).copy(alpha = pulse * 0.85f),
+                        radius = 12f,
+                        center = Offset(coreCenterX, coreCenterY),
+                        style = Stroke(width = 2f)
+                    )
+                    // Inner Critical Core
+                    drawCircle(
+                        color = if (boss.state == com.example.game.boss.BossState.STAGGERED) Color(0xFFFFD700) else Color(0xFFFF2040),
+                        radius = 5.5f,
+                        center = Offset(coreCenterX, coreCenterY)
+                    )
+                    drawCircle(
+                        color = Color.White,
+                        radius = 2f,
+                        center = Offset(coreCenterX, coreCenterY)
+                    )
+                }
+
+                // Stagger Stun Indicator (Stars above head)
+                if (boss.state == com.example.game.boss.BossState.STAGGERED) {
+                    val headX = bx + boss.w / 2f
+                    val headY = by - 12f
+                    val time = System.currentTimeMillis() / 200.0
+                    for (k in 0 until 3) {
+                        val angle = time + k * (Math.PI * 2.0 / 3.0)
+                        val starX = (headX + kotlin.math.cos(angle) * 18f).toFloat()
+                        val starY = (headY + kotlin.math.sin(angle) * 6f).toFloat()
+                        drawCircle(Color(0xFFFFD700), radius = 3f, center = Offset(starX, starY))
+                    }
+                }
+
+                // Boss Status Debuff Badges in world space (above head)
+                val bossEffects = boss.statusController.getActiveEffects()
+                if (bossEffects.isNotEmpty()) {
+                    val badgeHeadX = bx + boss.w / 2f
+                    val badgeHeadY = by - (if (boss.state == com.example.game.boss.BossState.STAGGERED) 26f else 14f)
+                    var badgeOffX = -((bossEffects.size - 1) * 16f)
+                    for (eff in bossEffects) {
+                        val cx = badgeHeadX + badgeOffX
+                        val cy = badgeHeadY
+                        drawCircle(Color(0xEE12081C), radius = 8f, center = Offset(cx, cy))
+                        drawCircle(eff.type.primaryColor, radius = 8f, center = Offset(cx, cy), style = Stroke(width = 1.5f))
+                        drawCircle(
+                            color = eff.type.secondaryColor,
+                            radius = 6f,
+                            center = Offset(cx, cy),
+                            style = Stroke(width = 2.5f)
+                        )
+                        drawCircle(Color.White, radius = 2f, center = Offset(cx, cy))
+                        badgeOffX += 32f
+                    }
+                }
             }
 
             // 9. Player (Pre-loaded textures)
@@ -209,6 +354,24 @@ object GameRenderer {
                 val px = p.x - camX
                 val py = p.y - camY
                 val bob = if (p.grounded && abs(p.vx) > 20f) sin(p.walkAnimTimer) * 2f else 0f
+
+                // Player Status Effect Aura
+                if (p.statusController.hasEffect(com.example.game.status.CombatStatusType.ALCHEMY_BURN)) {
+                    val pulse = (sin(System.currentTimeMillis() / 120.0) * 0.2f + 0.5f).toFloat()
+                    drawCircle(
+                        color = com.example.game.status.CombatStatusType.ALCHEMY_BURN.primaryColor.copy(alpha = pulse * 0.35f),
+                        radius = p.w * 0.9f,
+                        center = Offset(px + p.w / 2f, py + p.h / 2f)
+                    )
+                }
+                if (p.statusController.hasEffect(com.example.game.status.CombatStatusType.CORROSION)) {
+                    val pulse = (sin(System.currentTimeMillis() / 150.0) * 0.2f + 0.45f).toFloat()
+                    drawCircle(
+                        color = com.example.game.status.CombatStatusType.CORROSION.primaryColor.copy(alpha = pulse * 0.30f),
+                        radius = p.w * 0.95f,
+                        center = Offset(px + p.w / 2f, py + p.h / 2f)
+                    )
+                }
 
                 if (p.attacking) {
                     val tex = if (p.facing > 0) AssetCache.texPlayerAttackRight else AssetCache.texPlayerAttackLeft

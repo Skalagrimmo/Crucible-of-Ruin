@@ -1,6 +1,10 @@
 package com.example.game
 
 import androidx.compose.ui.graphics.Color
+import com.example.game.boss.BaseBoss
+import com.example.game.boss.CrucibleChimeraBoss
+import com.example.game.status.CombatStatusType
+import com.example.game.status.StatusEffectController
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.max
@@ -54,9 +58,9 @@ class PlayerEntity(var x: Float, var y: Float) {
     var facing: Int = 1 // 1 = right, -1 = left
     var grounded: Boolean = false
 
-    val maxHp: Float = 100f
+    var maxHp: Float = 100f
     var hp: Float = 100f
-    val maxFlasks: Int = 5
+    var maxFlasks: Int = 3
     var flasks: Int = 3
 
     val runSpeed: Float = 190f
@@ -79,10 +83,15 @@ class PlayerEntity(var x: Float, var y: Float) {
     var respawnTimer: Float = 0f
     var walkAnimTimer: Float = 0f
 
+    // Combat status effect controller (debuffs, DoTs, Corrosion, Alchemy-Burn)
+    val statusController = StatusEffectController()
+
     fun takeDamage(amount: Float, fromX: Float, engine: GameEngine) {
         if (invulnTimer > 0f || dead) return
-        hp -= amount
+        val finalAmount = amount * engine.defenseMultiplier * statusController.getIncomingDamageMultiplier()
+        hp -= finalAmount
         engine.audio.play("hurt")
+        engine.haptics?.onPlayerDamage()
         engine.camera.shake(8f)
         engine.particles.spawn(x + w / 2f, y + h / 2f, Color(0xFFE03030), 14, 140f, 0.4f, 4f)
 
@@ -111,6 +120,7 @@ class PlayerEntity(var x: Float, var y: Float) {
         dead = false
         invulnTimer = 1.5f
         knockbackTimer = 0f
+        statusController.clear()
     }
 }
 
@@ -149,6 +159,9 @@ class EnemyEntity(
     var flyPhase: Float = (Math.random() * Math.PI * 2.0).toFloat()
     var targetY: Float = y
 
+    // Combat status effect controller (debuffs, DoTs, Corrosion, Alchemy-Burn)
+    val statusController = StatusEffectController()
+
     init {
         when (type) {
             EnemyArchetype.LURKER -> {
@@ -169,7 +182,8 @@ class EnemyEntity(
     fun takeDamage(amount: Float, aId: Long, fromX: Float, engine: GameEngine) {
         if (lastHitId == aId || dead) return
         lastHitId = aId
-        hp -= amount
+        val finalAmount = amount * statusController.getIncomingDamageMultiplier()
+        hp -= finalAmount
         hurtTimer = 0.2f
         engine.audio.play("hit")
         engine.particles.spawnEnemyHurt(x + w / 2f, y + h / 2f, Color(0xFFB02040))
@@ -181,58 +195,22 @@ class EnemyEntity(
             dead = true
             engine.enemiesDefeated++
             engine.particles.spawnEnemyDeath(x + w / 2f, y + h / 2f, Color(0xFF8018A0))
-            if (Math.random() < 0.4) {
-                val dropType = if (Math.random() < 0.5) "health" else "flask"
+            if (Math.random() < 0.70) {
+                val r = Math.random()
+                val dropType = when {
+                    r < 0.20 -> "health"
+                    r < 0.38 -> "flask"
+                    r < 0.65 -> "sulfur"
+                    r < 0.88 -> "mercury"
+                    else -> "vitriol"
+                }
                 engine.pickups.spawn(x + w / 2f - 8f, y + h / 2f - 8f, dropType)
             }
         }
     }
 }
 
-class BossEntity(var x: Float, var y: Float) {
-    val w: Float = 90f
-    val h: Float = 80f
-    val maxHp: Float = 350f
-    var hp: Float = 350f
-    var facing: Int = -1
-    var vx: Float = 0f
-    var vy: Float = 0f
-    var dead: Boolean = false
-    var phase2: Boolean = false
-    var lastHitId: Long = 0L
-    var hurtTimer: Float = 0f
-
-    var state: String = "idle"
-    var stateTimer: Float = 1.2f
-    var attackCycle: Int = 0
-    var active: Boolean = false
-
-    fun takeDamage(amount: Float, aId: Long, fromX: Float, engine: GameEngine) {
-        if (lastHitId == aId || dead || !active) return
-        lastHitId = aId
-        hp -= amount
-        hurtTimer = 0.18f
-        engine.audio.play("hit")
-        engine.camera.shake(6f)
-        engine.particles.spawnEnemyHurt(x + w / 2f, y + h / 2f, Color(0xFFFF3060))
-
-        if (hp <= maxHp * 0.5f && !phase2) {
-            phase2 = true
-            engine.audio.play("boss_roar")
-            engine.camera.shake(16f)
-            engine.particles.spawnEnemyDeath(x + w / 2f, y + h / 2f, Color(0xFFC030FF))
-        }
-
-        if (hp <= 0f) {
-            hp = 0f
-            dead = true
-            engine.audio.play("victory")
-            engine.camera.shake(20f)
-            engine.particles.spawnEnemyDeath(x + w / 2f, y + h / 2f, Color(0xFFFFD700))
-            engine.state = "victory"
-        }
-    }
-}
+typealias BossEntity = BaseBoss
 
 class GameEngine {
     val audio = GameAudio()
@@ -259,7 +237,7 @@ class GameEngine {
     val hazards = ArrayList<Hazard>()
     val breakables = ArrayList<BreakableUrn>()
     val enemies = ArrayList<EnemyEntity>()
-    var boss: BossEntity = BossEntity(5750f, 360f)
+    var boss: BaseBoss = CrucibleChimeraBoss(5750f, 360f)
 
     val player: PlayerEntity = PlayerEntity(activeCheckpoint.x, activeCheckpoint.y)
 
@@ -271,6 +249,11 @@ class GameEngine {
 
     private var attackCounter: Long = 1L
 
+    var haptics: GameHaptics? = null
+    var damageMultiplier: Float = 1.0f
+    var defenseMultiplier: Float = 1.0f
+    var speedMultiplier: Float = 1.0f
+    var onResourceCollected: ((com.example.game.alchemy.ResourceType) -> Unit)? = null
     var onCheckpointActivated: ((Int) -> Unit)? = null
 
     init {
@@ -374,7 +357,7 @@ class GameEngine {
         platforms.add(Platform(5420f, 330f, 120f, 18f, PlatformStyle.IRON_GIRDER))
         platforms.add(Platform(5880f, 330f, 120f, 18f, PlatformStyle.IRON_GIRDER))
 
-        boss = BossEntity(5750f, 360f)
+        boss = CrucibleChimeraBoss(5750f, 360f)
     }
 
     fun onJumpPressed() {
@@ -387,10 +370,13 @@ class GameEngine {
             player.attackTimer = player.attackDuration
             player.attackId = ++attackCounter
             audio.play("slash")
+            haptics?.onMeleeSwing()
+            val arcColor = if (damageMultiplier > 1f) Color(0xFFFF5722) else Color(0xFF40F0FF)
             particles.spawnSlashArc(
                 if (player.facing > 0) player.x + player.w else player.x,
                 player.y + player.h / 2f,
-                player.facing
+                player.facing,
+                arcColor
             )
         }
     }
@@ -459,7 +445,51 @@ class GameEngine {
         if (player.coyoteTime > 0f) player.coyoteTime -= dt
         if (player.jumpBuffer > 0f) player.jumpBuffer -= dt
 
-        // Horizontal Movement
+        // Process active status debuffs (Alchemy-Burn, Corrosion)
+        player.statusController.update(dt) { type, damage, stacks ->
+            player.hp -= damage
+            particles.spawn(
+                player.x + (Math.random().toFloat() * player.w),
+                player.y + (Math.random().toFloat() * player.h),
+                type.primaryColor,
+                count = 4,
+                speed = 70f,
+                life = 0.35f,
+                size = 3.2f
+            )
+            if (player.hp <= 0f && !player.dead) {
+                player.hp = 0f
+                player.dead = true
+                player.respawnTimer = 1.4f
+                particles.spawnEnemyDeath(player.x + player.w / 2f, player.y + player.h / 2f, Color(0xFF8020A0))
+            }
+        }
+
+        // Ambient status particle trails on player
+        if (player.statusController.hasEffect(CombatStatusType.ALCHEMY_BURN)) {
+            particles.spawn(
+                player.x + (Math.random().toFloat() * player.w),
+                player.y + player.h - 6f,
+                CombatStatusType.ALCHEMY_BURN.primaryColor,
+                count = 1,
+                speed = 35f,
+                life = 0.3f,
+                size = 2.6f
+            )
+        }
+        if (player.statusController.hasEffect(CombatStatusType.CORROSION)) {
+            particles.spawn(
+                player.x + (Math.random().toFloat() * player.w),
+                player.y + (Math.random().toFloat() * player.h),
+                CombatStatusType.CORROSION.primaryColor,
+                count = 1,
+                speed = 25f,
+                life = 0.28f,
+                size = 2.4f
+            )
+        }
+
+        // Horizontal Movement (adjusted by speedMultiplier and Corrosion debuff penalty)
         if (player.knockbackTimer <= 0f) {
             var moveDir = 0
             if (inputLeft) moveDir -= 1
@@ -467,7 +497,9 @@ class GameEngine {
 
             if (moveDir != 0) {
                 player.facing = moveDir
-                val targetSpeed = moveDir * (if (player.grounded) player.runSpeed else player.airSpeed)
+                val baseSpeed = if (player.grounded) player.runSpeed else player.airSpeed
+                val effectiveSpeedMult = speedMultiplier * player.statusController.getSpeedMultiplier()
+                val targetSpeed = moveDir * baseSpeed * effectiveSpeedMult
                 player.vx += (targetSpeed - player.vx) * (if (player.grounded) 14f else 7f) * dt
                 player.walkAnimTimer += dt * 10f
             } else {
@@ -477,12 +509,13 @@ class GameEngine {
 
             // Jump
             if (player.jumpBuffer > 0f && player.coyoteTime > 0f) {
-                player.vy = player.jumpForce
+                player.vy = player.jumpForce * (if (speedMultiplier > 1f) 1.12f else 1.0f)
                 player.grounded = false
                 player.coyoteTime = 0f
                 player.jumpBuffer = 0f
                 audio.play("jump")
-                particles.spawn(player.x + player.w / 2f, player.y + player.h, Color(0xFF8B7DA8), 6, 60f, 0.25f, 2.5f)
+                val jumpColor = if (speedMultiplier > 1f) Color(0xFF00E5FF) else Color(0xFF8B7DA8)
+                particles.spawn(player.x + player.w / 2f, player.y + player.h, jumpColor, 6, 60f, 0.25f, 2.5f)
             }
             if (!inputJump && player.vy < -120f) {
                 player.vy += 700f * dt
@@ -555,18 +588,37 @@ class GameEngine {
 
             for (e in enemies) {
                 if (!e.dead && aabbIntersects(slashX, slashY, slashW, slashH, e.x, e.y, e.w, e.h)) {
-                    e.takeDamage(28f, player.attackId, player.x, this)
+                    val dmg = 28f * damageMultiplier
+                    e.takeDamage(dmg, player.attackId, player.x, this)
                     camera.shake(4f)
+                    haptics?.onMeleeHit()
+                    // Player melee applies status debuffs
+                    if (Math.random() < 0.40) {
+                        e.statusController.applyEffect(CombatStatusType.ALCHEMY_BURN, duration = 4.5f, stacks = 1)
+                    }
+                    if (Math.random() < 0.35) {
+                        e.statusController.applyEffect(CombatStatusType.CORROSION, duration = 5.0f, stacks = 1)
+                    }
                 }
             }
             if (boss.active && !boss.dead && aabbIntersects(slashX, slashY, slashW, slashH, boss.x, boss.y, boss.w, boss.h)) {
-                boss.takeDamage(28f, player.attackId, player.x, this)
+                val dmg = 28f * damageMultiplier
+                boss.takeDamage(dmg, player.attackId, player.x, this)
                 camera.shake(5f)
+                haptics?.onBossHit()
+                // Player melee applies status debuffs to boss
+                if (Math.random() < 0.45) {
+                    boss.statusController.applyEffect(CombatStatusType.ALCHEMY_BURN, duration = 4.5f, stacks = 1)
+                }
+                if (Math.random() < 0.40) {
+                    boss.statusController.applyEffect(CombatStatusType.CORROSION, duration = 5.0f, stacks = 1)
+                }
             }
             for (b in breakables) {
                 if (!b.dead && aabbIntersects(slashX, slashY, slashW, slashH, b.x, b.y, b.w, b.h)) {
                     b.dead = true
                     audio.play("hit")
+                    haptics?.onMeleeHit()
                     particles.spawn(b.x + 12f, b.y + 12f, Color(0xFFB39060), 12, 110f, 0.35f, 3.5f)
                     pickups.spawn(b.x + 4f, b.y, b.dropType)
                 }
@@ -581,6 +633,46 @@ class GameEngine {
         for (e in enemies) {
             if (e.dead) continue
             if (e.hurtTimer > 0f) e.hurtTimer -= dt
+
+            // Update enemy status effects (Alchemy-Burn, Corrosion)
+            e.statusController.update(dt) { type, damage, stacks ->
+                e.hp -= damage
+                e.hurtTimer = 0.08f
+                particles.spawn(
+                    e.x + (Math.random().toFloat() * e.w),
+                    e.y + (Math.random().toFloat() * e.h),
+                    type.primaryColor,
+                    count = 3,
+                    speed = 55f,
+                    life = 0.25f,
+                    size = 3f
+                )
+                if (e.hp <= 0f && !e.dead) {
+                    e.dead = true
+                    enemiesDefeated++
+                    particles.spawnEnemyDeath(e.x + e.w / 2f, e.y + e.h / 2f, Color(0xFF8018A0))
+                    if (Math.random() < 0.70) {
+                        val r = Math.random()
+                        val dropType = when {
+                            r < 0.20 -> "health"
+                            r < 0.38 -> "flask"
+                            r < 0.65 -> "sulfur"
+                            r < 0.88 -> "mercury"
+                            else -> "vitriol"
+                        }
+                        pickups.spawn(e.x + e.w / 2f - 8f, e.y + e.h / 2f - 8f, dropType)
+                    }
+                }
+            }
+            if (e.dead) continue
+
+            // Ambient status particle trail on enemies
+            if (e.statusController.hasEffect(CombatStatusType.ALCHEMY_BURN)) {
+                particles.spawn(e.x + e.w / 2f, e.y + e.h - 6f, CombatStatusType.ALCHEMY_BURN.primaryColor, 1, 25f, 0.25f, 2.2f)
+            }
+            if (e.statusController.hasEffect(CombatStatusType.CORROSION)) {
+                particles.spawn(e.x + e.w / 2f, e.y + e.h / 2f, CombatStatusType.CORROSION.primaryColor, 1, 20f, 0.25f, 2.0f)
+            }
 
             val distToPlayerX = px - e.x
             val distToPlayer = hypot(px - e.x, py - e.y)
@@ -751,146 +843,17 @@ class GameEngine {
 
             if (aabbIntersects(e.x, e.y, e.w, e.h, player.x, player.y, player.w, player.h)) {
                 player.takeDamage(if (e.type == EnemyArchetype.GOLEM) 24f else 16f, e.x + e.w / 2f, this)
+                if (e.type == EnemyArchetype.GOLEM) {
+                    player.statusController.applyEffect(CombatStatusType.CORROSION, duration = 5.0f, stacks = 1)
+                } else if (e.type == EnemyArchetype.CHERUB) {
+                    player.statusController.applyEffect(CombatStatusType.ALCHEMY_BURN, duration = 4.0f, stacks = 1)
+                }
             }
         }
     }
 
     private fun updateBoss(dt: Float) {
-        if (!boss.active || boss.dead) return
-        if (boss.hurtTimer > 0f) boss.hurtTimer -= dt
-
-        boss.stateTimer -= dt
-        val distToPlayerX = player.x + player.w / 2f - (boss.x + boss.w / 2f)
-
-        when (boss.state) {
-            "idle" -> {
-                boss.vx = 0f
-                boss.facing = if (distToPlayerX > 0) 1 else -1
-                if (boss.stateTimer <= 0f) {
-                    boss.attackCycle = (boss.attackCycle + 1) % 3
-                    val mult = if (boss.phase2) 0.65f else 1.0f
-
-                    when (boss.attackCycle) {
-                        0 -> {
-                            boss.state = "telegraph_dash"
-                            boss.stateTimer = 0.8f * mult
-                            audio.play("slash")
-                        }
-                        1 -> {
-                            boss.state = "telegraph_mortar"
-                            boss.stateTimer = 0.9f * mult
-                        }
-                        else -> {
-                            boss.state = "telegraph_slam"
-                            boss.stateTimer = 0.7f * mult
-                        }
-                    }
-                }
-            }
-            "telegraph_dash" -> {
-                boss.vx = 0f
-                boss.facing = if (distToPlayerX > 0) 1 else -1
-                particles.spawn(if (boss.facing > 0) boss.x + boss.w else boss.x, boss.y + 20f, Color(0xFFFF3010), 3, 60f, 0.25f, 3f)
-                if (boss.stateTimer <= 0f) {
-                    boss.state = "dash"
-                    boss.stateTimer = 0.9f
-                    boss.vx = boss.facing * (if (boss.phase2) 440f else 340f)
-                    audio.play("boss_roar")
-                }
-            }
-            "dash" -> {
-                particles.spawn(boss.x + boss.w / 2f, boss.y + boss.h - 10f, Color(0xFFF07010), 4, 80f, 0.3f, 3.5f)
-                if (boss.stateTimer <= 0f) {
-                    boss.state = "idle"
-                    boss.stateTimer = if (boss.phase2) 0.6f else 1.1f
-                }
-            }
-            "telegraph_mortar" -> {
-                boss.vx = 0f
-                boss.facing = if (distToPlayerX > 0) 1 else -1
-                particles.spawn(boss.x + boss.w / 2f, boss.y + 10f, Color(0xFFFFA020), 4, 100f, 0.35f, 4f)
-                if (boss.stateTimer <= 0f) {
-                    boss.state = "mortar"
-                    boss.stateTimer = 0.4f
-                    audio.play("explode")
-                    val count = if (boss.phase2) 5 else 3
-                    for (i in 0 until count) {
-                        val spread = (i - (count - 1) / 2f) * 90f
-                        val bVx = boss.facing * (200f + Math.random().toFloat() * 80f) + spread
-                        val bVy = -380f - Math.random().toFloat() * 80f
-                        projectiles.spawn(
-                            boss.x + boss.w / 2f, boss.y + 10f, bVx, bVy, ProjectileType.BOSS_MAGMA, false, 25f
-                        )
-                    }
-                }
-            }
-            "mortar" -> {
-                boss.vx = 0f
-                if (boss.stateTimer <= 0f) {
-                    boss.state = "idle"
-                    boss.stateTimer = if (boss.phase2) 0.8f else 1.3f
-                }
-            }
-            "telegraph_slam" -> {
-                boss.vx = 0f
-                if (boss.stateTimer <= 0f) {
-                    boss.state = "slam_air"
-                    boss.vy = -540f
-                    boss.vx = (player.x - boss.x) * 0.9f
-                    audio.play("boss_roar")
-                }
-            }
-            "slam_air" -> {
-                if (boss.vy > 100f) {
-                    boss.vy += 800f * dt
-                }
-            }
-        }
-
-        boss.vy += 950f * dt
-        if (boss.vy > 750f) boss.vy = 750f
-
-        boss.x += boss.vx * dt
-        for (p in platforms) {
-            if (aabbIntersects(boss.x, boss.y, boss.w, boss.h, p.x, p.y, p.w, p.h)) {
-                if (boss.vx > 0f) {
-                    boss.x = p.x - boss.w
-                    boss.vx = 0f
-                    if (boss.state == "dash") boss.stateTimer = 0f
-                } else if (boss.vx < 0f) {
-                    boss.x = p.x + p.w
-                    boss.vx = 0f
-                    if (boss.state == "dash") boss.stateTimer = 0f
-                }
-            }
-        }
-
-        boss.y += boss.vy * dt
-        for (p in platforms) {
-            if (aabbIntersects(boss.x, boss.y, boss.w, boss.h, p.x, p.y, p.w, p.h)) {
-                if (boss.vy > 0f) {
-                    boss.y = p.y - boss.h
-                    boss.vy = 0f
-                    if (boss.state == "slam_air") {
-                        boss.state = "idle"
-                        boss.stateTimer = if (boss.phase2) 0.7f else 1.3f
-                        audio.play("hit")
-                        camera.shake(14f)
-                        particles.spawn(boss.x + boss.w / 2f, boss.y + boss.h, Color(0xFFFF6020), 28, 180f, 0.5f, 5f)
-                        projectiles.spawn(
-                            boss.x - 10f, boss.y + boss.h - 24f, -260f, 0f, ProjectileType.SHOCKWAVE, false, 24f
-                        )
-                        projectiles.spawn(
-                            boss.x + boss.w + 10f, boss.y + boss.h - 24f, 260f, 0f, ProjectileType.SHOCKWAVE, false, 24f
-                        )
-                    }
-                }
-            }
-        }
-
-        if (aabbIntersects(boss.x, boss.y, boss.w, boss.h, player.x, player.y, player.w, player.h)) {
-            player.takeDamage(if (boss.phase2) 28f else 22f, boss.x + boss.w / 2f, this)
-        }
+        boss.update(dt, this)
     }
 
     private fun updateProjectiles(dt: Float) {
@@ -926,6 +889,19 @@ class GameEngine {
             // Damage player if enemy projectile
             if (!proj.senderIsPlayer && aabbIntersects(proj.x, proj.y, proj.w, proj.h, player.x, player.y, player.w, player.h)) {
                 player.takeDamage(proj.damage, proj.x, this)
+                // Projectile combat status infliction
+                when (proj.type) {
+                    ProjectileType.BOSS_MAGMA -> {
+                        player.statusController.applyEffect(CombatStatusType.ALCHEMY_BURN, duration = 5.0f, stacks = 1)
+                    }
+                    ProjectileType.SHOCKWAVE -> {
+                        player.statusController.applyEffect(CombatStatusType.CORROSION, duration = 4.5f, stacks = 1)
+                    }
+                    ProjectileType.CULTIST_ORB -> {
+                        player.statusController.applyEffect(CombatStatusType.CORROSION, duration = 4.0f, stacks = 1)
+                    }
+                    else -> {}
+                }
                 explodeProjectile(proj)
                 projectiles.removeAt(i)
                 continue
@@ -938,6 +914,7 @@ class GameEngine {
         when (proj.type) {
             ProjectileType.FLASK -> {
                 audio.play("explode")
+                haptics?.onFlaskExplosion()
                 camera.shake(6f)
                 particles.spawnExplosion(proj.x + proj.w / 2f, proj.y + proj.h / 2f)
                 val aoeX = proj.x - 45f
@@ -949,10 +926,16 @@ class GameEngine {
                 for (e in enemies) {
                     if (!e.dead && aabbIntersects(aoeX, aoeY, aoeW, aoeH, e.x, e.y, e.w, e.h)) {
                         e.takeDamage(45f, hitId, aoeX + aoeW / 2f, this)
+                        // Volatile Flask explosion saturates targets with Burn & Corrosion
+                        e.statusController.applyEffect(CombatStatusType.ALCHEMY_BURN, duration = 5.5f, stacks = 2)
+                        e.statusController.applyEffect(CombatStatusType.CORROSION, duration = 5.0f, stacks = 1)
                     }
                 }
                 if (boss.active && !boss.dead && aabbIntersects(aoeX, aoeY, aoeW, aoeH, boss.x, boss.y, boss.w, boss.h)) {
                     boss.takeDamage(45f, hitId, aoeX + aoeW / 2f, this)
+                    boss.statusController.applyEffect(CombatStatusType.ALCHEMY_BURN, duration = 5.5f, stacks = 2)
+                    boss.statusController.applyEffect(CombatStatusType.CORROSION, duration = 5.0f, stacks = 1)
+                    haptics?.onBossHit()
                 }
                 for (b in breakables) {
                     if (!b.dead && aabbIntersects(aoeX, aoeY, aoeW, aoeH, b.x, b.y, b.w, b.h)) {
@@ -990,17 +973,36 @@ class GameEngine {
             }
 
             if (aabbIntersects(pk.x, pk.y, pk.w, pk.h, player.x, player.y, player.w, player.h)) {
-                if (pk.type == "health") {
-                    player.hp = min(player.maxHp, player.hp + 35f)
-                } else {
-                    player.flasks = min(player.maxFlasks, player.flasks + 2)
+                var isResource = false
+                when (pk.type) {
+                    "health" -> player.hp = min(player.maxHp, player.hp + 35f)
+                    "flask" -> player.flasks = min(player.maxFlasks, player.flasks + 2)
+                    "sulfur" -> {
+                        isResource = true
+                        onResourceCollected?.invoke(com.example.game.alchemy.ResourceType.SULFUR_ASH)
+                    }
+                    "mercury" -> {
+                        isResource = true
+                        onResourceCollected?.invoke(com.example.game.alchemy.ResourceType.QUICKSILVER)
+                    }
+                    "vitriol" -> {
+                        isResource = true
+                        onResourceCollected?.invoke(com.example.game.alchemy.ResourceType.VITRIOL_CRYSTAL)
+                    }
                 }
                 audio.play("pickup")
-                particles.spawn(
-                    pk.x + 8f, pk.y + 8f,
-                    if (pk.type == "health") Color(0xFFFF3050) else Color(0xFF40FFB0),
-                    12, 110f, 0.4f, 3.5f
-                )
+                if (isResource) {
+                    haptics?.onResourceCollected()
+                }
+                val particleColor = when (pk.type) {
+                    "health" -> Color(0xFFFF3050)
+                    "flask" -> Color(0xFF40FFB0)
+                    "sulfur" -> Color(0xFFFFB039)
+                    "mercury" -> Color(0xFF64D8CB)
+                    "vitriol" -> Color(0xFFB388FF)
+                    else -> Color.White
+                }
+                particles.spawn(pk.x + 8f, pk.y + 8f, particleColor, 12, 110f, 0.4f, 3.5f)
                 pickups.removeAt(i)
                 continue
             }

@@ -3,20 +3,27 @@ package com.example.game
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.IconButton
@@ -30,6 +37,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
+import com.example.game.alchemy.AlchemyWorkbench
+import com.example.game.alchemy.PermanentBuffType
+import com.example.game.alchemy.ResourceType
+import com.example.game.boss.BossState
 import com.example.game.data.AuthRepository
 import com.example.game.data.UserSave
 import com.example.game.data.UserSaveRepository
@@ -37,6 +48,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
@@ -51,6 +63,7 @@ import kotlin.math.min
 fun GameScreen(
     startCheckpoint: Int = 0,
     initialTargetFps: Int = 30,
+    initialHapticsEnabled: Boolean = true,
     onReturnToMainMenu: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -60,10 +73,47 @@ fun GameScreen(
     val saveRepo = remember { com.example.game.data.UserSaveRepository(context) }
     val user by authRepo.currentUser.collectAsState()
 
+    val alchemyViewModel: com.example.game.alchemy.AlchemyViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    val pouch by alchemyViewModel.pouch.collectAsState()
+    val activeBuffs by alchemyViewModel.activeEffects.collectAsState()
+    val craftingNotice by alchemyViewModel.craftingNotice.collectAsState()
+
+    var hapticsEnabledState by remember { mutableStateOf(initialHapticsEnabled) }
+    val haptics = remember { GameHaptics(context).apply { isEnabled = initialHapticsEnabled } }
+    var showCraftingDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(hapticsEnabledState) {
+        haptics.isEnabled = hapticsEnabledState
+    }
+
+    LaunchedEffect(craftingNotice) {
+        if (craftingNotice != null) {
+            kotlinx.coroutines.delay(2400)
+            alchemyViewModel.clearCraftingNotice()
+        }
+    }
+
     val engine = remember {
         GameEngine().apply {
             setStartCheckpoint(startCheckpoint)
+            this.haptics = haptics
+            this.onResourceCollected = { res ->
+                alchemyViewModel.collectResource(res)
+            }
         }
+    }
+
+    LaunchedEffect(user) {
+        val currentUid = user?.uid ?: ""
+        val save = saveRepo.getUserSave(currentUid)
+        alchemyViewModel.loadFromUserSave(save)
+        engine.player.maxHp = 100f + alchemyViewModel.getPermanentBonusMaxHp()
+        engine.player.hp = minOf(engine.player.hp, engine.player.maxHp)
+        engine.player.maxFlasks = 3 + alchemyViewModel.getPermanentBonusMaxFlasks()
+        engine.player.flasks = minOf(engine.player.flasks, engine.player.maxFlasks)
+        engine.damageMultiplier = alchemyViewModel.getTotalDamageMultiplier()
+        engine.defenseMultiplier = alchemyViewModel.getTotalDefenseMultiplier()
+        engine.speedMultiplier = alchemyViewModel.getTotalSpeedMultiplier()
     }
 
     // Auto-save checkpoint progress to local storage and Firestore
@@ -124,6 +174,12 @@ fun GameScreen(
 
                     // Clamp delta time to 0.05s max to preserve physics stability
                     if (dt > 0.05f) dt = 0.05f
+
+                    // Update active combat buffs from AlchemyViewModel
+                    alchemyViewModel.update(dt)
+                    engine.damageMultiplier = alchemyViewModel.getDamageMultiplier()
+                    engine.defenseMultiplier = alchemyViewModel.getDefenseMultiplier()
+                    engine.speedMultiplier = alchemyViewModel.getSpeedMultiplier()
 
                     engine.update(dt)
                     frameTick++
@@ -210,9 +266,37 @@ fun GameScreen(
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Medium
             )
+
+            // Active Alchemical Combat Buffs
+            if (activeBuffs.isNotEmpty()) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.padding(top = 4.dp)
+                ) {
+                    for (buff in activeBuffs) {
+                        Box(
+                            modifier = Modifier
+                                .background(Color(0xD9170E28), RoundedCornerShape(6.dp))
+                                .border(1.dp, buff.color, RoundedCornerShape(6.dp))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(buff.iconSymbol, fontSize = 11.sp)
+                                Text(
+                                    text = "${buff.remainingSeconds.toInt()}s",
+                                    color = buff.color,
+                                    fontSize = 10.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
 
-        // Top Right: Controls (FPS Cap, Sound & Pause)
+        // Top Right: Controls (Alchemize, FPS Cap, Sound & Pause)
         Row(
             modifier = Modifier
                 .align(Alignment.TopEnd)
@@ -220,6 +304,30 @@ fun GameScreen(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Alchemical Crafting Button
+            Button(
+                onClick = {
+                    showCraftingDialog = true
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xCC2A183D)),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .height(38.dp)
+                    .border(1.dp, Color(0xFFFFB039), RoundedCornerShape(12.dp))
+                    .testTag("btn_alchemize")
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Text("⚗️", fontSize = 14.sp)
+                    Text(
+                        text = "🜍${pouch[com.example.game.alchemy.ResourceType.SULFUR_ASH] ?: 0} ☿${pouch[com.example.game.alchemy.ResourceType.QUICKSILVER] ?: 0} 🜊${pouch[com.example.game.alchemy.ResourceType.VITRIOL_CRYSTAL] ?: 0}",
+                        color = Color(0xFFFFD700),
+                        fontSize = 11.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
             // Frame Rate Cap Toggle Button (30 FPS Power Saver / 60 FPS)
             Button(
                 onClick = {
@@ -277,34 +385,133 @@ fun GameScreen(
             }
         }
 
-        // Boss Health Bar (Bottom center, when active)
+        // Boss Health Bar & Multi-Phase/Weak-Point HUD (Bottom center, when active)
         if (engine.boss.active && !engine.boss.dead) {
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = 80.dp),
+                    .padding(bottom = 76.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
-                    text = if (engine.boss.phase2) "IGNIS CHIMERA - ENRAGED" else "IGNIS, THE ALCHEMICAL CHIMERA",
-                    color = if (engine.boss.phase2) Color(0xFFFF2050) else Color(0xFFFFD700),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = engine.boss.bossName.uppercase(),
+                        color = Color(0xFFFFD700),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp
+                    )
+                    Text(
+                        text = "• ${engine.boss.currentPhase.title}",
+                        color = engine.boss.currentPhase.accentColor,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(2.dp))
+
+                // HP Bar with Phase Pips (at 33% and 66%)
                 Box(
                     modifier = Modifier
                         .width(360.dp)
-                        .height(14.dp)
-                        .background(Color(0xDD100A1A), RoundedCornerShape(3.dp))
-                        .border(1.dp, if (engine.boss.phase2) Color(0xFFFF2050) else Color(0xFFD0A040), RoundedCornerShape(3.dp))
+                        .height(13.dp)
+                        .background(Color(0xEE120A1E), RoundedCornerShape(3.dp))
+                        .border(1.dp, engine.boss.currentPhase.accentColor.copy(alpha = 0.8f), RoundedCornerShape(3.dp))
                 ) {
                     val ratio = (engine.boss.hp / engine.boss.maxHp).coerceIn(0f, 1f)
                     Box(
                         modifier = Modifier
-                            .fillMaxSize(fraction = ratio)
-                            .background(if (engine.boss.phase2) Color(0xFFB01035) else Color(0xFFC95020))
+                            .fillMaxHeight()
+                            .fillMaxWidth(fraction = ratio)
+                            .background(
+                                Brush.horizontalGradient(
+                                    listOf(
+                                        Color(0xFF8B0000),
+                                        engine.boss.currentPhase.accentColor
+                                    )
+                                )
+                            )
                     )
+                    // Phase dividing markers
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .width(1.dp)
+                            .align(Alignment.CenterStart)
+                            .offset(x = 118.8.dp)
+                            .background(Color(0x88FFFFFF))
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .width(1.dp)
+                            .align(Alignment.CenterStart)
+                            .offset(x = 237.6.dp)
+                            .background(Color(0x88FFFFFF))
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(2.dp))
+
+                // Stagger & Status Indicator
+                when (engine.boss.state) {
+                    com.example.game.boss.BossState.STAGGERED -> {
+                        Text(
+                            text = "★ STAGGERED - WEAK POINT EXPOSED (CRIT x2.2) ★",
+                            color = Color(0xFFFFD700),
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+                    com.example.game.boss.BossState.TELEGRAPHING -> {
+                        val atk = engine.boss.currentAttack
+                        Text(
+                            text = "⚠ TELEGRAPH: ${atk?.name?.uppercase() ?: "INCOMING ATTACK"} ⚠",
+                            color = atk?.warningColor ?: Color(0xFFFF3020),
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    com.example.game.boss.BossState.PHASE_TRANSITION -> {
+                        Text(
+                            text = "⚡ PHASE TRANSFORMATION ENRAGED ⚡",
+                            color = engine.boss.currentPhase.accentColor,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    else -> {
+                        val staggerRatio = (engine.boss.weakPoint.staggerHealth / engine.boss.weakPoint.maxStaggerHealth).coerceIn(0f, 1f)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                text = "CORE SHIELD",
+                                color = Color(0xFFC0A0E0),
+                                fontSize = 8.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .width(80.dp)
+                                    .height(4.dp)
+                                    .background(Color(0x88201530), RoundedCornerShape(2.dp))
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxHeight()
+                                        .fillMaxWidth(fraction = staggerRatio)
+                                        .background(Color(0xFFFFD700), RoundedCornerShape(2.dp))
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -425,6 +632,22 @@ fun GameScreen(
                     }
                     Spacer(modifier = Modifier.height(10.dp))
                     Button(
+                        onClick = {
+                            hapticsEnabledState = !hapticsEnabledState
+                            haptics.isEnabled = hapticsEnabledState
+                            saveRepo.saveLocalUserSave(saveRepo.getLocalUserSave().copy(hapticsEnabled = hapticsEnabledState))
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF37274E)),
+                        modifier = Modifier.testTag("toggle_haptics_pause_menu")
+                    ) {
+                        Text(
+                            text = if (hapticsEnabledState) "Tactile Haptics: Enabled" else "Tactile Haptics: Disabled",
+                            color = if (hapticsEnabledState) Color(0xFF80FFA8) else Color(0xFFFFA0A0),
+                            fontSize = 13.sp
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Button(
                         onClick = { engine.restart() },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E204A)),
                         modifier = Modifier.testTag("restart_button")
@@ -441,6 +664,60 @@ fun GameScreen(
                     }
                 }
             }
+        }
+
+        // Temporary Floating Crafting Notice Toast
+        if (craftingNotice != null) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 62.dp)
+                    .background(Color(0xF01E1130), RoundedCornerShape(20.dp))
+                    .border(1.5.dp, Color(0xFFFFD700), RoundedCornerShape(20.dp))
+                    .padding(horizontal = 20.dp, vertical = 8.dp)
+            ) {
+                Text(
+                    text = "✦ $craftingNotice ✦",
+                    color = Color(0xFFFFD700),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        // Alchemical Crafting & Permanent Transmutation Workbench
+        if (showCraftingDialog) {
+            AlchemyWorkbench(
+                alchemyViewModel = alchemyViewModel,
+                audio = engine.audio,
+                haptics = haptics,
+                onClose = { showCraftingDialog = false },
+                onBuffTransmuted = { buffType ->
+                    engine.player.maxHp = 100f + alchemyViewModel.getPermanentBonusMaxHp()
+                    engine.player.hp = minOf(engine.player.hp, engine.player.maxHp)
+                    engine.player.maxFlasks = 3 + alchemyViewModel.getPermanentBonusMaxFlasks()
+                    engine.player.flasks = minOf(engine.player.flasks, engine.player.maxFlasks)
+                    engine.damageMultiplier = alchemyViewModel.getTotalDamageMultiplier()
+                    engine.defenseMultiplier = alchemyViewModel.getTotalDefenseMultiplier()
+                    engine.speedMultiplier = alchemyViewModel.getTotalSpeedMultiplier()
+
+                    scope.launch {
+                        val currentSave = saveRepo.getUserSave(user?.uid ?: "")
+                        val updatedSave = currentSave.copy(
+                            permanentVitality = alchemyViewModel.getPermanentRank(PermanentBuffType.VITALITY_CORE),
+                            permanentDamage = alchemyViewModel.getPermanentRank(PermanentBuffType.IGNIS_FERVOR),
+                            permanentSpeed = alchemyViewModel.getPermanentRank(PermanentBuffType.QUICKSILVER_STRIDE),
+                            permanentFlasks = alchemyViewModel.getPermanentRank(PermanentBuffType.CRUCIBLE_VESSEL),
+                            permanentDefense = alchemyViewModel.getPermanentRank(PermanentBuffType.AEGIS_INFUSION),
+                            permanentVitriol = alchemyViewModel.getPermanentRank(PermanentBuffType.VITRIOLIC_TOUCH),
+                            savedSulfur = alchemyViewModel.getResourceCount(ResourceType.SULFUR_ASH),
+                            savedMercury = alchemyViewModel.getResourceCount(ResourceType.QUICKSILVER),
+                            savedVitriol = alchemyViewModel.getResourceCount(ResourceType.VITRIOL_CRYSTAL)
+                        )
+                        saveRepo.saveUserSave(updatedSave)
+                    }
+                }
+            )
         }
 
         // Perished Overlay

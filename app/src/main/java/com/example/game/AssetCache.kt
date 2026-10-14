@@ -67,8 +67,13 @@ object AssetCache {
         if (isInitialized) return
         isInitialized = true
 
-        initAudioTracks()
-        initTextures()
+        try {
+            initAudioTracks()
+        } catch (_: Throwable) {}
+
+        try {
+            initTextures()
+        } catch (_: Throwable) {}
     }
 
     // =========================================================================
@@ -325,10 +330,14 @@ object AssetCache {
     }
 
     private fun renderBitmap(width: Int, height: Int, block: (Canvas) -> Unit): ImageBitmap {
-        val bitmap = ImageBitmap(width, height)
-        val canvas = Canvas(bitmap)
-        block(canvas)
-        return bitmap
+        return try {
+            val bitmap = ImageBitmap(width, height)
+            val canvas = Canvas(bitmap)
+            block(canvas)
+            bitmap
+        } catch (_: Throwable) {
+            ImageBitmap(1, 1)
+        }
     }
 
     private fun renderPlayerSprite(facingRight: Boolean, attacking: Boolean): ImageBitmap {

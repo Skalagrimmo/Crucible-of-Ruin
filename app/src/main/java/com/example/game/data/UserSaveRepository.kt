@@ -1,110 +1,116 @@
 package com.example.game.data
 
 import android.content.Context
-import android.content.SharedPreferences
 import com.example.R
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.tasks.await
 
 class UserSaveRepository(private val context: Context) {
-    private val prefs: SharedPreferences =
-        context.getSharedPreferences("crucible_user_save", Context.MODE_PRIVATE)
+    private val prefs = context.getSharedPreferences("crucible_save_prefs", Context.MODE_PRIVATE)
 
     private val firestore: FirebaseFirestore by lazy {
-        val dbId = context.getString(R.string.firestore_database_id)
-        FirebaseFirestore.getInstance(dbId)
+        FirebaseFirestore.getInstance(context.getString(R.string.firestore_database_id))
     }
 
     fun getLocalUserSave(): UserSave {
         return UserSave(
-            userId = prefs.getString("userId", "") ?: "",
-            displayName = prefs.getString("displayName", "Alchemist") ?: "Alchemist",
-            highScore = prefs.getInt("highScore", 0),
-            bestTimeSeconds = prefs.getFloat("bestTimeSeconds", 0f),
-            foesSlain = prefs.getInt("foesSlain", 0),
-            lastCheckpoint = prefs.getInt("lastCheckpoint", 0),
-            targetFps = prefs.getInt("targetFps", 30),
-            soundMuted = prefs.getBoolean("soundMuted", false),
-            updatedAt = prefs.getLong("updatedAt", System.currentTimeMillis())
+            userId = prefs.getString("user_id", "") ?: "",
+            displayName = prefs.getString("display_name", "Alchemist") ?: "Alchemist",
+            highScore = prefs.getInt("high_score", 0),
+            bestTimeSeconds = prefs.getFloat("best_time", 0f),
+            foesSlain = prefs.getInt("foes_slain", 0),
+            lastCheckpoint = prefs.getInt("last_checkpoint", 0),
+            savedAt = prefs.getLong("saved_at", System.currentTimeMillis()),
+            targetFps = prefs.getInt("target_fps", 30),
+            soundMuted = prefs.getBoolean("sound_muted", false),
+            hapticsEnabled = prefs.getBoolean("haptics_enabled", true),
+            permanentVitality = prefs.getInt("perm_vitality", 0),
+            permanentDamage = prefs.getInt("perm_damage", 0),
+            permanentSpeed = prefs.getInt("perm_speed", 0),
+            permanentFlasks = prefs.getInt("perm_flasks", 0),
+            permanentDefense = prefs.getInt("perm_defense", 0),
+            permanentVitriol = prefs.getInt("perm_vitriol", 0),
+            savedSulfur = prefs.getInt("saved_sulfur", 3),
+            savedMercury = prefs.getInt("saved_mercury", 2),
+            savedVitriol = prefs.getInt("saved_vitriol", 1)
         )
     }
 
     fun saveLocalUserSave(save: UserSave) {
         prefs.edit()
-            .putString("userId", save.userId)
-            .putString("displayName", save.displayName)
-            .putInt("highScore", save.highScore)
-            .putFloat("bestTimeSeconds", save.bestTimeSeconds)
-            .putInt("foesSlain", save.foesSlain)
-            .putInt("lastCheckpoint", save.lastCheckpoint)
-            .putInt("targetFps", save.targetFps)
-            .putBoolean("soundMuted", save.soundMuted)
-            .putLong("updatedAt", save.updatedAt)
+            .putString("user_id", save.userId)
+            .putString("display_name", save.displayName)
+            .putInt("high_score", save.highScore)
+            .putFloat("best_time", save.bestTimeSeconds)
+            .putInt("foes_slain", save.foesSlain)
+            .putInt("last_checkpoint", save.lastCheckpoint)
+            .putLong("saved_at", save.savedAt)
+            .putInt("target_fps", save.targetFps)
+            .putBoolean("sound_muted", save.soundMuted)
+            .putBoolean("haptics_enabled", save.hapticsEnabled)
+            .putInt("perm_vitality", save.permanentVitality)
+            .putInt("perm_damage", save.permanentDamage)
+            .putInt("perm_speed", save.permanentSpeed)
+            .putInt("perm_flasks", save.permanentFlasks)
+            .putInt("perm_defense", save.permanentDefense)
+            .putInt("perm_vitriol", save.permanentVitriol)
+            .putInt("saved_sulfur", save.savedSulfur)
+            .putInt("saved_mercury", save.savedMercury)
+            .putInt("saved_vitriol", save.savedVitriol)
             .apply()
     }
 
     suspend fun getUserSave(userId: String): UserSave {
-        var local = getLocalUserSave()
-        if (userId.isNotBlank() && local.userId != userId) {
-            local = local.copy(userId = userId)
-        }
-
+        val local = getLocalUserSave()
         if (userId.isBlank()) return local
 
         return try {
-            val doc = firestore.collection("users").document(userId).get().await()
-            if (doc.exists()) {
-                val cloudSave = UserSave(
-                    userId = doc.getString("userId") ?: userId,
-                    displayName = doc.getString("displayName") ?: local.displayName,
-                    highScore = maxOf(doc.getLong("highScore")?.toInt() ?: 0, local.highScore),
-                    bestTimeSeconds = run {
-                        val cloudTime = doc.getDouble("bestTimeSeconds")?.toFloat() ?: 0f
-                        if (local.bestTimeSeconds <= 0f) cloudTime
-                        else if (cloudTime <= 0f) local.bestTimeSeconds
-                        else minOf(cloudTime, local.bestTimeSeconds)
-                    },
-                    foesSlain = maxOf(doc.getLong("foesSlain")?.toInt() ?: 0, local.foesSlain),
-                    lastCheckpoint = maxOf(doc.getLong("lastCheckpoint")?.toInt() ?: 0, local.lastCheckpoint),
-                    targetFps = doc.getLong("targetFps")?.toInt() ?: local.targetFps,
-                    soundMuted = doc.getBoolean("soundMuted") ?: local.soundMuted,
-                    updatedAt = maxOf(doc.getLong("updatedAt") ?: 0L, local.updatedAt)
-                )
-                saveLocalUserSave(cloudSave)
-                cloudSave
+            val snapshot = firestore.collection("users").document(userId).get().await()
+            if (snapshot.exists()) {
+                val cloud = snapshot.toObject(UserSave::class.java)
+                if (cloud != null) {
+                    val merged = cloud.copy(
+                        targetFps = local.targetFps,
+                        soundMuted = local.soundMuted,
+                        hapticsEnabled = local.hapticsEnabled,
+                        highScore = maxOf(local.highScore, cloud.highScore),
+                        lastCheckpoint = maxOf(local.lastCheckpoint, cloud.lastCheckpoint),
+                        foesSlain = maxOf(local.foesSlain, cloud.foesSlain),
+                        permanentVitality = maxOf(local.permanentVitality, cloud.permanentVitality),
+                        permanentDamage = maxOf(local.permanentDamage, cloud.permanentDamage),
+                        permanentSpeed = maxOf(local.permanentSpeed, cloud.permanentSpeed),
+                        permanentFlasks = maxOf(local.permanentFlasks, cloud.permanentFlasks),
+                        permanentDefense = maxOf(local.permanentDefense, cloud.permanentDefense),
+                        permanentVitriol = maxOf(local.permanentVitriol, cloud.permanentVitriol),
+                        savedSulfur = maxOf(local.savedSulfur, cloud.savedSulfur),
+                        savedMercury = maxOf(local.savedMercury, cloud.savedMercury),
+                        savedVitriol = maxOf(local.savedVitriol, cloud.savedVitriol)
+                    )
+                    saveLocalUserSave(merged)
+                    merged
+                } else {
+                    local
+                }
             } else {
-                saveUserSave(local)
                 local
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
             local
         }
     }
 
-    suspend fun saveUserSave(save: UserSave): Boolean {
+    suspend fun saveUserSave(save: UserSave): Result<Unit> {
         saveLocalUserSave(save)
-
-        if (save.userId.isBlank()) return true
+        if (save.userId.isBlank()) return Result.success(Unit)
 
         return try {
-            val map = hashMapOf(
-                "userId" to save.userId,
-                "displayName" to save.displayName,
-                "highScore" to save.highScore,
-                "bestTimeSeconds" to save.bestTimeSeconds,
-                "foesSlain" to save.foesSlain,
-                "lastCheckpoint" to save.lastCheckpoint,
-                "targetFps" to save.targetFps,
-                "soundMuted" to save.soundMuted,
-                "updatedAt" to System.currentTimeMillis()
-            )
             firestore.collection("users").document(save.userId)
-                .set(map, SetOptions.merge())
+                .set(save, SetOptions.merge())
                 .await()
-            true
-        } catch (_: Exception) {
-            false
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 }
