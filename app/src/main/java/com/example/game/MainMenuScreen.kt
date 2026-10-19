@@ -48,6 +48,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.game.codex.GrimoireCodexDialog
 import com.example.game.data.AuthRepository
 import com.example.game.data.UserSave
 import com.example.game.data.UserSaveRepository
@@ -77,6 +78,7 @@ fun MainMenuScreen(
     var showSettingsDialog by remember { mutableStateOf(false) }
     var showStatsDialog by remember { mutableStateOf(false) }
     var showControlsDialog by remember { mutableStateOf(false) }
+    var showGrimoireDialog by remember { mutableStateOf(false) }
 
     // Load user cloud save whenever user logs in or app launches
     LaunchedEffect(user) {
@@ -316,6 +318,31 @@ fun MainMenuScreen(
                     .testTag("menu_options_button")
             ) {
                 Text("OPTIONS & PERFORMANCE", color = Color(0xFFDCCFF5), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Grimoire Codex & Bestiary
+            Button(
+                onClick = { showGrimoireDialog = true },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF26143E)),
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(42.dp)
+                    .border(1.dp, Color(0xFFFFD700), RoundedCornerShape(10.dp))
+                    .testTag("menu_grimoire_button")
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("📖", fontSize = 14.sp)
+                    Text(
+                        text = "GRIMOIRE CODEX & BESTIARY",
+                        color = Color(0xFFFFD700),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -575,6 +602,7 @@ fun MainMenuScreen(
                         Text("▲ Jump: Tap for short hop, hold for maximum vertical reach. Coyote time allows jumping briefly after walking off ledges.", color = Color(0xFFDCCFF5), fontSize = 12.sp)
                         Text("⚔️ Melee Slash: Deliver rapid sword strikes. Shatters breakable urns and deals 28 damage to foes.", color = Color(0xFFDCCFF5), fontSize = 12.sp)
                         Text("🧪 Alchemical Flask: Lob volatile reagent bottles with AoE explosion (45 damage). Essential for aerial cherubs and crowds.", color = Color(0xFFDCCFF5), fontSize = 12.sp)
+                        Text("💨 Shadow Dash & Riposte: Surge forward with complete invulnerability frames. Dashing directly through an incoming attack or boss telegraph triggers a Chrono-Break Riposte that restores 1 Flask and counters with rupture shockwave!", color = Color(0xFF00E5FF), fontSize = 12.sp)
                         Text("Altar Shrines: Touch golden shrines to bind your soul and unlock continue checkpoints.", color = Color(0xFF90FFC0), fontSize = 12.sp)
                     }
 
@@ -589,6 +617,14 @@ fun MainMenuScreen(
                     }
                 }
             }
+        }
+
+        // --- DIALOG 4: GRIMOIRE CODEX & BESTIARY ---
+        if (showGrimoireDialog) {
+            GrimoireCodexDialog(
+                userSave = userSave,
+                onDismiss = { showGrimoireDialog = false }
+            )
         }
     }
 }

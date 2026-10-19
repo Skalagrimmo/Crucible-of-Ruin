@@ -348,12 +348,59 @@ object GameRenderer {
                 }
             }
 
-            // 9. Player (Pre-loaded textures)
+            // 9. Player (Pre-loaded textures, shadow dash afterimages, and riposte visual fx)
             val p = engine.player
+
+            // Render shadow dash afterimages
+            for (img in p.afterimages) {
+                val ix = img.x - camX
+                val iy = img.y - camY
+                val tex = if (img.facing > 0) AssetCache.texPlayerIdleRight else AssetCache.texPlayerIdleLeft
+                drawImage(
+                    image = tex,
+                    topLeft = Offset(ix - 3f, iy - 2f),
+                    alpha = img.alpha * 0.65f
+                )
+                drawCircle(
+                    color = img.color.copy(alpha = img.alpha * 0.35f),
+                    radius = p.w * 0.75f,
+                    center = Offset(ix + p.w / 2f, iy + p.h / 2f),
+                    style = Stroke(width = 1.5f)
+                )
+            }
+
             if (!p.dead && (p.invulnTimer <= 0f || (System.currentTimeMillis() / 60) % 2 == 0L)) {
                 val px = p.x - camX
                 val py = p.y - camY
                 val bob = if (p.grounded && abs(p.vx) > 20f) sin(p.walkAnimTimer) * 2f else 0f
+
+                // Perfect Riposte Shockwave Ring
+                if (p.perfectRiposteTimer > 0f) {
+                    val progress = 1f - (p.perfectRiposteTimer / 1.3f).coerceIn(0f, 1f)
+                    val shockRadius = p.w * (1.2f + progress * 2.8f)
+                    val shockAlpha = (1f - progress).coerceIn(0f, 1f)
+                    drawCircle(
+                        color = Color(0xFFFFD700).copy(alpha = shockAlpha * 0.80f),
+                        radius = shockRadius,
+                        center = Offset(px + p.w / 2f, py + p.h / 2f),
+                        style = Stroke(width = 3.5f)
+                    )
+                    drawCircle(
+                        color = Color(0xFF00E5FF).copy(alpha = shockAlpha * 0.60f),
+                        radius = shockRadius * 0.75f,
+                        center = Offset(px + p.w / 2f, py + p.h / 2f),
+                        style = Stroke(width = 2f)
+                    )
+                }
+
+                // Shadow Dash In-Flight Glow
+                if (p.isDashing) {
+                    drawCircle(
+                        color = Color(0x6600E5FF),
+                        radius = p.w * 1.1f,
+                        center = Offset(px + p.w / 2f, py + p.h / 2f)
+                    )
+                }
 
                 // Player Status Effect Aura
                 if (p.statusController.hasEffect(com.example.game.status.CombatStatusType.ALCHEMY_BURN)) {

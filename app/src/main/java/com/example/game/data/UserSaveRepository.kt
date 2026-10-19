@@ -33,7 +33,8 @@ class UserSaveRepository(private val context: Context) {
             permanentVitriol = prefs.getInt("perm_vitriol", 0),
             savedSulfur = prefs.getInt("saved_sulfur", 3),
             savedMercury = prefs.getInt("saved_mercury", 2),
-            savedVitriol = prefs.getInt("saved_vitriol", 1)
+            savedVitriol = prefs.getInt("saved_vitriol", 1),
+            perfectDodges = prefs.getInt("perfect_dodges", 0)
         )
     }
 
@@ -58,6 +59,7 @@ class UserSaveRepository(private val context: Context) {
             .putInt("saved_sulfur", save.savedSulfur)
             .putInt("saved_mercury", save.savedMercury)
             .putInt("saved_vitriol", save.savedVitriol)
+            .putInt("perfect_dodges", save.perfectDodges)
             .apply()
     }
 
@@ -85,7 +87,8 @@ class UserSaveRepository(private val context: Context) {
                         permanentVitriol = maxOf(local.permanentVitriol, cloud.permanentVitriol),
                         savedSulfur = maxOf(local.savedSulfur, cloud.savedSulfur),
                         savedMercury = maxOf(local.savedMercury, cloud.savedMercury),
-                        savedVitriol = maxOf(local.savedVitriol, cloud.savedVitriol)
+                        savedVitriol = maxOf(local.savedVitriol, cloud.savedVitriol),
+                        perfectDodges = maxOf(local.perfectDodges, cloud.perfectDodges)
                     )
                     saveLocalUserSave(merged)
                     merged

@@ -21,5 +21,7 @@ data class UserSave(
     // Persistent Reagents
     val savedSulfur: Int = 3,
     val savedMercury: Int = 2,
-    val savedVitriol: Int = 1
+    val savedVitriol: Int = 1,
+    // Combat Mastery Statistics
+    val perfectDodges: Int = 0
 )

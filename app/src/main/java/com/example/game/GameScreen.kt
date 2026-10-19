@@ -38,11 +38,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import com.example.game.alchemy.AlchemyWorkbench
+import com.example.game.codex.GrimoireCodexDialog
 import com.example.game.alchemy.PermanentBuffType
 import com.example.game.alchemy.ResourceType
 import com.example.game.boss.BossState
 import com.example.game.data.AuthRepository
 import com.example.game.data.UserSave
+import com.example.game.status.ActiveCombatStatus
+import com.example.game.status.CombatStatusType
 import com.example.game.data.UserSaveRepository
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
@@ -81,6 +84,8 @@ fun GameScreen(
     var hapticsEnabledState by remember { mutableStateOf(initialHapticsEnabled) }
     val haptics = remember { GameHaptics(context).apply { isEnabled = initialHapticsEnabled } }
     var showCraftingDialog by remember { mutableStateOf(false) }
+    var showGrimoireDialog by remember { mutableStateOf(false) }
+    var userSaveState by remember { mutableStateOf(saveRepo.getLocalUserSave()) }
 
     LaunchedEffect(hapticsEnabledState) {
         haptics.isEnabled = hapticsEnabledState
@@ -106,6 +111,7 @@ fun GameScreen(
     LaunchedEffect(user) {
         val currentUid = user?.uid ?: ""
         val save = saveRepo.getUserSave(currentUid)
+        userSaveState = save
         alchemyViewModel.loadFromUserSave(save)
         engine.player.maxHp = 100f + alchemyViewModel.getPermanentBonusMaxHp()
         engine.player.hp = minOf(engine.player.hp, engine.player.maxHp)
@@ -121,12 +127,13 @@ fun GameScreen(
         val currentUid = user?.uid ?: ""
         scope.launch {
             val current = saveRepo.getUserSave(currentUid)
-            saveRepo.saveUserSave(
-                current.copy(
-                    lastCheckpoint = maxOf(current.lastCheckpoint, cpId),
-                    foesSlain = current.foesSlain + engine.enemiesDefeated
-                )
+            val updated = current.copy(
+                lastCheckpoint = maxOf(current.lastCheckpoint, cpId),
+                foesSlain = current.foesSlain + engine.enemiesDefeated,
+                perfectDodges = current.perfectDodges + engine.perfectDodgesCount
             )
+            saveRepo.saveUserSave(updated)
+            userSaveState = updated
         }
     }
 
@@ -137,13 +144,14 @@ fun GameScreen(
             scope.launch {
                 val current = saveRepo.getUserSave(currentUid)
                 val bestTime = if (current.bestTimeSeconds <= 0f) engine.timeElapsed else minOf(current.bestTimeSeconds, engine.timeElapsed)
-                saveRepo.saveUserSave(
-                    current.copy(
-                        bestTimeSeconds = bestTime,
-                        foesSlain = current.foesSlain + engine.enemiesDefeated,
-                        highScore = maxOf(current.highScore, (engine.enemiesDefeated * 100 + engine.player.hp.toInt() * 10))
-                    )
+                val updated = current.copy(
+                    bestTimeSeconds = bestTime,
+                    foesSlain = current.foesSlain + engine.enemiesDefeated,
+                    highScore = maxOf(current.highScore, (engine.enemiesDefeated * 100 + engine.player.hp.toInt() * 10)),
+                    perfectDodges = current.perfectDodges + engine.perfectDodgesCount
                 )
+                saveRepo.saveUserSave(updated)
+                userSaveState = updated
             }
         }
     }
@@ -199,6 +207,41 @@ fun GameScreen(
             val tick = frameTick
             if (tick >= 0) {
                 GameRenderer.render(this, engine)
+            }
+        }
+
+        // Screen-wide Status Effect Vignette Overlay (fiery red/orange for Alchemy-Burn, caustic green for Corrosion)
+        val hasBurn = engine.player.statusController.hasEffect(CombatStatusType.ALCHEMY_BURN)
+        val hasCorrosion = engine.player.statusController.hasEffect(CombatStatusType.CORROSION)
+        if (hasBurn || hasCorrosion) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val tick = frameTick // Reacts to frame updates
+                if (tick >= 0) {
+                    if (hasBurn) {
+                        val pulse = (kotlin.math.sin(System.currentTimeMillis() / 140.0) * 0.15f + 0.35f).toFloat()
+                        drawRect(
+                            brush = Brush.radialGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color(0xFFFF3D00).copy(alpha = pulse * 0.40f)
+                                ),
+                                radius = size.maxDimension * 0.72f
+                            )
+                        )
+                    }
+                    if (hasCorrosion) {
+                        val pulse = (kotlin.math.sin(System.currentTimeMillis() / 170.0) * 0.12f + 0.28f).toFloat()
+                        drawRect(
+                            brush = Brush.radialGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color(0xFF76FF03).copy(alpha = pulse * 0.35f)
+                                ),
+                                radius = size.maxDimension * 0.68f
+                            )
+                        )
+                    }
+                }
             }
         }
 
@@ -294,6 +337,84 @@ fun GameScreen(
                     }
                 }
             }
+
+            // Active Combat Status Debuffs (Alchemy-Burn, Corrosion)
+            val playerDebuffs = remember(frameTick) {
+                engine.player.statusController.getActiveEffects().toList()
+            }
+            if (playerDebuffs.isNotEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .padding(top = 6.dp)
+                        .testTag("player_debuffs_list"),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    for (debuff in playerDebuffs) {
+                        Box(
+                            modifier = Modifier
+                                .background(
+                                    if (debuff.type == CombatStatusType.ALCHEMY_BURN) Color(0xEE2A0A10) else Color(0xEE0E240D),
+                                    RoundedCornerShape(6.dp)
+                                )
+                                .border(1.dp, debuff.type.primaryColor, RoundedCornerShape(6.dp))
+                                .padding(horizontal = 6.dp, vertical = 3.dp)
+                                .testTag("debuff_${debuff.type.id}")
+                        ) {
+                            Column {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(debuff.type.iconSymbol, fontSize = 11.sp)
+                                    Text(
+                                        text = debuff.type.displayName.uppercase() + (if (debuff.stacks > 1) " x${debuff.stacks}" else ""),
+                                        color = debuff.type.primaryColor,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 0.5.sp
+                                    )
+                                    Text(
+                                        text = "${String.format("%.1f", debuff.remaining)}s",
+                                        color = Color(0xFFF0E6FF),
+                                        fontSize = 9.sp,
+                                        fontFamily = FontFamily.Monospace,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    if (debuff.type == CombatStatusType.CORROSION) {
+                                        Text(
+                                            text = "(+${30 * debuff.stacks}% DMG / -${20 * debuff.stacks}% SPD)",
+                                            color = Color(0xFFFFD54F),
+                                            fontSize = 8.sp,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    } else if (debuff.type == CombatStatusType.ALCHEMY_BURN) {
+                                        Text(
+                                            text = "(DoT)",
+                                            color = Color(0xFFFF8A65),
+                                            fontSize = 8.sp,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .width(90.dp)
+                                        .height(3.dp)
+                                        .background(Color(0x88231238), RoundedCornerShape(1.5.dp))
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxHeight()
+                                            .fillMaxWidth(fraction = debuff.progress)
+                                            .background(debuff.type.primaryColor, RoundedCornerShape(1.5.dp))
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         // Top Right: Controls (Alchemize, FPS Cap, Sound & Pause)
@@ -326,6 +447,25 @@ fun GameScreen(
                         fontFamily = FontFamily.Monospace,
                         fontWeight = FontWeight.Bold
                     )
+                }
+            }
+
+            // Grimoire Codex Button
+            Button(
+                onClick = {
+                    showGrimoireDialog = true
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xCC24143D)),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .height(38.dp)
+                    .border(1.dp, Color(0xFFC0A8DC), RoundedCornerShape(12.dp))
+                    .testTag("btn_grimoire_codex")
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("📖", fontSize = 13.sp)
+                    Text("Codex", color = Color(0xFFE5DBF7), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
             // Frame Rate Cap Toggle Button (30 FPS Power Saver / 60 FPS)
@@ -457,6 +597,58 @@ fun GameScreen(
 
                 Spacer(modifier = Modifier.height(2.dp))
 
+                // Boss Combat Status Debuffs (Corrosion, Alchemy-Burn)
+                val bossDebuffs = remember(frameTick) {
+                    if (engine.boss.active && !engine.boss.dead) engine.boss.statusController.getActiveEffects().toList() else emptyList()
+                }
+                if (bossDebuffs.isNotEmpty()) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .padding(bottom = 2.dp)
+                            .testTag("boss_debuffs_row")
+                    ) {
+                        for (bDebuff in bossDebuffs) {
+                            Box(
+                                modifier = Modifier
+                                    .background(Color(0xD9160B22), RoundedCornerShape(4.dp))
+                                    .border(1.dp, bDebuff.type.primaryColor, RoundedCornerShape(4.dp))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    .testTag("boss_debuff_${bDebuff.type.id}")
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(bDebuff.type.iconSymbol, fontSize = 9.sp)
+                                    Text(
+                                        text = "${bDebuff.type.displayName.uppercase()}" + (if (bDebuff.stacks > 1) " x${bDebuff.stacks}" else "") + " ${String.format("%.1f", bDebuff.remaining)}s",
+                                        color = bDebuff.type.primaryColor,
+                                        fontSize = 8.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    if (bDebuff.type == CombatStatusType.CORROSION) {
+                                        Text(
+                                            text = "(+${30 * bDebuff.stacks}% DMG)",
+                                            color = Color(0xFFFFD700),
+                                            fontSize = 8.sp,
+                                            fontWeight = FontWeight.ExtraBold
+                                        )
+                                    } else if (bDebuff.type == CombatStatusType.ALCHEMY_BURN) {
+                                        Text(
+                                            text = "(DoT)",
+                                            color = Color(0xFFFF8A65),
+                                            fontSize = 8.sp,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // Stagger & Status Indicator
                 when (engine.boss.state) {
                     com.example.game.boss.BossState.STAGGERED -> {
@@ -541,7 +733,7 @@ fun GameScreen(
                 )
             }
 
-            // Action Buttons (Sub, Attack, Jump)
+            // Action Buttons (Sub, Dash, Attack, Jump)
             Row(
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
                 verticalAlignment = Alignment.Bottom
@@ -557,6 +749,20 @@ fun GameScreen(
                     modifier = Modifier
                         .padding(bottom = 16.dp)
                         .testTag("btn_flask")
+                )
+
+                // Shadow Dash Button
+                val isDashReady = engine.player.dashCooldown <= 0f
+                TouchTapButton(
+                    symbol = "💨",
+                    label = if (isDashReady) "Dash" else "${String.format("%.1f", engine.player.dashCooldown)}s",
+                    size = 56,
+                    color = if (isDashReady) Color(0x99182E48) else Color(0x66101624),
+                    borderColor = if (isDashReady) Color(0xFF00E5FF) else Color(0x44406888),
+                    onTap = { engine.onDashPressed() },
+                    modifier = Modifier
+                        .padding(bottom = 16.dp)
+                        .testTag("btn_dash")
                 )
 
                 // Melee Slash Attack
@@ -648,6 +854,14 @@ fun GameScreen(
                     }
                     Spacer(modifier = Modifier.height(10.dp))
                     Button(
+                        onClick = { showGrimoireDialog = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2C1944)),
+                        modifier = Modifier.testTag("pause_grimoire_button")
+                    ) {
+                        Text("📖 Grimoire Codex & Bestiary", color = Color(0xFFFFD700))
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Button(
                         onClick = { engine.restart() },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E204A)),
                         modifier = Modifier.testTag("restart_button")
@@ -685,6 +899,32 @@ fun GameScreen(
             }
         }
 
+        // Floating Perfect Riposte Banner Overlay
+        if (engine.player.perfectRiposteTimer > 0f) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 96.dp)
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(Color(0xE6261545), Color(0xF00D2845), Color(0xE6261545))
+                        ),
+                        RoundedCornerShape(20.dp)
+                    )
+                    .border(1.5.dp, Color(0xFFFFD700), RoundedCornerShape(20.dp))
+                    .padding(horizontal = 22.dp, vertical = 8.dp)
+                    .testTag("perfect_riposte_banner")
+            ) {
+                Text(
+                    text = engine.player.riposteNotice,
+                    color = Color(0xFFFFD700),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 0.5.sp
+                )
+            }
+        }
+
         // Alchemical Crafting & Permanent Transmutation Workbench
         if (showCraftingDialog) {
             AlchemyWorkbench(
@@ -717,6 +957,15 @@ fun GameScreen(
                         saveRepo.saveUserSave(updatedSave)
                     }
                 }
+            )
+        }
+
+        // Grimoire & Bestiary Codex Dialog
+        if (showGrimoireDialog) {
+            GrimoireCodexDialog(
+                userSave = userSaveState,
+                alchemyViewModel = alchemyViewModel,
+                onDismiss = { showGrimoireDialog = false }
             )
         }
 

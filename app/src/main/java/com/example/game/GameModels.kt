@@ -51,6 +51,14 @@ data class Checkpoint(
     var activated: Boolean = false
 )
 
+data class PlayerAfterimage(
+    val x: Float,
+    val y: Float,
+    val facing: Int,
+    var alpha: Float = 0.75f,
+    val color: Color = Color(0xFF00E5FF)
+)
+
 class BreakableUrn(
     val x: Float,
     val y: Float,

@@ -91,6 +91,8 @@ object AssetCache {
         sounds["checkpoint"] = generateArpeggio(intArrayOf(330, 440, 554, 659), 0.10f, 0.5f)
         sounds["boss_roar"] = generateTone(70f, 35f, 0.50f, 0.8f)
         sounds["victory"] = generateArpeggio(intArrayOf(261, 329, 392, 523, 659), 0.14f, 0.6f)
+        sounds["dash"] = generateNoise(0.12f, 0.38f)
+        sounds["riposte"] = generateArpeggio(intArrayOf(587, 880, 1174, 1760), 0.07f, 0.85f)
 
         for ((key, pcm) in sounds) {
             try {

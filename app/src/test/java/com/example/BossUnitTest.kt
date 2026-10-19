@@ -5,6 +5,8 @@ import com.example.game.boss.BossPhase
 import com.example.game.boss.BossState
 import com.example.game.boss.CrucibleChimeraBoss
 import com.example.game.boss.WeakPoint
+import com.example.game.status.CombatStatusType
+import com.example.game.status.StatusEffectController
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -114,5 +116,158 @@ class BossUnitTest {
         val recoveryDuration = boss.currentAttack!!.recoveryDuration
         boss.update(recoveryDuration + 0.05f, engine)
         assertEquals(BossState.IDLE, boss.state)
+    }
+
+    @Test
+    fun testStatusEffectApplicationAndDotTick() {
+        val controller = StatusEffectController()
+        assertFalse(controller.hasEffect(CombatStatusType.ALCHEMY_BURN))
+
+        controller.applyEffect(CombatStatusType.ALCHEMY_BURN, duration = 4.0f, dpsMultiplier = 1.0f, stacks = 1)
+        assertTrue(controller.hasEffect(CombatStatusType.ALCHEMY_BURN))
+        val eff = controller.getEffect(CombatStatusType.ALCHEMY_BURN)
+        assertNotNull(eff)
+        assertEquals(1, eff!!.stacks)
+        assertEquals(4.0f, eff.remaining, 0.001f)
+
+        // Stack accumulation up to maxStacks (3)
+        controller.applyEffect(CombatStatusType.ALCHEMY_BURN, duration = 4.0f, stacks = 2)
+        assertEquals(3, eff.stacks)
+
+        // Cannot exceed maxStacks
+        controller.applyEffect(CombatStatusType.ALCHEMY_BURN, duration = 4.0f, stacks = 2)
+        assertEquals(3, eff.stacks)
+
+        // Verify DoT ticking
+        var totalTickDamage = 0f
+        var tickCount = 0
+        controller.update(0.55f) { type, damage, stacks ->
+            assertEquals(CombatStatusType.ALCHEMY_BURN, type)
+            assertEquals(3, stacks)
+            totalTickDamage += damage
+            tickCount++
+        }
+        assertEquals(1, tickCount)
+        assertTrue(totalTickDamage > 0f)
+
+        // Advance until expiration
+        controller.update(5.0f) { _, _, _ -> }
+        assertFalse(controller.hasEffect(CombatStatusType.ALCHEMY_BURN))
+        assertTrue(controller.getActiveEffects().isEmpty())
+    }
+
+    @Test
+    fun testCorrosionStatPenalties() {
+        val controller = StatusEffectController()
+        assertEquals(1.0f, controller.getIncomingDamageMultiplier(), 0.001f)
+        assertEquals(1.0f, controller.getSpeedMultiplier(), 0.001f)
+
+        // 1 Stack of Corrosion: +30% damage taken, -20% speed
+        controller.applyEffect(CombatStatusType.CORROSION, duration = 5.0f, stacks = 1)
+        assertEquals(1.30f, controller.getIncomingDamageMultiplier(), 0.001f)
+        assertEquals(0.80f, controller.getSpeedMultiplier(), 0.001f)
+
+        // 2 Stacks of Corrosion: +60% damage taken, -40% speed
+        controller.applyEffect(CombatStatusType.CORROSION, duration = 5.0f, stacks = 1)
+        assertEquals(1.60f, controller.getIncomingDamageMultiplier(), 0.001f)
+        assertEquals(0.60f, controller.getSpeedMultiplier(), 0.001f)
+    }
+
+    @Test
+    fun testBossTakesAmplifiedDamageFromCorrosion() {
+        val boss = CrucibleChimeraBoss(spawnX = 1000f, spawnY = 300f)
+        boss.active = true
+        val engine = GameEngine()
+        val initialHp = boss.hp
+
+        // Apply normal hit without corrosion (hit from far away to avoid weak point)
+        boss.takeDamage(20f, 1001L, 0f, engine)
+        val damageTakenNormal = initialHp - boss.hp
+        assertEquals(20f, damageTakenNormal, 0.01f)
+
+        // Inflict 1 stack of Corrosion (+30% damage taken)
+        boss.statusController.applyEffect(CombatStatusType.CORROSION, duration = 5f, stacks = 1)
+        val hpBeforeCorrodedHit = boss.hp
+        boss.takeDamage(20f, 1002L, 0f, engine)
+        val damageTakenCorroded = hpBeforeCorrodedHit - boss.hp
+        assertEquals(26f, damageTakenCorroded, 0.01f) // 20 * 1.30 = 26
+    }
+
+    @Test
+    fun testBossWeakPointInflictsStatusEffects() {
+        val boss = CrucibleChimeraBoss(spawnX = 1000f, spawnY = 300f)
+        boss.active = true
+        boss.facing = 1
+        val engine = GameEngine()
+
+        // Place player so slash directly hits weak point
+        engine.player.x = 980f
+        engine.player.y = 305f
+        engine.player.facing = 1
+
+        assertFalse(boss.statusController.hasEffect(CombatStatusType.CORROSION))
+        assertFalse(boss.statusController.hasEffect(CombatStatusType.ALCHEMY_BURN))
+
+        boss.takeDamage(30f, 2001L, engine.player.x, engine)
+
+        // Weak point breach applies both Corrosion and Alchemy-Burn
+        assertTrue(boss.statusController.hasEffect(CombatStatusType.CORROSION))
+        assertTrue(boss.statusController.hasEffect(CombatStatusType.ALCHEMY_BURN))
+    }
+
+    @Test
+    fun testShadowDashMechanicsAndCooldown() {
+        val engine = GameEngine()
+        val player = engine.player
+        assertEquals(0f, player.dashCooldown, 0.001f)
+        assertFalse(player.isDashing)
+
+        // Initiate Dash
+        engine.onDashPressed()
+        assertTrue("Player should be in dashing state", player.isDashing)
+        assertTrue("Dash cooldown should be active", player.dashCooldown > 0f)
+        assertTrue("Player should have invulnerability frames during dash", player.invulnTimer > 0f)
+
+        // Cannot dash again while cooldown is active
+        val currentCd = player.dashCooldown
+        engine.onDashPressed()
+        assertEquals(currentCd, player.dashCooldown, 0.001f)
+
+        // Advance past dash duration (0.22s)
+        engine.update(0.25f)
+        assertFalse("Player should have completed dash", player.isDashing)
+
+        // Advance past remaining cooldown
+        engine.update(player.maxDashCooldown + 0.1f)
+        assertEquals(0f, player.dashCooldown, 0.001f)
+    }
+
+    @Test
+    fun testPerfectRiposteRestoresFlaskAndRupturesBoss() {
+        val engine = GameEngine()
+        val player = engine.player
+        val boss = engine.boss
+        boss.active = true
+        boss.state = BossState.TELEGRAPHING
+
+        // Place player near telegraphing boss
+        player.x = boss.x - 40f
+        player.y = boss.y
+        player.flasks = 1 // depleted flasks to test restoration
+
+        val bossHpBefore = boss.hp
+        assertEquals(0, engine.perfectDodgesCount)
+
+        // Dash through telegraph
+        engine.onDashPressed()
+
+        // Verify Perfect Riposte triggers
+        assertEquals(1, engine.perfectDodgesCount)
+        assertEquals(2, player.flasks) // +1 flask restored!
+        assertTrue(player.perfectRiposteTimer > 0f)
+        assertTrue(boss.hp < bossHpBefore) // Boss took rupture counter damage
+        assertTrue(boss.statusController.hasEffect(CombatStatusType.CORROSION))
+        assertTrue(boss.statusController.hasEffect(CombatStatusType.ALCHEMY_BURN))
+        assertTrue(engine.timeDilation < 1.0f) // Chrono break slow motion active
     }
 }

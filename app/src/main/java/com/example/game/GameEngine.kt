@@ -2,6 +2,7 @@ package com.example.game
 
 import androidx.compose.ui.graphics.Color
 import com.example.game.boss.BaseBoss
+import com.example.game.boss.BossState
 import com.example.game.boss.CrucibleChimeraBoss
 import com.example.game.status.CombatStatusType
 import com.example.game.status.StatusEffectController
@@ -86,6 +87,18 @@ class PlayerEntity(var x: Float, var y: Float) {
     // Combat status effect controller (debuffs, DoTs, Corrosion, Alchemy-Burn)
     val statusController = StatusEffectController()
 
+    // Shadow Dash & Alchemical Riposte
+    var isDashing: Boolean = false
+    var dashTimer: Float = 0f
+    val dashDuration: Float = 0.22f
+    var dashCooldown: Float = 0f
+    val maxDashCooldown: Float = 0.85f
+    val dashSpeed: Float = 440f
+    var dashDir: Int = 1
+    val afterimages = ArrayList<PlayerAfterimage>()
+    var perfectRiposteTimer: Float = 0f
+    var riposteNotice: String = ""
+
     fun takeDamage(amount: Float, fromX: Float, engine: GameEngine) {
         if (invulnTimer > 0f || dead) return
         val finalAmount = amount * engine.defenseMultiplier * statusController.getIncomingDamageMultiplier()
@@ -120,6 +133,12 @@ class PlayerEntity(var x: Float, var y: Float) {
         dead = false
         invulnTimer = 1.5f
         knockbackTimer = 0f
+        isDashing = false
+        dashTimer = 0f
+        dashCooldown = 0f
+        afterimages.clear()
+        perfectRiposteTimer = 0f
+        riposteNotice = ""
         statusController.clear()
     }
 }
@@ -246,6 +265,11 @@ class GameEngine {
     var inputJump: Boolean = false
     var inputAttack: Boolean = false
     var inputSub: Boolean = false
+    var inputDash: Boolean = false
+
+    var perfectDodgesCount: Int = 0
+    var timeDilation: Float = 1.0f
+    var timeDilationTimer: Float = 0f
 
     private var attackCounter: Long = 1L
 
@@ -277,6 +301,9 @@ class GameEngine {
         state = "playing"
         timeElapsed = 0f
         enemiesDefeated = 0
+        perfectDodgesCount = 0
+        timeDilation = 1.0f
+        timeDilationTimer = 0f
     }
 
     fun initLevel() {
@@ -396,8 +423,112 @@ class GameEngine {
         }
     }
 
-    fun update(dt: Float) {
+    fun onDashPressed() {
+        if (player.dashCooldown > 0f || player.dead || player.knockbackTimer > 0f) return
+
+        player.isDashing = true
+        player.dashTimer = player.dashDuration
+        player.dashCooldown = player.maxDashCooldown / (if (speedMultiplier > 1f) 1.20f else 1.0f)
+        val moveDir = when {
+            inputLeft -> -1
+            inputRight -> 1
+            else -> player.facing
+        }
+        player.dashDir = moveDir
+        player.facing = moveDir
+        player.invulnTimer = 0.22f
+
+        audio.play("dash")
+        particles.spawn(
+            player.x + player.w / 2f,
+            player.y + player.h / 2f,
+            Color(0xFF80D8FF),
+            count = 10,
+            speed = 120f,
+            life = 0.3f,
+            size = 3.5f
+        )
+
+        checkPerfectRiposte()
+    }
+
+    private fun checkPerfectRiposte() {
+        var riposteTriggered = false
+        val px = player.x + player.w / 2f
+        val py = player.y + player.h / 2f
+
+        // 1. Check incoming enemy projectiles (<95f)
+        for (i in projectiles.activeCount - 1 downTo 0) {
+            val proj = projectiles.get(i)
+            if (!proj.senderIsPlayer) {
+                val dist = kotlin.math.hypot(proj.x - px, proj.y - py)
+                if (dist < 95f) {
+                    riposteTriggered = true
+                    explodeProjectile(proj)
+                    projectiles.removeAt(i)
+                    break
+                }
+            }
+        }
+
+        // 2. Check nearby active enemies (<90f)
+        for (e in enemies) {
+            if (!e.dead) {
+                val dist = kotlin.math.hypot(e.x + e.w / 2f - px, e.y + e.h / 2f - py)
+                if (dist < 90f) {
+                    riposteTriggered = true
+                    e.takeDamage(42f * damageMultiplier, 88888L + attackCounter++, px, this)
+                    e.statusController.applyEffect(CombatStatusType.CORROSION, duration = 6.0f, stacks = 2)
+                    e.statusController.applyEffect(CombatStatusType.ALCHEMY_BURN, duration = 5.0f, stacks = 1)
+                    break
+                }
+            }
+        }
+
+        // 3. Check Boss if telegraphing or attacking nearby (<140f)
+        if (boss.active && !boss.dead) {
+            val bossDist = kotlin.math.hypot(boss.x + boss.w / 2f - px, boss.y + boss.h / 2f - py)
+            if (bossDist < 140f && (boss.state == BossState.TELEGRAPHING || boss.state == BossState.ATTACKING)) {
+                riposteTriggered = true
+                val riposteDmg = 55f * damageMultiplier
+                boss.takeDamage(riposteDmg, 77777L + attackCounter++, px, this)
+                boss.statusController.applyEffect(CombatStatusType.CORROSION, duration = 6.0f, stacks = 2)
+                boss.statusController.applyEffect(CombatStatusType.ALCHEMY_BURN, duration = 5.0f, stacks = 2)
+            }
+        }
+
+        if (riposteTriggered) {
+            perfectDodgesCount++
+            player.perfectRiposteTimer = 1.3f
+            player.riposteNotice = "⚡ PERFECT RIPOSTE! FLASK RESTORED ⚡"
+
+            if (player.flasks < player.maxFlasks) {
+                player.flasks++
+            }
+
+            audio.play("riposte")
+            haptics?.onBossHit()
+            camera.shake(10f)
+
+            timeDilation = 0.32f
+            timeDilationTimer = 0.22f
+
+            particles.spawn(px, py, Color(0xFFFFD700), count = 22, speed = 180f, life = 0.45f, size = 4.5f)
+            particles.spawn(px, py, Color(0xFF00E5FF), count = 16, speed = 150f, life = 0.40f, size = 4.0f)
+        }
+    }
+
+    fun update(rawDt: Float) {
         if (state == "paused") return
+
+        // Time dilation (slow-mo on perfect riposte)
+        if (timeDilationTimer > 0f) {
+            timeDilationTimer -= rawDt
+            if (timeDilationTimer <= 0f) {
+                timeDilation = 1.0f
+            }
+        }
+        val dt = rawDt * timeDilation
         timeElapsed += dt
 
         // Checkpoint detection
@@ -444,6 +575,51 @@ class GameEngine {
         if (player.subCooldown > 0f) player.subCooldown -= dt
         if (player.coyoteTime > 0f) player.coyoteTime -= dt
         if (player.jumpBuffer > 0f) player.jumpBuffer -= dt
+        if (player.dashCooldown > 0f) player.dashCooldown = (player.dashCooldown - dt).coerceAtLeast(0f)
+        if (player.perfectRiposteTimer > 0f) player.perfectRiposteTimer = (player.perfectRiposteTimer - dt).coerceAtLeast(0f)
+
+        // Update shadow afterimages
+        val imgIter = player.afterimages.iterator()
+        while (imgIter.hasNext()) {
+            val img = imgIter.next()
+            img.alpha -= dt * 3.8f
+            if (img.alpha <= 0f) imgIter.remove()
+        }
+
+        // Shadow Dash Movement & i-frames
+        if (player.isDashing) {
+            player.dashTimer -= dt
+            player.invulnTimer = 0.16f
+            player.vx = player.dashDir * player.dashSpeed * (if (speedMultiplier > 1f) 1.15f else 1.0f)
+            player.vy = 0f
+
+            if (player.afterimages.isEmpty() || kotlin.math.abs(player.afterimages.last().x - player.x) > 24f) {
+                player.afterimages.add(
+                    PlayerAfterimage(
+                        x = player.x,
+                        y = player.y,
+                        facing = player.facing,
+                        alpha = 0.75f,
+                        color = Color(0xFF00E5FF)
+                    )
+                )
+            }
+
+            particles.spawn(
+                player.x + player.w / 2f,
+                player.y + player.h / 2f,
+                Color(0xFF00E5FF),
+                count = 2,
+                speed = 40f,
+                life = 0.2f,
+                size = 2.8f
+            )
+
+            if (player.dashTimer <= 0f) {
+                player.isDashing = false
+                player.vx *= 0.4f
+            }
+        }
 
         // Process active status debuffs (Alchemy-Burn, Corrosion)
         player.statusController.update(dt) { type, damage, stacks ->
@@ -490,7 +666,7 @@ class GameEngine {
         }
 
         // Horizontal Movement (adjusted by speedMultiplier and Corrosion debuff penalty)
-        if (player.knockbackTimer <= 0f) {
+        if (player.knockbackTimer <= 0f && !player.isDashing) {
             var moveDir = 0
             if (inputLeft) moveDir -= 1
             if (inputRight) moveDir += 1
