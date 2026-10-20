@@ -6,6 +6,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.graphics.nativeCanvas
+import android.graphics.Paint
+import android.graphics.Typeface
 import kotlin.math.abs
 import kotlin.math.sin
 
@@ -221,6 +224,16 @@ object GameRenderer {
                         offX += 12f
                     }
                 }
+
+                // Enemy Stagger Daze Indicator
+                if (e.isStaggered) {
+                    val dazePulse = (sin(System.currentTimeMillis() / 70.0) * 0.25f + 0.75f).toFloat()
+                    val headX = ex + e.w / 2f
+                    val headY = ey - 14f
+                    drawCircle(Color(0xFFFFD700), radius = 4f * dazePulse, center = Offset(headX - 6f, headY))
+                    drawCircle(Color(0xFFFFF275), radius = 3f * dazePulse, center = Offset(headX, headY - 4f))
+                    drawCircle(Color(0xFFFFD700), radius = 4f * dazePulse, center = Offset(headX + 6f, headY))
+                }
             }
 
             // 8. Boss (Pre-loaded textures, telegraphed attack indicators, and weak-point reticle)
@@ -423,15 +436,27 @@ object GameRenderer {
                 if (p.attacking) {
                     val tex = if (p.facing > 0) AssetCache.texPlayerAttackRight else AssetCache.texPlayerAttackLeft
                     drawImage(tex, topLeft = Offset(px - 10f, py - 4f + bob))
-                    // Slash Arc
+                    // Slash Arc based on combo step
+                    val arcColor = when (p.lastComboHit) {
+                        3 -> Color(0xFFFF2040)
+                        2 -> Color(0xFFFFB300)
+                        else -> COLOR_SLASH_ARC
+                    }
+                    val arcSize = if (p.lastComboHit == 3) 60f else 48f
+                    val arcStroke = if (p.lastComboHit == 3) 4.5f else 3f
+                    val arcOffX = if (p.facing > 0) {
+                        px - (if (p.lastComboHit == 3) 6f else 10f)
+                    } else {
+                        px - (if (p.lastComboHit == 3) 24f else 10f)
+                    }
                     drawArc(
-                        color = COLOR_SLASH_ARC,
+                        color = arcColor,
                         startAngle = if (p.facing > 0) -80f else 100f,
-                        sweepAngle = 140f,
+                        sweepAngle = if (p.lastComboHit == 3) 160f else 140f,
                         useCenter = false,
-                        topLeft = Offset(px - 10f, py - 4f),
-                        size = Size(48f, 48f),
-                        style = Stroke(width = 3f)
+                        topLeft = Offset(arcOffX, py - (if (p.lastComboHit == 3) 8f else 4f)),
+                        size = Size(arcSize, arcSize),
+                        style = Stroke(width = arcStroke)
                     )
                 } else {
                     val tex = if (p.facing > 0) AssetCache.texPlayerIdleRight else AssetCache.texPlayerIdleLeft
@@ -474,6 +499,42 @@ object GameRenderer {
                     size = Size(pt.size * pAlpha, pt.size * pAlpha),
                     alpha = pAlpha
                 )
+            }
+
+            // 12. Floating Combat Text (FCT) Damage Numbers & Critical Banners
+            val nativeCanvas = drawContext.canvas.nativeCanvas
+            val strokePaint = Paint().apply {
+                isAntiAlias = true
+                typeface = Typeface.DEFAULT_BOLD
+                style = Paint.Style.STROKE
+            }
+            val fillPaint = Paint().apply {
+                isAntiAlias = true
+                typeface = Typeface.DEFAULT_BOLD
+                style = Paint.Style.FILL
+            }
+
+            for (i in 0 until engine.damageNumbers.activeCount) {
+                val dn = engine.damageNumbers.get(i)
+                val alpha = (dn.life / dn.maxLife).coerceIn(0f, 1f)
+                val dnx = dn.x - camX
+                val dny = dn.y - camY
+                val textSizePx = if (dn.isCrit) 20f * dn.scale else 14f * dn.scale
+
+                strokePaint.textSize = textSizePx
+                fillPaint.textSize = textSizePx
+
+                // Dark outline for legibility
+                strokePaint.color = android.graphics.Color.argb((alpha * 230).toInt(), 12, 6, 20)
+                strokePaint.strokeWidth = if (dn.isCrit) 3.5f else 2.5f
+                nativeCanvas.drawText(dn.text, dnx, dny, strokePaint)
+
+                // Fill color
+                val r = (dn.color.red * 255).toInt()
+                val g = (dn.color.green * 255).toInt()
+                val b = (dn.color.blue * 255).toInt()
+                fillPaint.color = android.graphics.Color.argb((alpha * 255).toInt(), r, g, b)
+                nativeCanvas.drawText(dn.text, dnx, dny, fillPaint)
             }
         }
     }

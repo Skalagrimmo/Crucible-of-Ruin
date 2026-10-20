@@ -368,3 +368,86 @@ class ParticlePool(val capacity: Int = 160) {
         activeCount = 0
     }
 }
+
+/**
+ * Pre-allocated entity for Floating Combat Text (FCT) damage numbers.
+ */
+class DamageNumber {
+    var x: Float = 0f
+    var y: Float = 0f
+    var vx: Float = 0f
+    var vy: Float = -70f
+    var text: String = ""
+    var color: Color = Color.White
+    var scale: Float = 1.0f
+    var isCrit: Boolean = false
+    var life: Float = 0f
+    var maxLife: Float = 0.75f
+
+    fun init(spawnX: Float, spawnY: Float, displayText: String, numColor: Color, crit: Boolean = false) {
+        x = spawnX
+        y = spawnY
+        text = displayText
+        color = numColor
+        isCrit = crit
+        maxLife = if (crit) 0.90f else 0.70f
+        life = maxLife
+        scale = if (crit) 1.35f else 1.0f
+        vx = (Random.nextFloat() - 0.5f) * 36f
+        vy = if (crit) -95f else -65f
+    }
+}
+
+/**
+ * Dense-array object pool for Floating Combat Text damage numbers.
+ * Completely eliminates runtime memory allocations.
+ */
+class DamageNumberPool(val capacity: Int = 36) {
+    val pool = Array(capacity) { DamageNumber() }
+    var activeCount: Int = 0
+        private set
+
+    fun get(index: Int): DamageNumber = pool[index]
+
+    fun spawn(x: Float, y: Float, text: String, color: Color, isCrit: Boolean = false): DamageNumber {
+        val num = if (activeCount < capacity) {
+            pool[activeCount++]
+        } else {
+            pool[capacity - 1]
+        }
+        num.init(x, y, text, color, isCrit)
+        return num
+    }
+
+    fun removeAt(index: Int) {
+        if (index in 0 until activeCount) {
+            activeCount--
+            if (index < activeCount) {
+                val temp = pool[index]
+                pool[index] = pool[activeCount]
+                pool[activeCount] = temp
+            }
+        }
+    }
+
+    fun update(dt: Float) {
+        var i = 0
+        while (i < activeCount) {
+            val d = pool[i]
+            d.life -= dt
+            if (d.life <= 0f) {
+                removeAt(i)
+                continue
+            }
+            d.x += d.vx * dt
+            d.y += d.vy * dt
+            d.vy += 45f * dt
+            i++
+        }
+    }
+
+    fun clear() {
+        activeCount = 0
+    }
+}
+

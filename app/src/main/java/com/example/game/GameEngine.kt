@@ -73,10 +73,17 @@ class PlayerEntity(var x: Float, var y: Float) {
 
     var attacking: Boolean = false
     var attackTimer: Float = 0f
-    val attackDuration: Float = 0.28f
+    var attackDuration: Float = 0.22f
     var attackHitboxActive: Boolean = false
     var attackId: Long = 0L
     var subCooldown: Float = 0f
+
+    // 3-Hit Melee Combo System
+    var comboIndex: Int = 0 // 0 = Slash 1, 1 = Slash 2, 2 = Finisher
+    var comboResetTimer: Float = 0f
+    val maxComboResetTimer: Float = 0.65f
+    var lastComboHit: Int = 1 // 1, 2, or 3
+    var comboFinisherFlashTimer: Float = 0f
 
     var invulnTimer: Float = 0f
     var knockbackTimer: Float = 0f
@@ -108,6 +115,14 @@ class PlayerEntity(var x: Float, var y: Float) {
         engine.camera.shake(8f)
         engine.particles.spawn(x + w / 2f, y + h / 2f, Color(0xFFE03030), 14, 140f, 0.4f, 4f)
 
+        // Spawn floating damage text on player
+        engine.damageNumbers.spawn(
+            x = x + w / 2f,
+            y = y + 4f,
+            text = finalAmount.toInt().toString(),
+            color = Color(0xFFFF5252)
+        )
+
         if (hp <= 0f) {
             hp = 0f
             dead = true
@@ -133,6 +148,10 @@ class PlayerEntity(var x: Float, var y: Float) {
         dead = false
         invulnTimer = 1.5f
         knockbackTimer = 0f
+        comboIndex = 0
+        comboResetTimer = 0f
+        lastComboHit = 1
+        comboFinisherFlashTimer = 0f
         isDashing = false
         dashTimer = 0f
         dashCooldown = 0f
@@ -173,6 +192,10 @@ class EnemyEntity(
     var hp: Float
     val maxHp: Float
     val speed: Float
+    var poise: Float
+    val maxPoise: Float
+    var isStaggered: Boolean = false
+    var staggerTimer: Float = 0f
     var shootCooldown: Float = 2.0f
     var charging: Boolean = false
     var flyPhase: Float = (Math.random() * Math.PI * 2.0).toFloat()
@@ -185,30 +208,73 @@ class EnemyEntity(
         when (type) {
             EnemyArchetype.LURKER -> {
                 w = 30f; h = 36f; hp = 45f; maxHp = 45f; speed = 90f; state = "patrol"
+                maxPoise = 30f; poise = 30f
             }
             EnemyArchetype.CHERUB -> {
                 w = 26f; h = 24f; hp = 30f; maxHp = 30f; speed = 110f; state = "fly"
+                maxPoise = 20f; poise = 20f
             }
             EnemyArchetype.CULTIST -> {
                 w = 28f; h = 42f; hp = 50f; maxHp = 50f; speed = 0f; state = "idle"
+                maxPoise = 25f; poise = 25f
             }
             EnemyArchetype.GOLEM -> {
                 w = 44f; h = 54f; hp = 130f; maxHp = 130f; speed = 45f; state = "patrol"
+                maxPoise = 85f; poise = 85f
             }
         }
     }
 
-    fun takeDamage(amount: Float, aId: Long, fromX: Float, engine: GameEngine) {
+    fun takeDamage(
+        amount: Float,
+        aId: Long,
+        fromX: Float,
+        engine: GameEngine,
+        poiseDamage: Float = 15f,
+        knockbackMult: Float = 1.0f,
+        isCrit: Boolean = false
+    ) {
         if (lastHitId == aId || dead) return
         lastHitId = aId
         val finalAmount = amount * statusController.getIncomingDamageMultiplier()
         hp -= finalAmount
-        hurtTimer = 0.2f
+        hurtTimer = 0.22f
         engine.audio.play("hit")
-        engine.particles.spawnEnemyHurt(x + w / 2f, y + h / 2f, Color(0xFFB02040))
+        engine.particles.spawnEnemyHurt(x + w / 2f, y + h / 2f, if (isCrit) Color(0xFFFFD700) else Color(0xFFB02040))
 
+        // Directional knockback
         val dir = if (fromX > x + w / 2f) -1 else 1
-        vx = dir * (if (type == EnemyArchetype.GOLEM) 40f else 120f)
+        val baseKnock = if (type == EnemyArchetype.GOLEM) 40f else 125f
+        vx = dir * baseKnock * knockbackMult
+        if (knockbackMult > 1.4f) {
+            vy = -140f // Lift enemy upward on combo finisher
+        }
+
+        // Spawn Floating Combat Text damage number
+        engine.damageNumbers.spawn(
+            x = x + w / 2f,
+            y = y + 4f,
+            text = finalAmount.toInt().toString() + (if (isCrit) "!" else ""),
+            color = if (isCrit) Color(0xFFFFD700) else if (knockbackMult > 1.4f) Color(0xFFFF3B30) else Color(0xFFFFF275),
+            isCrit = isCrit || knockbackMult > 1.4f
+        )
+
+        // Poise damage & Stagger break
+        poise -= poiseDamage
+        if (poise <= 0f && !isStaggered && !dead) {
+            poise = 0f
+            isStaggered = true
+            staggerTimer = 0.85f
+            engine.audio.play("hit")
+            engine.damageNumbers.spawn(
+                x = x + w / 2f,
+                y = y - 10f,
+                text = "STAGGERED!",
+                color = Color(0xFFFFD700),
+                isCrit = true
+            )
+            engine.particles.spawnExplosion(x + w / 2f, y + h / 2f)
+        }
 
         if (hp <= 0f) {
             dead = true
@@ -237,6 +303,7 @@ class GameEngine {
     val particles = ParticlePool(160)
     val projectiles = ProjectilePool(40)
     val pickups = PickupPool(24)
+    val damageNumbers = DamageNumberPool(36)
 
     val levelWidth = 6200f
     val levelHeight = 540f
@@ -385,6 +452,7 @@ class GameEngine {
         platforms.add(Platform(5880f, 330f, 120f, 18f, PlatformStyle.IRON_GIRDER))
 
         boss = CrucibleChimeraBoss(5750f, 360f)
+        damageNumbers.clear()
     }
 
     fun onJumpPressed() {
@@ -393,12 +461,41 @@ class GameEngine {
 
     fun onAttackPressed() {
         if (!player.attacking && !player.dead && player.knockbackTimer <= 0f) {
+            val combo = player.comboIndex // 0, 1, or 2
+            player.lastComboHit = combo + 1 // 1, 2, or 3
+
+            // Attack timings per combo hit
+            player.attackDuration = when (combo) {
+                0 -> 0.22f // Hit 1: quick jab
+                1 -> 0.26f // Hit 2: horizontal cleave
+                else -> 0.35f // Hit 3: crucible heavy finisher
+            }
             player.attacking = true
             player.attackTimer = player.attackDuration
             player.attackId = ++attackCounter
             audio.play("slash")
             haptics?.onMeleeSwing()
-            val arcColor = if (damageMultiplier > 1f) Color(0xFFFF5722) else Color(0xFF40F0FF)
+
+            // Subtle forward step surge on combo hits 2 & 3
+            if (combo > 0) {
+                player.vx += player.facing * (if (combo == 1) 75f else 130f)
+            }
+            if (combo == 2) {
+                player.comboFinisherFlashTimer = 0.35f
+                camera.shake(9f)
+            }
+
+            // Advance combo chain & set reset window
+            player.comboResetTimer = player.maxComboResetTimer
+            player.comboIndex = (combo + 1) % 3
+
+            // Visual particle arc based on combo stage
+            val arcColor = when {
+                damageMultiplier > 1f -> Color(0xFFFF5722)
+                combo == 2 -> Color(0xFFFF2040) // Finisher: fiery crimson
+                combo == 1 -> Color(0xFFFFB300) // Hit 2: radiant amber
+                else -> Color(0xFF00E5FF) // Hit 1: electric cyan
+            }
             particles.spawnSlashArc(
                 if (player.facing > 0) player.x + player.w else player.x,
                 player.y + player.h / 2f,
@@ -556,6 +653,7 @@ class GameEngine {
         updateProjectiles(dt)
         updatePickups(dt)
         particles.update(dt)
+        damageNumbers.update(dt)
 
         camera.update(player.x, player.y, player.facing, levelWidth, levelHeight, dt)
     }
@@ -577,6 +675,15 @@ class GameEngine {
         if (player.jumpBuffer > 0f) player.jumpBuffer -= dt
         if (player.dashCooldown > 0f) player.dashCooldown = (player.dashCooldown - dt).coerceAtLeast(0f)
         if (player.perfectRiposteTimer > 0f) player.perfectRiposteTimer = (player.perfectRiposteTimer - dt).coerceAtLeast(0f)
+        if (player.comboResetTimer > 0f) {
+            player.comboResetTimer = (player.comboResetTimer - dt).coerceAtLeast(0f)
+            if (player.comboResetTimer <= 0f) {
+                player.comboIndex = 0
+            }
+        }
+        if (player.comboFinisherFlashTimer > 0f) {
+            player.comboFinisherFlashTimer = (player.comboFinisherFlashTimer - dt).coerceAtLeast(0f)
+        }
 
         // Update shadow afterimages
         val imgIter = player.afterimages.iterator()
@@ -757,36 +864,89 @@ class GameEngine {
 
         // Melee combat checks
         if (player.attacking && player.attackHitboxActive) {
-            val slashX = if (player.facing > 0) player.x + player.w - 4f else player.x - 34f
+            val comboStep = player.lastComboHit
+            val isFinisher = comboStep == 3
+            val slashX = if (player.facing > 0) player.x + player.w - 4f else player.x - (if (isFinisher) 42f else 34f)
             val slashY = player.y + 4f
-            val slashW = 36f
+            val slashW = if (isFinisher) 46f else 36f
             val slashH = player.h - 8f
+
+            // Base damage, poise damage, and knockback scaling per combo step
+            val (baseDmg, poiseDmg, knockMult) = when (comboStep) {
+                1 -> Triple(22f, 15f, 0.9f)
+                2 -> Triple(30f, 22f, 1.3f)
+                else -> Triple(52f, 45f, 2.1f) // Crucible Heavy Finisher
+            }
+            val finalDmg = baseDmg * damageMultiplier
 
             for (e in enemies) {
                 if (!e.dead && aabbIntersects(slashX, slashY, slashW, slashH, e.x, e.y, e.w, e.h)) {
-                    val dmg = 28f * damageMultiplier
-                    e.takeDamage(dmg, player.attackId, player.x, this)
-                    camera.shake(4f)
+                    e.takeDamage(
+                        amount = finalDmg,
+                        aId = player.attackId,
+                        fromX = player.x,
+                        engine = this,
+                        poiseDamage = poiseDmg,
+                        knockbackMult = knockMult,
+                        isCrit = isFinisher
+                    )
+                    camera.shake(if (isFinisher) 9f else if (comboStep == 2) 5f else 3.5f)
                     haptics?.onMeleeHit()
-                    // Player melee applies status debuffs
-                    if (Math.random() < 0.40) {
+
+                    if (isFinisher) {
+                        particles.spawnExplosion(e.x + e.w / 2f, e.y + e.h / 2f)
+                    }
+
+                    // Player melee applies status debuffs (higher chance on finisher)
+                    val burnChance = if (isFinisher) 0.65 else 0.40
+                    val corrChance = if (isFinisher) 0.55 else 0.35
+                    if (Math.random() < burnChance) {
                         e.statusController.applyEffect(CombatStatusType.ALCHEMY_BURN, duration = 4.5f, stacks = 1)
                     }
-                    if (Math.random() < 0.35) {
+                    if (Math.random() < corrChance) {
                         e.statusController.applyEffect(CombatStatusType.CORROSION, duration = 5.0f, stacks = 1)
                     }
                 }
             }
             if (boss.active && !boss.dead && aabbIntersects(slashX, slashY, slashW, slashH, boss.x, boss.y, boss.w, boss.h)) {
-                val dmg = 28f * damageMultiplier
-                boss.takeDamage(dmg, player.attackId, player.x, this)
-                camera.shake(5f)
+                val isWeakPoint = boss.weakPoint.intersects(slashX, slashY, slashW, slashH, boss.x, boss.y, boss.w, boss.facing)
+                val critMult = if (isWeakPoint) boss.weakPoint.damageMultiplier else 1.0f
+                val bossDmg = finalDmg * critMult
+
+                boss.takeDamage(bossDmg, player.attackId, player.x, this)
+                camera.shake(if (isFinisher) 10f else if (isWeakPoint) 7f else 4.5f)
                 haptics?.onBossHit()
+
+                // Spawn floating combat text on boss
+                damageNumbers.spawn(
+                    x = boss.x + boss.w / 2f + (kotlin.random.Random.nextFloat() - 0.5f) * 20f,
+                    y = boss.y + 10f,
+                    text = bossDmg.toInt().toString() + (if (isWeakPoint || isFinisher) "!" else ""),
+                    color = if (isWeakPoint) Color(0xFFFFD700) else if (isFinisher) Color(0xFFFF3B30) else Color(0xFFFFF275),
+                    isCrit = isWeakPoint || isFinisher
+                )
+
+                if (isWeakPoint && boss.weakPoint.isBroken) {
+                    damageNumbers.spawn(
+                        x = boss.x + boss.w / 2f,
+                        y = boss.y - 12f,
+                        text = "CORE SHATTER!",
+                        color = Color(0xFFFFD700),
+                        isCrit = true
+                    )
+                }
+
+                if (isFinisher) {
+                    particles.spawnExplosion(boss.x + boss.w / 2f, boss.y + boss.h / 2f)
+                }
+
                 // Player melee applies status debuffs to boss
-                if (Math.random() < 0.45) {
+                val burnChance = if (isFinisher) 0.65 else 0.45
+                val corrChance = if (isFinisher) 0.55 else 0.40
+                if (Math.random() < burnChance) {
                     boss.statusController.applyEffect(CombatStatusType.ALCHEMY_BURN, duration = 4.5f, stacks = 1)
                 }
-                if (Math.random() < 0.40) {
+                if (Math.random() < corrChance) {
                     boss.statusController.applyEffect(CombatStatusType.CORROSION, duration = 5.0f, stacks = 1)
                 }
             }
@@ -850,10 +1010,18 @@ class GameEngine {
                 particles.spawn(e.x + e.w / 2f, e.y + e.h / 2f, CombatStatusType.CORROSION.primaryColor, 1, 20f, 0.25f, 2.0f)
             }
 
-            val distToPlayerX = px - e.x
-            val distToPlayer = hypot(px - e.x, py - e.y)
+            if (e.isStaggered) {
+                e.staggerTimer -= dt
+                e.vx = 0f
+                if (e.staggerTimer <= 0f) {
+                    e.isStaggered = false
+                    e.poise = e.maxPoise
+                }
+            } else {
+                val distToPlayerX = px - e.x
+                val distToPlayer = hypot(px - e.x, py - e.y)
 
-            when (e.type) {
+                when (e.type) {
                 EnemyArchetype.LURKER -> {
                     when (e.state) {
                         "patrol" -> {
@@ -978,6 +1146,7 @@ class GameEngine {
                     }
                 }
             }
+            }
 
             if (e.type != EnemyArchetype.CHERUB) {
                 e.vy += 950f * dt
@@ -1017,12 +1186,14 @@ class GameEngine {
                 }
             }
 
-            if (aabbIntersects(e.x, e.y, e.w, e.h, player.x, player.y, player.w, player.h)) {
-                player.takeDamage(if (e.type == EnemyArchetype.GOLEM) 24f else 16f, e.x + e.w / 2f, this)
-                if (e.type == EnemyArchetype.GOLEM) {
-                    player.statusController.applyEffect(CombatStatusType.CORROSION, duration = 5.0f, stacks = 1)
-                } else if (e.type == EnemyArchetype.CHERUB) {
-                    player.statusController.applyEffect(CombatStatusType.ALCHEMY_BURN, duration = 4.0f, stacks = 1)
+            if (!e.isStaggered && aabbIntersects(e.x, e.y, e.w, e.h, player.x, player.y, player.w, player.h)) {
+                if (!player.isDashing && player.invulnTimer <= 0f) {
+                    player.takeDamage(if (e.type == EnemyArchetype.GOLEM) 24f else 16f, e.x + e.w / 2f, this)
+                    if (e.type == EnemyArchetype.GOLEM) {
+                        player.statusController.applyEffect(CombatStatusType.CORROSION, duration = 5.0f, stacks = 1)
+                    } else if (e.type == EnemyArchetype.CHERUB) {
+                        player.statusController.applyEffect(CombatStatusType.ALCHEMY_BURN, duration = 4.0f, stacks = 1)
+                    }
                 }
             }
         }

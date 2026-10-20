@@ -301,4 +301,125 @@ class BossUnitTest {
         boss.dead = true
         assertFalse("Health bar must not be visible when boss is dead", boss.active && !boss.dead)
     }
+
+    @Test
+    fun testThreeHitMeleeComboProgressionAndReset() {
+        val engine = GameEngine()
+        val player = engine.player
+
+        assertEquals(0, player.comboIndex)
+        assertEquals(0f, player.comboResetTimer, 0.001f)
+
+        // 1. Hit 1 (Quick Jab)
+        engine.onAttackPressed()
+        assertTrue("Player should be attacking", player.attacking)
+        assertEquals(1, player.lastComboHit)
+        assertEquals(0.22f, player.attackDuration, 0.001f)
+        assertEquals(1, player.comboIndex)
+        assertTrue(player.comboResetTimer > 0f)
+
+        // Advance through attack 1 duration
+        engine.update(0.24f)
+        assertFalse(player.attacking)
+
+        // 2. Hit 2 (Horizontal Cleave)
+        val vxBeforeHit2 = player.vx
+        engine.onAttackPressed()
+        assertTrue(player.attacking)
+        assertEquals(2, player.lastComboHit)
+        assertEquals(0.26f, player.attackDuration, 0.001f)
+        assertEquals(2, player.comboIndex)
+        assertTrue(player.vx != vxBeforeHit2) // Forward step surge
+
+        // Advance through attack 2 duration
+        engine.update(0.28f)
+        assertFalse(player.attacking)
+
+        // 3. Hit 3 (Crucible Heavy Finisher)
+        engine.onAttackPressed()
+        assertTrue(player.attacking)
+        assertEquals(3, player.lastComboHit)
+        assertEquals(0.35f, player.attackDuration, 0.001f)
+        assertEquals(0, player.comboIndex) // Loops back to 0
+        assertTrue(player.comboFinisherFlashTimer > 0f)
+
+        // Advance through finisher and past combo reset window (0.65s)
+        engine.update(0.80f)
+        assertEquals(0f, player.comboResetTimer, 0.001f)
+        assertEquals(0, player.comboIndex)
+    }
+
+    @Test
+    fun testEnemyKnockbackPoiseBreakAndStagger() {
+        val engine = GameEngine()
+        val enemy = engine.enemies.first { it.type == com.example.game.EnemyArchetype.LURKER }
+        enemy.hp = 100f
+        val initialHp = enemy.hp
+        val initialPoise = enemy.poise
+        assertEquals(30f, initialPoise, 0.001f)
+        assertFalse(enemy.isStaggered)
+
+        // Hit 1: 15 poise damage
+        enemy.takeDamage(
+            amount = 15f,
+            aId = 5001L,
+            fromX = enemy.x - 20f,
+            engine = engine,
+            poiseDamage = 15f,
+            knockbackMult = 0.9f
+        )
+        assertTrue(enemy.hp < initialHp)
+        assertEquals(15f, enemy.poise, 0.001f)
+        assertFalse(enemy.isStaggered)
+        assertTrue(enemy.vx > 0f) // Knocked away from player
+
+        // Hit 2: 20 poise damage -> breaks poise (<= 0f) and triggers Stagger
+        enemy.takeDamage(
+            amount = 15f,
+            aId = 5002L,
+            fromX = enemy.x - 20f,
+            engine = engine,
+            poiseDamage = 20f,
+            knockbackMult = 2.1f,
+            isCrit = true
+        )
+        assertFalse("Enemy should still be alive", enemy.dead)
+        assertTrue("Enemy should be in staggered state", enemy.isStaggered)
+        assertTrue(enemy.staggerTimer > 0f)
+        assertTrue(enemy.vy < 0f) // Lifted upward by finisher knockback
+
+        // Advance through stagger duration (0.85s) -> enemy recovers poise
+        engine.update(0.90f)
+        assertFalse("Enemy should have recovered from stagger", enemy.isStaggered)
+        assertEquals(enemy.maxPoise, enemy.poise, 0.001f)
+    }
+
+    @Test
+    fun testDamageNumberPoolZeroAllocations() {
+        val engine = GameEngine()
+        val pool = engine.damageNumbers
+        assertEquals(0, pool.activeCount)
+
+        // Spawn 2 floating numbers
+        pool.spawn(100f, 200f, "28", androidx.compose.ui.graphics.Color.Yellow)
+        pool.spawn(120f, 200f, "52!", androidx.compose.ui.graphics.Color.Red, isCrit = true)
+        assertEquals(2, pool.activeCount)
+
+        val first = pool.get(0)
+        val second = pool.get(1)
+        assertEquals("28", first.text)
+        assertFalse(first.isCrit)
+        assertEquals("52!", second.text)
+        assertTrue(second.isCrit)
+
+        // Advance time: verify upward drift
+        val initialY = first.y
+        pool.update(0.2f)
+        assertTrue(first.y < initialY) // Drifted upward
+        assertEquals(2, pool.activeCount)
+
+        // Advance past lifetime (0.9s)
+        pool.update(1.0f)
+        assertEquals(0, pool.activeCount)
+    }
 }

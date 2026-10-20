@@ -592,16 +592,68 @@ fun GameScreen(
                         .testTag("btn_dash")
                 )
 
-                // Melee Slash Attack
-                TouchTapButton(
-                    symbol = "⚔️",
-                    label = "Attack",
-                    size = 68,
-                    color = Color(0x992E1B46),
-                    borderColor = Color(0xFF8F77AA),
-                    onTap = { engine.onAttackPressed() },
-                    modifier = Modifier.testTag("btn_attack")
-                )
+                // Melee Slash Attack with 3-Hit Combo Meter Overlay
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    val comboStep = remember(frameTick) { engine.player.comboIndex }
+                    val comboTimer = remember(frameTick) { engine.player.comboResetTimer }
+                    val isFinisherReady = comboStep == 2
+
+                    if (comboTimer > 0f) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(3.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .background(Color(0xD9160B24), RoundedCornerShape(4.dp))
+                                .border(
+                                    1.dp,
+                                    if (isFinisherReady) Color(0xFFFF2040) else Color(0xFFFFB300),
+                                    RoundedCornerShape(4.dp)
+                                )
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                .testTag("combo_meter_badge")
+                        ) {
+                            Text(
+                                text = if (isFinisherReady) "FINISHER!" else "COMBO x${comboStep + 1}",
+                                color = if (isFinisherReady) Color(0xFFFF453A) else Color(0xFFFFD700),
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontFamily = FontFamily.Monospace
+                            )
+                            // 3 Combo Pips
+                            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                for (i in 0..2) {
+                                    val isHit = i < comboStep + 1
+                                    Box(
+                                        modifier = Modifier
+                                            .size(5.dp)
+                                            .background(
+                                                when {
+                                                    !isHit -> Color(0x55555555)
+                                                    i == 2 -> Color(0xFFFF2040)
+                                                    i == 1 -> Color(0xFFFFB300)
+                                                    else -> Color(0xFF00E5FF)
+                                                },
+                                                CircleShape
+                                            )
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    TouchTapButton(
+                        symbol = "⚔️",
+                        label = if (comboTimer > 0f && isFinisherReady) "Finisher" else "Attack",
+                        size = 68,
+                        color = if (comboTimer > 0f && isFinisherReady) Color(0xCC4A0E18) else Color(0x992E1B46),
+                        borderColor = if (comboTimer > 0f && isFinisherReady) Color(0xFFFF2040) else if (comboTimer > 0f) Color(0xFFFFB300) else Color(0xFF8F77AA),
+                        onTap = { engine.onAttackPressed() },
+                        modifier = Modifier.testTag("btn_attack")
+                    )
+                }
 
                 // Jump Button (supports hold for full trajectory)
                 TouchHoldButton(
