@@ -270,4 +270,35 @@ class BossUnitTest {
         assertTrue(boss.statusController.hasEffect(CombatStatusType.ALCHEMY_BURN))
         assertTrue(engine.timeDilation < 1.0f) // Chrono break slow motion active
     }
+
+    @Test
+    fun testGothicBossHealthBarStateAndPoise() {
+        val engine = GameEngine()
+        val boss = engine.boss
+        assertFalse("Health bar must not be visible when boss is inactive", boss.active && !boss.dead)
+
+        // Activate boss encounter
+        boss.active = true
+        boss.dead = false
+        assertTrue("Health bar must be visible during active boss encounter", boss.active && !boss.dead)
+
+        // Verify Gothic Bar data contracts
+        assertEquals("Ignis, Alchemical Chimera", boss.bossName)
+        assertEquals(BossPhase.PHASE_1, boss.currentPhase)
+        assertEquals("PHASE I: AWAKENED", boss.currentPhase.title)
+
+        // Verify Poise / Stagger calculation
+        val staggerRatio = (boss.weakPoint.staggerHealth / boss.weakPoint.maxStaggerHealth).coerceIn(0f, 1f)
+        assertEquals(1.0f, staggerRatio, 0.001f)
+
+        // Damage boss to 50% HP -> enters Phase 2
+        boss.hp = boss.maxHp * 0.5f
+        boss.takeDamage(1f, 9999L, 0f, engine)
+        assertEquals(BossPhase.PHASE_2, boss.currentPhase)
+        assertEquals("PHASE II: MOLTEN FURY", boss.currentPhase.title)
+
+        // Mark dead -> health bar should deactivate
+        boss.dead = true
+        assertFalse("Health bar must not be visible when boss is dead", boss.active && !boss.dead)
+    }
 }

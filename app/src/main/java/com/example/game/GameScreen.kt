@@ -42,6 +42,7 @@ import com.example.game.codex.GrimoireCodexDialog
 import com.example.game.alchemy.PermanentBuffType
 import com.example.game.alchemy.ResourceType
 import com.example.game.boss.BossState
+import com.example.game.boss.GothicBossHealthBar
 import com.example.game.data.AuthRepository
 import com.example.game.data.UserSave
 import com.example.game.status.ActiveCombatStatus
@@ -525,188 +526,14 @@ fun GameScreen(
             }
         }
 
-        // Boss Health Bar & Multi-Phase/Weak-Point HUD (Bottom center, when active)
-        if (engine.boss.active && !engine.boss.dead) {
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 76.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = engine.boss.bossName.uppercase(),
-                        color = Color(0xFFFFD700),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp
-                    )
-                    Text(
-                        text = "• ${engine.boss.currentPhase.title}",
-                        color = engine.boss.currentPhase.accentColor,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(2.dp))
-
-                // HP Bar with Phase Pips (at 33% and 66%)
-                Box(
-                    modifier = Modifier
-                        .width(360.dp)
-                        .height(13.dp)
-                        .background(Color(0xEE120A1E), RoundedCornerShape(3.dp))
-                        .border(1.dp, engine.boss.currentPhase.accentColor.copy(alpha = 0.8f), RoundedCornerShape(3.dp))
-                ) {
-                    val ratio = (engine.boss.hp / engine.boss.maxHp).coerceIn(0f, 1f)
-                    Box(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .fillMaxWidth(fraction = ratio)
-                            .background(
-                                Brush.horizontalGradient(
-                                    listOf(
-                                        Color(0xFF8B0000),
-                                        engine.boss.currentPhase.accentColor
-                                    )
-                                )
-                            )
-                    )
-                    // Phase dividing markers
-                    Box(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .width(1.dp)
-                            .align(Alignment.CenterStart)
-                            .offset(x = 118.8.dp)
-                            .background(Color(0x88FFFFFF))
-                    )
-                    Box(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .width(1.dp)
-                            .align(Alignment.CenterStart)
-                            .offset(x = 237.6.dp)
-                            .background(Color(0x88FFFFFF))
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(2.dp))
-
-                // Boss Combat Status Debuffs (Corrosion, Alchemy-Burn)
-                val bossDebuffs = remember(frameTick) {
-                    if (engine.boss.active && !engine.boss.dead) engine.boss.statusController.getActiveEffects().toList() else emptyList()
-                }
-                if (bossDebuffs.isNotEmpty()) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .padding(bottom = 2.dp)
-                            .testTag("boss_debuffs_row")
-                    ) {
-                        for (bDebuff in bossDebuffs) {
-                            Box(
-                                modifier = Modifier
-                                    .background(Color(0xD9160B22), RoundedCornerShape(4.dp))
-                                    .border(1.dp, bDebuff.type.primaryColor, RoundedCornerShape(4.dp))
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                                    .testTag("boss_debuff_${bDebuff.type.id}")
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Text(bDebuff.type.iconSymbol, fontSize = 9.sp)
-                                    Text(
-                                        text = "${bDebuff.type.displayName.uppercase()}" + (if (bDebuff.stacks > 1) " x${bDebuff.stacks}" else "") + " ${String.format("%.1f", bDebuff.remaining)}s",
-                                        color = bDebuff.type.primaryColor,
-                                        fontSize = 8.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    if (bDebuff.type == CombatStatusType.CORROSION) {
-                                        Text(
-                                            text = "(+${30 * bDebuff.stacks}% DMG)",
-                                            color = Color(0xFFFFD700),
-                                            fontSize = 8.sp,
-                                            fontWeight = FontWeight.ExtraBold
-                                        )
-                                    } else if (bDebuff.type == CombatStatusType.ALCHEMY_BURN) {
-                                        Text(
-                                            text = "(DoT)",
-                                            color = Color(0xFFFF8A65),
-                                            fontSize = 8.sp,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Stagger & Status Indicator
-                when (engine.boss.state) {
-                    com.example.game.boss.BossState.STAGGERED -> {
-                        Text(
-                            text = "★ STAGGERED - WEAK POINT EXPOSED (CRIT x2.2) ★",
-                            color = Color(0xFFFFD700),
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            letterSpacing = 0.5.sp
-                        )
-                    }
-                    com.example.game.boss.BossState.TELEGRAPHING -> {
-                        val atk = engine.boss.currentAttack
-                        Text(
-                            text = "⚠ TELEGRAPH: ${atk?.name?.uppercase() ?: "INCOMING ATTACK"} ⚠",
-                            color = atk?.warningColor ?: Color(0xFFFF3020),
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    com.example.game.boss.BossState.PHASE_TRANSITION -> {
-                        Text(
-                            text = "⚡ PHASE TRANSFORMATION ENRAGED ⚡",
-                            color = engine.boss.currentPhase.accentColor,
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    else -> {
-                        val staggerRatio = (engine.boss.weakPoint.staggerHealth / engine.boss.weakPoint.maxStaggerHealth).coerceIn(0f, 1f)
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Text(
-                                text = "CORE SHIELD",
-                                color = Color(0xFFC0A0E0),
-                                fontSize = 8.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .width(80.dp)
-                                    .height(4.dp)
-                                    .background(Color(0x88201530), RoundedCornerShape(2.dp))
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxHeight()
-                                        .fillMaxWidth(fraction = staggerRatio)
-                                        .background(Color(0xFFFFD700), RoundedCornerShape(2.dp))
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        // Gothic Boss Health Bar & Encounter HUD (Top center during boss encounters)
+        GothicBossHealthBar(
+            boss = engine.boss,
+            frameTick = frameTick,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 8.dp)
+        )
 
         // On-Screen Touch Controls (Multi-touch with detectTapGestures & pointer inputs)
         Row(
