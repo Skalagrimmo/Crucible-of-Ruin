@@ -63,6 +63,9 @@ fun MainMenuScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val authRepo = remember { AuthRepository(context) }
+    androidx.compose.runtime.DisposableEffect(authRepo) {
+        onDispose { authRepo.dispose() }
+    }
     val saveRepo = remember { UserSaveRepository(context) }
 
     val user by authRepo.currentUser.collectAsState()

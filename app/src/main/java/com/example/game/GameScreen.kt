@@ -74,6 +74,9 @@ fun GameScreen(
     val context = androidx.compose.ui.platform.LocalContext.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val authRepo = remember { com.example.game.data.AuthRepository(context) }
+    androidx.compose.runtime.DisposableEffect(authRepo) {
+        onDispose { authRepo.dispose() }
+    }
     val saveRepo = remember { com.example.game.data.UserSaveRepository(context) }
     val user by authRepo.currentUser.collectAsState()
 
