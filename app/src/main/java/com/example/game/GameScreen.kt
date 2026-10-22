@@ -1074,6 +1074,9 @@ fun TouchTapButton(
 }
 
 
+/** Toggle between the supported low-power and full-rate settings. */
+internal fun nextTargetFps(current: Int): Int = if (current == 30) 60 else 30
+
 /** Returns only counters that have not yet been included in a persisted snapshot. */
 internal fun pendingCounterDelta(current: Int, previouslySaved: Int): Int =
     if (current >= previouslySaved) current - previouslySaved else current.coerceAtLeast(0)
