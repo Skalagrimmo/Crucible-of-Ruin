@@ -49,13 +49,13 @@ class AlchemyViewModel : ViewModel() {
     val craftingNotice: StateFlow<String?> = _craftingNotice.asStateFlow()
 
     fun loadFromUserSave(save: UserSave) {
-        _pouch.update {
-            mapOf(
-                ResourceType.SULFUR_ASH to maxOf(save.savedSulfur, it[ResourceType.SULFUR_ASH] ?: 0),
-                ResourceType.QUICKSILVER to maxOf(save.savedMercury, it[ResourceType.QUICKSILVER] ?: 0),
-                ResourceType.VITRIOL_CRYSTAL to maxOf(save.savedVitriol, it[ResourceType.VITRIOL_CRYSTAL] ?: 0)
-            )
-        }
+        // Consumable reagents must match the saved snapshot exactly. Taking max against
+        // the ViewModel's starter pouch would refund anything spent before the save.
+        _pouch.value = mapOf(
+            ResourceType.SULFUR_ASH to save.savedSulfur.coerceAtLeast(0),
+            ResourceType.QUICKSILVER to save.savedMercury.coerceAtLeast(0),
+            ResourceType.VITRIOL_CRYSTAL to save.savedVitriol.coerceAtLeast(0)
+        )
         _permanentBuffRanks.update {
             mapOf(
                 PermanentBuffType.VITALITY_CORE to save.permanentVitality,

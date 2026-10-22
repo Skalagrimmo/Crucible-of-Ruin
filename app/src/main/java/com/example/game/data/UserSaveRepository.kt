@@ -1,27 +1,34 @@
 package com.example.game.data
 
 import android.content.Context
+import android.content.SharedPreferences
 import com.example.R
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.tasks.await
 
 class UserSaveRepository(private val context: Context) {
-    private val prefs = context.getSharedPreferences("crucible_save_prefs", Context.MODE_PRIVATE)
-
     private val firestore: FirebaseFirestore by lazy {
         FirebaseFirestore.getInstance(context.getString(R.string.firestore_database_id))
     }
 
-    fun getLocalUserSave(): UserSave {
+    /**
+     * Each account has its own local snapshot. Guest progress lives in a separate file so
+     * signing into a second account cannot silently mix the two accounts' consumables.
+     */
+    fun getLocalUserSave(userId: String = ""): UserSave {
+        val normalizedUserId = userId.trim()
+        val prefs = preferencesFor(normalizedUserId)
+        migrateLegacyPreferencesIfNeeded(normalizedUserId, prefs)
+
         return UserSave(
-            userId = prefs.getString("user_id", "") ?: "",
+            userId = normalizedUserId,
             displayName = prefs.getString("display_name", "Alchemist") ?: "Alchemist",
             highScore = prefs.getInt("high_score", 0),
             bestTimeSeconds = prefs.getFloat("best_time", 0f),
             foesSlain = prefs.getInt("foes_slain", 0),
             lastCheckpoint = prefs.getInt("last_checkpoint", 0),
-            savedAt = prefs.getLong("saved_at", System.currentTimeMillis()),
+            savedAt = prefs.getLong("saved_at", 0L),
             targetFps = prefs.getInt("target_fps", 30),
             soundMuted = prefs.getBoolean("sound_muted", false),
             hapticsEnabled = prefs.getBoolean("haptics_enabled", true),
@@ -38,7 +45,22 @@ class UserSaveRepository(private val context: Context) {
         )
     }
 
-    fun saveLocalUserSave(save: UserSave) {
+    /**
+     * Saves a local snapshot and returns the exact timestamped value persisted.
+     * This method is also used for local-only device preferences.
+     */
+    fun saveLocalUserSave(save: UserSave): UserSave {
+        val normalized = save.copy(
+            userId = save.userId.trim(),
+            savedAt = System.currentTimeMillis()
+        )
+        writeLocalSnapshot(normalized)
+        return normalized
+    }
+
+    private fun writeLocalSnapshot(save: UserSave) {
+        val prefs = preferencesFor(save.userId)
+        migrateLegacyPreferencesIfNeeded(save.userId, prefs)
         prefs.edit()
             .putString("user_id", save.userId)
             .putString("display_name", save.displayName)
@@ -60,64 +82,178 @@ class UserSaveRepository(private val context: Context) {
             .putInt("saved_mercury", save.savedMercury)
             .putInt("saved_vitriol", save.savedVitriol)
             .putInt("perfect_dodges", save.perfectDodges)
+            .putBoolean(KEY_HAS_SAVE, true)
             .apply()
     }
 
+    private fun preferencesFor(userId: String): SharedPreferences {
+        val accountKey = userId.ifBlank { "guest" }
+        return context.getSharedPreferences("${PREFERENCES_PREFIX}$accountKey", Context.MODE_PRIVATE)
+    }
+
+    private fun hasStoredSave(userId: String): Boolean {
+        val prefs = preferencesFor(userId)
+        migrateLegacyPreferencesIfNeeded(userId, prefs)
+        return prefs.getBoolean(KEY_HAS_SAVE, false)
+    }
+
+    /**
+     * Migrate the former single SharedPreferences file only to the matching owner.
+     * Legacy guest data is never copied into a different signed-in account.
+     */
+    private fun migrateLegacyPreferencesIfNeeded(userId: String, target: SharedPreferences) {
+        if (target.getBoolean(KEY_LEGACY_MIGRATED, false)) return
+
+        val legacy = context.getSharedPreferences(LEGACY_PREFERENCES, Context.MODE_PRIVATE)
+        val legacyValues = legacy.all
+        if (legacyValues.isEmpty()) {
+            target.edit().putBoolean(KEY_LEGACY_MIGRATED, true).apply()
+            return
+        }
+
+        val legacyOwner = legacy.getString("user_id", "")?.trim().orEmpty()
+        if (legacyOwner == userId) {
+            val editor = target.edit()
+            legacyValues.forEach { (key, value) ->
+                when (value) {
+                    is String -> editor.putString(key, value)
+                    is Int -> editor.putInt(key, value)
+                    is Long -> editor.putLong(key, value)
+                    is Float -> editor.putFloat(key, value)
+                    is Boolean -> editor.putBoolean(key, value)
+                    is Set<*> -> editor.putStringSet(
+                        key,
+                        value.filterIsInstance<String>().toMutableSet()
+                    )
+                }
+            }
+            editor.putBoolean(KEY_HAS_SAVE, true)
+                .putBoolean(KEY_LEGACY_MIGRATED, true)
+                .apply()
+        } else {
+            // This account has checked the legacy file; do not import another owner's data.
+            target.edit().putBoolean(KEY_LEGACY_MIGRATED, true).apply()
+        }
+    }
+
     suspend fun getUserSave(userId: String): UserSave {
-        val local = getLocalUserSave()
-        if (userId.isBlank()) return local
+        val normalizedUserId = userId.trim()
+        val local = getLocalUserSave(normalizedUserId)
+        val localHasSave = hasStoredSave(normalizedUserId)
+        if (normalizedUserId.isBlank()) return local
 
         return try {
-            val snapshot = firestore.collection("users").document(userId).get().await()
-            if (snapshot.exists()) {
-                val cloud = snapshot.toObject(UserSave::class.java)
-                if (cloud != null) {
-                    val merged = cloud.copy(
-                        targetFps = local.targetFps,
-                        soundMuted = local.soundMuted,
-                        hapticsEnabled = local.hapticsEnabled,
-                        highScore = maxOf(local.highScore, cloud.highScore),
-                        bestTimeSeconds = if (local.bestTimeSeconds <= 0f) cloud.bestTimeSeconds
-                            else if (cloud.bestTimeSeconds <= 0f) local.bestTimeSeconds
-                            else minOf(local.bestTimeSeconds, cloud.bestTimeSeconds),
-                        lastCheckpoint = maxOf(local.lastCheckpoint, cloud.lastCheckpoint),
-                        foesSlain = maxOf(local.foesSlain, cloud.foesSlain),
-                        savedAt = maxOf(local.savedAt, cloud.savedAt),
-                        permanentVitality = maxOf(local.permanentVitality, cloud.permanentVitality),
-                        permanentDamage = maxOf(local.permanentDamage, cloud.permanentDamage),
-                        permanentSpeed = maxOf(local.permanentSpeed, cloud.permanentSpeed),
-                        permanentFlasks = maxOf(local.permanentFlasks, cloud.permanentFlasks),
-                        permanentDefense = maxOf(local.permanentDefense, cloud.permanentDefense),
-                        permanentVitriol = maxOf(local.permanentVitriol, cloud.permanentVitriol),
-                        savedSulfur = maxOf(local.savedSulfur, cloud.savedSulfur),
-                        savedMercury = maxOf(local.savedMercury, cloud.savedMercury),
-                        savedVitriol = maxOf(local.savedVitriol, cloud.savedVitriol),
-                        perfectDodges = maxOf(local.perfectDodges, cloud.perfectDodges)
-                    )
-                    saveLocalUserSave(merged)
+            val snapshot = firestore.collection("users")
+                .document(normalizedUserId)
+                .get()
+                .await()
+            val cloud = if (snapshot.exists()) snapshot.toObject(UserSave::class.java) else null
+
+            if (cloud != null) {
+                val merged = mergeUserSaves(
+                    local = local,
+                    cloud = cloud,
+                    userId = normalizedUserId,
+                    localHasSave = localHasSave
+                )
+                val localProgressIsNewer = localHasSave && local.savedAt > cloud.savedAt
+                if (localProgressIsNewer) {
+                    // A newer offline snapshot wins and is pushed back to the cloud.
+                    saveUserSave(merged)
+                    getLocalUserSave(normalizedUserId)
+                } else {
+                    // Preserve the cloud snapshot timestamp; reading must not make stale local
+                    // progression look newer than the cloud on the next launch.
+                    writeLocalSnapshot(merged)
                     merged
+                }
+            } else {
+                // First login: keep this account's local data. If it has none, import the
+                // separate guest save once; never merge guest data into an existing cloud save.
+                val seed = if (!localHasSave && hasStoredSave("")) {
+                    getLocalUserSave("")
                 } else {
                     local
                 }
-            } else {
-                local
+                val initial = seed.copy(userId = normalizedUserId)
+                saveUserSave(initial)
+                getLocalUserSave(normalizedUserId)
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
+            // Local-first fallback remains usable when Firebase or the network is unavailable.
             local
         }
     }
 
     suspend fun saveUserSave(save: UserSave): Result<Unit> {
-        saveLocalUserSave(save)
-        if (save.userId.isBlank()) return Result.success(Unit)
+        val normalizedUserId = save.userId.trim()
+        val persisted = save.copy(
+            userId = normalizedUserId,
+            savedAt = System.currentTimeMillis()
+        )
+        writeLocalSnapshot(persisted)
+        if (normalizedUserId.isBlank()) return Result.success(Unit)
 
         return try {
-            firestore.collection("users").document(save.userId)
-                .set(save, SetOptions.merge())
+            firestore.collection("users")
+                .document(normalizedUserId)
+                .set(persisted, SetOptions.merge())
                 .await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
+
+    private companion object {
+        const val LEGACY_PREFERENCES = "crucible_save_prefs"
+        const val PREFERENCES_PREFIX = "crucible_save_prefs_"
+        const val KEY_HAS_SAVE = "_has_saved_snapshot"
+        const val KEY_LEGACY_MIGRATED = "_legacy_migrated"
+    }
+}
+
+/**
+ * Merge monotonic achievements independently, but take consumable reagent counts from one
+ * timestamped snapshot. Using maxOf for consumables restores ingredients after crafting.
+ */
+internal fun mergeUserSaves(
+    local: UserSave,
+    cloud: UserSave,
+    userId: String,
+    localHasSave: Boolean
+): UserSave {
+    val localIsNewer = localHasSave && local.savedAt > cloud.savedAt
+    val progress = if (localIsNewer) local else cloud
+    val deviceSettings = if (localHasSave) local else cloud
+
+    val localBest = local.bestTimeSeconds
+    val cloudBest = cloud.bestTimeSeconds
+    val bestTime = when {
+        localBest <= 0f -> cloudBest
+        cloudBest <= 0f -> localBest
+        else -> minOf(localBest, cloudBest)
+    }
+
+    return progress.copy(
+        userId = userId,
+        highScore = maxOf(local.highScore, cloud.highScore),
+        bestTimeSeconds = bestTime,
+        foesSlain = maxOf(local.foesSlain, cloud.foesSlain),
+        lastCheckpoint = maxOf(local.lastCheckpoint, cloud.lastCheckpoint),
+        savedAt = maxOf(local.savedAt, cloud.savedAt),
+        targetFps = deviceSettings.targetFps,
+        soundMuted = deviceSettings.soundMuted,
+        hapticsEnabled = deviceSettings.hapticsEnabled,
+        permanentVitality = maxOf(local.permanentVitality, cloud.permanentVitality),
+        permanentDamage = maxOf(local.permanentDamage, cloud.permanentDamage),
+        permanentSpeed = maxOf(local.permanentSpeed, cloud.permanentSpeed),
+        permanentFlasks = maxOf(local.permanentFlasks, cloud.permanentFlasks),
+        permanentDefense = maxOf(local.permanentDefense, cloud.permanentDefense),
+        permanentVitriol = maxOf(local.permanentVitriol, cloud.permanentVitriol),
+        savedSulfur = progress.savedSulfur,
+        savedMercury = progress.savedMercury,
+        savedVitriol = progress.savedVitriol,
+        perfectDodges = maxOf(local.perfectDodges, cloud.perfectDodges)
+    )
 }

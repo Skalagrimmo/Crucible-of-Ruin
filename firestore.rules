@@ -1,12 +1,19 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
-    match /leaderboards/{docId} {
+
+    // Leaderboard documents are keyed by the owning Firebase UID. Public clients may
+    // read rankings, but may only create/update/delete their own entry.
+    match /leaderboards/{userId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow create, update: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.userId == userId;
+      allow delete: if request.auth != null && request.auth.uid == userId;
     }
   }
 }
