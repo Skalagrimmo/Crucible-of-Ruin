@@ -437,8 +437,12 @@ fun MainMenuScreen(
                         Button(
                             onClick = {
                                 targetFps = if (targetFps == 30) 60 else 30
-                                userSave = userSave.copy(targetFps = targetFps)
-                                scope.launch { saveRepo.saveUserSave(userSave) }
+                                val updatedSave = userSave.copy(
+                                    targetFps = targetFps,
+                                    userId = user?.uid ?: ""
+                                )
+                                userSave = updatedSave
+                                saveRepo.saveLocalUserSave(updatedSave)
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4C2A78)),
                             modifier = Modifier.testTag("dialog_toggle_fps")
@@ -468,8 +472,12 @@ fun MainMenuScreen(
                             onCheckedChange = { isEnabled ->
                                 soundMuted = !isEnabled
                                 AssetCache.isMuted = soundMuted
-                                userSave = userSave.copy(soundMuted = soundMuted)
-                                scope.launch { saveRepo.saveUserSave(userSave) }
+                                val updatedSave = userSave.copy(
+                                    soundMuted = soundMuted,
+                                    userId = user?.uid ?: ""
+                                )
+                                userSave = updatedSave
+                                saveRepo.saveLocalUserSave(updatedSave)
                             },
                             colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFFFFD700))
                         )
@@ -495,8 +503,12 @@ fun MainMenuScreen(
                             checked = hapticsEnabled,
                             onCheckedChange = { isEnabled ->
                                 hapticsEnabled = isEnabled
-                                userSave = userSave.copy(hapticsEnabled = hapticsEnabled)
-                                scope.launch { saveRepo.saveUserSave(userSave) }
+                                val updatedSave = userSave.copy(
+                                    hapticsEnabled = hapticsEnabled,
+                                    userId = user?.uid ?: ""
+                                )
+                                userSave = updatedSave
+                                saveRepo.saveLocalUserSave(updatedSave)
                             },
                             colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFFFFD700)),
                             modifier = Modifier.testTag("dialog_toggle_haptics")
