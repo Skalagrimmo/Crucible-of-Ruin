@@ -1,3 +1,4 @@
+successfully downloaded text file (SHA: 95fac8d2c96d4e4324f1ed322352f35e0f58f3e0)
 name: Android CI
 
 on:
@@ -116,9 +117,16 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           {
-            echo "**❌ CI failed on \`testDebugUnitTest\` — last 150 lines of build output:**"
+            echo "**❌ CI failed on \`testDebugUnitTest\`**"
+            echo ""
+            echo "**Extracted errors and causes:**"
             echo '~~~'
-            tail -n 150 build-output.log
+            grep -n -E 'e: |error:|FAILURE|What went wrong|Could not|Caused by|required:|found:' build-output.log | grep -v 'at org.gradle' | tail -n 100 || true
+            echo '~~~'
+            echo ""
+            echo "**Last 60 lines of build output:**"
+            echo '~~~'
+            tail -n 60 build-output.log
             echo '~~~'
           } > comment-body.md
           gh pr comment "$PR_NUMBER" --body-file comment-body.md
