@@ -1,3 +1,4 @@
+successfully downloaded text file (SHA: 6bd0ad4c0f9e1faef251c6ca6da8aa20cbc049ab)
 successfully downloaded text file (SHA: 95fac8d2c96d4e4324f1ed322352f35e0f58f3e0)
 name: Android CI
 
@@ -82,7 +83,12 @@ jobs:
                     "package_name": "com.example"
                   }
                 },
-                "oauth_client": [],
+                "oauth_client": [
+                  {
+                    "client_id": "000000000-placeholder0000000000000000000000000000.apps.googleusercontent.com",
+                    "client_type": 3
+                  }
+                ],
                 "api_key": [
                   {
                     "current_key": "AIzaSyCI-placeholder-key-for-compilation-0000000000"
