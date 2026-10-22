@@ -80,6 +80,18 @@ jobs:
           set -o pipefail
           ./gradlew :app:assembleDebug --stacktrace --no-daemon 2>&1 | tee -a build-output.log
 
+      # This APK is built with a placeholder Firebase config when the real config is absent.
+      # It is suitable for offline/gameplay smoke tests, but real Google Sign-In/cloud sync
+      # require the application's actual google-services.json.
+      - name: Upload debug APK artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crucible-of-ruin-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Upload failure diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
