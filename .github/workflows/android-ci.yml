@@ -18,7 +18,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
@@ -49,7 +49,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
-      contents: read
+      contents: write
+      pull-requests: write
     steps:
       - name: Checkout (latest main includes wrapper commit)
         uses: actions/checkout@v4
@@ -57,7 +58,7 @@ jobs:
           ref: ${{ github.event_name == 'push' && 'main' || github.event.pull_request.head.sha }}
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
@@ -103,7 +104,59 @@ jobs:
           gradle-version: '9.3.1'
 
       - name: Run unit tests
-        run: gradle :app:testDebugUnitTest --stacktrace
+        shell: bash
+        run: |
+          set -o pipefail
+          gradle :app:testDebugUnitTest --stacktrace 2>&1 | tee build-output.log
+
+      - name: Archive failure diagnostics to ci-diagnostics branch
+        if: failure()
+        run: |
+          {
+            echo "# CI failure report"
+            echo ""
+            echo "Commit: ${GITHUB_SHA}"
+            echo "Event: ${GITHUB_EVENT_NAME}"
+            echo ""
+            echo "## Extracted errors and causes"
+            echo ""
+            echo '~~~'
+            grep -n -E 'e: |error: |FAILURE|What went wrong|Could not|Caused by|Execution failed|required:|found:|malformed' build-output.log | grep -v 'at org.gradle' | tail -n 150 || true
+            echo '~~~'
+            echo ""
+            echo "## Last 150 lines of build output"
+            echo ""
+            echo '~~~'
+            tail -n 150 build-output.log
+            echo '~~~'
+          } > CI-FAILURE-REPORT.md
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B ci-diagnostics
+          git add CI-FAILURE-REPORT.md
+          git commit -m "ci: failure report for ${GITHUB_SHA}"
+          git push -f origin ci-diagnostics || echo "Could not push diagnostics branch"
+
+      - name: Report failure output to PR
+        if: failure() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          {
+            echo "**❌ CI failed on \`testDebugUnitTest\`**"
+            echo ""
+            echo "**Extracted errors and causes:**"
+            echo '~~~'
+            grep -n -E 'e: |error: |FAILURE|What went wrong|Could not|Caused by|Execution failed|required:|found:|malformed' build-output.log | grep -v 'at org.gradle' | tail -n 100 || true
+            echo '~~~'
+            echo ""
+            echo "**Last 60 lines of build output:**"
+            echo '~~~'
+            tail -n 60 build-output.log
+            echo '~~~'
+          } > comment-body.md
+          gh pr comment "$PR_NUMBER" --body-file comment-body.md || true
 
       - name: Build debug APK
         run: gradle :app:assembleDebug --stacktrace
