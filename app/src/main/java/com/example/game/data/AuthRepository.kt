@@ -30,10 +30,19 @@ class AuthRepository(private val context: Context) {
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
+    private val authStateListener = FirebaseAuth.AuthStateListener { firebaseAuth ->
+        _currentUser.value = firebaseAuth.currentUser
+    }
+
     init {
-        auth.addAuthStateListener { firebaseAuth ->
-            _currentUser.value = firebaseAuth.currentUser
-        }
+        auth.addAuthStateListener(authStateListener)
+    }
+
+    /**
+     * Release the Firebase listener when the screen that owns this repository is disposed.
+     */
+    fun dispose() {
+        auth.removeAuthStateListener(authStateListener)
     }
 
     suspend fun signInWithGoogle(): Result<FirebaseUser?> {
