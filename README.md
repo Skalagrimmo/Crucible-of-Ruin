@@ -54,3 +54,9 @@ Requires JDK 21 and Android SDK 36.
 ```
 
 `BossUnitTest` covers boss phases, weak-point stagger, status-effect DoT, dash/riposte mechanics, combo progression, poise/knockback, and the damage-number pool.
+
+## Save and backup behavior
+
+- Without Google Sign-In, progress is stored locally on the device.
+- Signing in enables Firebase cloud saves. On a first sign-in, guest progress is imported only when the signed-in account has no existing cloud save.
+- Android system backup and device-transfer rules intentionally exclude the app's local save preferences. A signed-in player should rely on the cloud save to restore progress after reinstalling or switching devices. Guest-only progress is not included in system backups and may be lost if app data is cleared, the app is uninstalled, or the device is replaced.
