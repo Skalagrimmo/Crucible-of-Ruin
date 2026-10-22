@@ -45,7 +45,7 @@ Requires JDK 21 and Android SDK 36.
 ./gradlew :app:assembleDebug
 ```
 
-> **Note:** the Gradle wrapper and `app/google-services.json` are not committed yet. Run `gradle wrapper` locally to generate the wrapper, and place your `google-services.json` (Firebase console → Project settings → Android app) under `app/` before building.
+> **Note:** the Gradle wrapper is committed. Before building locally, place your `google-services.json` (Firebase console → Project settings → Android app) under `app/`. CI uses a placeholder file for compilation because unit tests do not touch live Firebase.
 
 ## Testing
 
