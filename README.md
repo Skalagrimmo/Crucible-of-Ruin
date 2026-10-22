@@ -18,6 +18,8 @@ Melee-combat focused side-scroller built natively with Kotlin and Jetpack Compos
 - Firebase Auth (Credential Manager / Google ID) + Firestore
 - JUnit + Robolectric for unit tests of combat, boss and save systems
 
+**Android application ID:** `com.skalagrimmo.crucibleofruin`. Register an Android app with this exact package name in Firebase Console, then place its `google-services.json` under `app/` for real Google Sign-In and cloud saves. The CI placeholder is only for compilation/tests and does not enable real authentication or cloud synchronization.
+
 ## Project structure
 
 ```
