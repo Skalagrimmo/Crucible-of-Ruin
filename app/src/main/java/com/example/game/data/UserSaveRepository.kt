@@ -77,8 +77,12 @@ class UserSaveRepository(private val context: Context) {
                         soundMuted = local.soundMuted,
                         hapticsEnabled = local.hapticsEnabled,
                         highScore = maxOf(local.highScore, cloud.highScore),
+                        bestTimeSeconds = if (local.bestTimeSeconds <= 0f) cloud.bestTimeSeconds
+                            else if (cloud.bestTimeSeconds <= 0f) local.bestTimeSeconds
+                            else minOf(local.bestTimeSeconds, cloud.bestTimeSeconds),
                         lastCheckpoint = maxOf(local.lastCheckpoint, cloud.lastCheckpoint),
                         foesSlain = maxOf(local.foesSlain, cloud.foesSlain),
+                        savedAt = maxOf(local.savedAt, cloud.savedAt),
                         permanentVitality = maxOf(local.permanentVitality, cloud.permanentVitality),
                         permanentDamage = maxOf(local.permanentDamage, cloud.permanentDamage),
                         permanentSpeed = maxOf(local.permanentSpeed, cloud.permanentSpeed),
