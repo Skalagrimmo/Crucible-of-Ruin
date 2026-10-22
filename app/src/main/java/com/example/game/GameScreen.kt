@@ -141,7 +141,16 @@ fun GameScreen(
             val updated = current.copy(
                 lastCheckpoint = maxOf(current.lastCheckpoint, cpId),
                 foesSlain = current.foesSlain + enemiesDelta,
-                perfectDodges = current.perfectDodges + dodgesDelta
+                perfectDodges = current.perfectDodges + dodgesDelta,
+                permanentVitality = alchemyViewModel.getPermanentRank(PermanentBuffType.VITALITY_CORE),
+                permanentDamage = alchemyViewModel.getPermanentRank(PermanentBuffType.IGNIS_FERVOR),
+                permanentSpeed = alchemyViewModel.getPermanentRank(PermanentBuffType.QUICKSILVER_STRIDE),
+                permanentFlasks = alchemyViewModel.getPermanentRank(PermanentBuffType.CRUCIBLE_VESSEL),
+                permanentDefense = alchemyViewModel.getPermanentRank(PermanentBuffType.AEGIS_INFUSION),
+                permanentVitriol = alchemyViewModel.getPermanentRank(PermanentBuffType.VITRIOLIC_TOUCH),
+                savedSulfur = alchemyViewModel.getResourceCount(ResourceType.SULFUR_ASH),
+                savedMercury = alchemyViewModel.getResourceCount(ResourceType.QUICKSILVER),
+                savedVitriol = alchemyViewModel.getResourceCount(ResourceType.VITRIOL_CRYSTAL)
             )
             saveRepo.saveUserSave(updated)
             userSaveState = saveRepo.getLocalUserSave(currentUid)
