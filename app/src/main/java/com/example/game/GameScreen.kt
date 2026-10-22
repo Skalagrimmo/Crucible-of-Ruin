@@ -87,6 +87,9 @@ fun GameScreen(
     var showCraftingDialog by remember { mutableStateOf(false) }
     var showGrimoireDialog by remember { mutableStateOf(false) }
     var userSaveState by remember { mutableStateOf(saveRepo.getLocalUserSave()) }
+    // Track run counters already persisted at checkpoints to avoid counting the same events twice.
+    var enemiesCountedThroughLastSave by remember { mutableIntStateOf(0) }
+    var dodgesCountedThroughLastSave by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(hapticsEnabledState) {
         haptics.isEnabled = hapticsEnabledState
@@ -126,15 +129,22 @@ fun GameScreen(
     // Auto-save checkpoint progress to local storage and Firestore
     engine.onCheckpointActivated = { cpId ->
         val currentUid = user?.uid ?: ""
+        val enemiesNow = engine.enemiesDefeated
+        val dodgesNow = engine.perfectDodgesCount
+        val enemiesDelta = pendingCounterDelta(enemiesNow, enemiesCountedThroughLastSave)
+        val dodgesDelta = pendingCounterDelta(dodgesNow, dodgesCountedThroughLastSave)
+        enemiesCountedThroughLastSave = enemiesNow
+        dodgesCountedThroughLastSave = dodgesNow
+
         scope.launch {
             val current = saveRepo.getUserSave(currentUid)
             val updated = current.copy(
                 lastCheckpoint = maxOf(current.lastCheckpoint, cpId),
-                foesSlain = current.foesSlain + engine.enemiesDefeated,
-                perfectDodges = current.perfectDodges + engine.perfectDodgesCount
+                foesSlain = current.foesSlain + enemiesDelta,
+                perfectDodges = current.perfectDodges + dodgesDelta
             )
             saveRepo.saveUserSave(updated)
-            userSaveState = updated
+            userSaveState = saveRepo.getLocalUserSave(currentUid)
         }
     }
 
@@ -142,17 +152,24 @@ fun GameScreen(
     LaunchedEffect(engine.state) {
         if (engine.state == "victory") {
             val currentUid = user?.uid ?: ""
+            val enemiesNow = engine.enemiesDefeated
+            val dodgesNow = engine.perfectDodgesCount
+            val enemiesDelta = pendingCounterDelta(enemiesNow, enemiesCountedThroughLastSave)
+            val dodgesDelta = pendingCounterDelta(dodgesNow, dodgesCountedThroughLastSave)
+            enemiesCountedThroughLastSave = enemiesNow
+            dodgesCountedThroughLastSave = dodgesNow
+
             scope.launch {
                 val current = saveRepo.getUserSave(currentUid)
                 val bestTime = if (current.bestTimeSeconds <= 0f) engine.timeElapsed else minOf(current.bestTimeSeconds, engine.timeElapsed)
                 val updated = current.copy(
                     bestTimeSeconds = bestTime,
-                    foesSlain = current.foesSlain + engine.enemiesDefeated,
+                    foesSlain = current.foesSlain + enemiesDelta,
                     highScore = maxOf(current.highScore, (engine.enemiesDefeated * 100 + engine.player.hp.toInt() * 10)),
-                    perfectDodges = current.perfectDodges + engine.perfectDodgesCount
+                    perfectDodges = current.perfectDodges + dodgesDelta
                 )
                 saveRepo.saveUserSave(updated)
-                userSaveState = updated
+                userSaveState = saveRepo.getLocalUserSave(currentUid)
             }
         }
     }
@@ -1037,3 +1054,8 @@ fun TouchTapButton(
         }
     }
 }
+
+
+/** Returns only counters that have not yet been included in a persisted snapshot. */
+internal fun pendingCounterDelta(current: Int, previouslySaved: Int): Int =
+    if (current >= previouslySaved) current - previouslySaved else current.coerceAtLeast(0)
