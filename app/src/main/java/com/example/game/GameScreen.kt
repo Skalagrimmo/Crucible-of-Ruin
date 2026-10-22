@@ -737,7 +737,7 @@ fun GameScreen(
                         onClick = {
                             hapticsEnabledState = !hapticsEnabledState
                             haptics.isEnabled = hapticsEnabledState
-                            saveRepo.saveLocalUserSave(saveRepo.getLocalUserSave().copy(hapticsEnabled = hapticsEnabledState))
+                            saveRepo.saveLocalUserSave(saveRepo.getLocalUserSave(user?.uid ?: "").copy(hapticsEnabled = hapticsEnabledState))
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF37274E)),
                         modifier = Modifier.testTag("toggle_haptics_pause_menu")
