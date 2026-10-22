@@ -46,14 +46,12 @@ class UserSaveRepository(private val context: Context) {
     }
 
     /**
-     * Saves a local snapshot and returns the exact timestamped value persisted.
-     * This method is also used for local-only device preferences.
+     * Saves a local snapshot without changing the progress timestamp.
+     * Device-only settings must not make an older offline progression snapshot look newer
+     * than the cloud save. Progress timestamps are advanced by saveUserSave().
      */
     fun saveLocalUserSave(save: UserSave): UserSave {
-        val normalized = save.copy(
-            userId = save.userId.trim(),
-            savedAt = System.currentTimeMillis()
-        )
+        val normalized = save.copy(userId = save.userId.trim())
         writeLocalSnapshot(normalized)
         return normalized
     }

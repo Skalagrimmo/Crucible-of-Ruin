@@ -47,6 +47,10 @@ Requires JDK 21 and Android SDK 36.
 
 > **Note:** the Gradle wrapper is committed. Before building locally, place your `google-services.json` (Firebase console → Project settings → Android app) under `app/`. CI uses a placeholder file for compilation because unit tests do not touch live Firebase.
 
+## CI debug APK
+
+Successful GitHub Actions runs upload `app-debug.apk` as the `crucible-of-ruin-debug-apk` artifact for 14 days. The CI APK uses a placeholder Firebase configuration when the real `google-services.json` is absent. It can be used for an offline/gameplay smoke test, but Google Sign-In and cloud saves require the real Firebase configuration.
+
 ## Testing
 
 ```bash

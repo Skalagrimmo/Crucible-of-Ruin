@@ -49,4 +49,24 @@ class UserSaveRepositoryLocalTest {
         assertEquals(3, repository.getLocalUserSave("").savedSulfur)
         assertEquals(2, repository.getLocalUserSave("").savedMercury)
     }
+
+    @Test
+    fun localDeviceSettingSaveDoesNotAdvanceProgressTimestamp() {
+        val repository = UserSaveRepository(context)
+        repository.saveLocalUserSave(
+            UserSave(
+                userId = "account-a",
+                savedAt = 123L,
+                savedSulfur = 1,
+                hapticsEnabled = true
+            )
+        )
+
+        val local = repository.getLocalUserSave("account-a")
+        val saved = repository.saveLocalUserSave(local.copy(hapticsEnabled = false))
+
+        assertEquals(123L, saved.savedAt)
+        assertEquals(123L, repository.getLocalUserSave("account-a").savedAt)
+        assertEquals(false, repository.getLocalUserSave("account-a").hapticsEnabled)
+    }
 }
