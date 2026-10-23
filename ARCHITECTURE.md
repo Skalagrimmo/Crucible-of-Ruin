@@ -50,12 +50,12 @@ These are observations, not immediate change requests:
 - `GameScreen.kt` combines several roles: frame-loop host, touch-input adapter, HUD/overlay composition, alchemy bridge, and save orchestration.
 - The screen and renderer read mutable engine/entity state directly. The event callbacks help with some outward events, but there is not yet a separate immutable render snapshot or narrow engine API.
 - `CombatStatusType` contains Compose `Color` values alongside gameplay parameters. That is practical for the current app, but it ties part of the status definition to presentation types.
-- Existing tests cover significant boss/combat/status and save behavior, but the current test set does not show a dedicated suite for platform collision/landing, falling between platforms, or touch-to-engine input wiring.
+- Existing tests cover significant boss/combat/status and save behavior. `GameEnginePhysicsTest` now verifies landing on the starting platform and the pit-fall death/respawn path; targeted coverage is still missing for platform-edge/gap transitions, hazard/knockback interactions, and touch-to-engine input wiring.
 
 ## Safe order for future structural work
 
 1. Keep this map current and use actual gameplay recordings to choose the next issue.
-2. Add focused regression tests around the behavior that will be moved before changing ownership: start with movement/collision/fall handling and status-effect ticking/death accounting.
+2. Extend the baseline regression tests before changing ownership, especially around platform-edge/gap transitions and input-to-engine wiring; retain tests for movement, fall handling, and status-effect death accounting.
 3. Extract one responsibility at a time from `GameEngine` (world definitions and collision/physics are clearer candidates than a broad rewrite). Preserve the existing update order until tests make changes safe.
 4. Reduce the responsibilities in `GameScreen` incrementally: separate presentation/input wiring from persistence orchestration only when the boundaries are clear.
 5. Consider decoupling gameplay data from Compose presentation types after the existing behavior is covered by tests.
