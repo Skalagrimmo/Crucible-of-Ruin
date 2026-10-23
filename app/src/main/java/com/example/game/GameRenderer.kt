@@ -44,9 +44,12 @@ object GameRenderer {
     )
 
     private val CITY_FACADES = listOf(
-        CityFacade(284f, 242f, 306f, 168f, 4),
-        CityFacade(714f, 202f, 256f, 208f, 3),
-        CityFacade(1224f, 242f, 376f, 168f, 5)
+        CityFacade(RuinedBastionDistrict.worldX(284f), RuinedBastionDistrict.worldY(242f),
+            RuinedBastionDistrict.worldWidth(306f), RuinedBastionDistrict.worldHeight(168f), 4),
+        CityFacade(RuinedBastionDistrict.worldX(714f), RuinedBastionDistrict.worldY(172f),
+            RuinedBastionDistrict.worldWidth(256f), RuinedBastionDistrict.worldHeight(238f), 3),
+        CityFacade(RuinedBastionDistrict.worldX(1224f), RuinedBastionDistrict.worldY(242f),
+            RuinedBastionDistrict.worldWidth(376f), RuinedBastionDistrict.worldHeight(168f), 5)
     )
 
     private val COLOR_ACID_BASE = Color(0xFF0F4422)
@@ -136,7 +139,7 @@ object GameRenderer {
 
             // Background Ruin Spires (Speed: 0.15)
             var rx = -100f
-            while (rx < 6400f) {
+            while (rx < 7000f) {
                 val sx = rx - camX * 0.15f
                 if (sx in -120f..1060f) {
                     drawRect(COLOR_PARALLAX_RUIN, topLeft = Offset(sx, 160f), size = Size(90f, 380f))
@@ -147,7 +150,7 @@ object GameRenderer {
 
             // Midground Pre-loaded Textures: Stained Glass & Pillars (Speed: 0.35)
             var px = 100f
-            while (px < 6100f) {
+            while (px < 6800f) {
                 val dx = px - camX * 0.35f
                 if (dx in -80f..1040f) {
                     if ((px.toInt() % 640) == 0) {

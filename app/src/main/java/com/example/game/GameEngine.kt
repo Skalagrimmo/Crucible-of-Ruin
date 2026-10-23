@@ -175,7 +175,7 @@ class EnemyEntity(
     val type: EnemyArchetype,
     val patrolRange: Float = 160f
 ) {
-    val startX: Float = x
+    var startX: Float = x
     val startY: Float = y
     var facing: Int = -1
     var grounded: Boolean = false
@@ -305,17 +305,17 @@ class GameEngine {
     val pickups = PickupPool(24)
     val damageNumbers = DamageNumberPool(36)
 
-    val levelWidth = 6200f
-    val levelHeight = 780f
+    val levelWidth = 6200f + RuinedBastionDistrict.HORIZONTAL_OFFSET
+    val levelHeight = 840f
 
     var state: String = "playing"
     var timeElapsed: Float = 0f
     var enemiesDefeated: Int = 0
 
     val checkpoints = listOf(
-        Checkpoint(0, 80f, 380f, "Section 1: Lower Bastion City", true),
-        Checkpoint(1, 1980f, 340f, "Section 2: Crucible Laboratories", false),
-        Checkpoint(2, 4400f, 340f, "Section 3: Sanctum Approach", false)
+        Checkpoint(0, 80f, RuinedBastionDistrict.worldY(380f), "Section 1: Lower Bastion City", true),
+        Checkpoint(1, 1980f + RuinedBastionDistrict.HORIZONTAL_OFFSET, 340f, "Section 2: Crucible Laboratories", false),
+        Checkpoint(2, 4400f + RuinedBastionDistrict.HORIZONTAL_OFFSET, 340f, "Section 3: Sanctum Approach", false)
     )
     var activeCheckpoint: Checkpoint = checkpoints[0]
 
@@ -323,7 +323,7 @@ class GameEngine {
     val hazards = ArrayList<Hazard>()
     val breakables = ArrayList<BreakableUrn>()
     val enemies = ArrayList<EnemyEntity>()
-    var boss: BaseBoss = CrucibleChimeraBoss(5750f, 360f)
+    var boss: BaseBoss = CrucibleChimeraBoss(5750f + RuinedBastionDistrict.HORIZONTAL_OFFSET, 360f)
 
     val player: PlayerEntity = PlayerEntity(activeCheckpoint.x, activeCheckpoint.y)
 
@@ -387,6 +387,10 @@ class GameEngine {
         // mixing it into combat, boss, and later-section setup.
         cityShortcutUnlocked = false
         RuinedBastionDistrict.populate(platforms, breakables, enemies)
+        val cityPlatformCount = platforms.size
+        val cityHazardCount = hazards.size
+        val cityBreakableCount = breakables.size
+        val cityEnemyCount = enemies.size
 
         // --- SECTION 2: THE CRUCIBLE LABORATORIES (x: 1900 - 4300) ---
         platforms.add(Platform(1920f, 420f, 380f, 120f, PlatformStyle.STONE))
@@ -433,7 +437,16 @@ class GameEngine {
         platforms.add(Platform(5420f, 330f, 120f, 18f, PlatformStyle.IRON_GIRDER))
         platforms.add(Platform(5880f, 330f, 120f, 18f, PlatformStyle.IRON_GIRDER))
 
-        boss = CrucibleChimeraBoss(5750f, 360f)
+        boss = CrucibleChimeraBoss(5750f + RuinedBastionDistrict.HORIZONTAL_OFFSET, 360f)
+        // Keep later rooms' internal shapes, shifting them to the right of the expanded city.
+        val cityOffset = RuinedBastionDistrict.HORIZONTAL_OFFSET
+        for (i in cityPlatformCount until platforms.size) platforms[i] = platforms[i].copy(x = platforms[i].x + cityOffset)
+        for (i in cityHazardCount until hazards.size) hazards[i] = hazards[i].copy(x = hazards[i].x + cityOffset)
+        for (i in cityBreakableCount until breakables.size) breakables[i].x += cityOffset
+        for (i in cityEnemyCount until enemies.size) {
+            enemies[i].x += cityOffset
+            enemies[i].startX += cityOffset
+        }
         damageNumbers.clear()
     }
 
@@ -623,7 +636,7 @@ class GameEngine {
         }
 
         // Boss trigger
-        if (!boss.active && player.x > 5340f) {
+        if (!boss.active && player.x > 5340f + RuinedBastionDistrict.HORIZONTAL_OFFSET) {
             boss.active = true
             audio.play("boss_roar")
             camera.shake(12f)
@@ -646,7 +659,9 @@ class GameEngine {
 
         // The gate is blocked from the street. Reaching its far side by the
         // rooftop route opens it, creating a permanent shortcut for this run.
-        if (player.x >= 1760f && player.x < 1900f && player.y >= 390f) {
+        if (player.x >= RuinedBastionDistrict.shortcutUnlockMinX &&
+            player.x < RuinedBastionDistrict.shortcutUnlockMaxX &&
+            player.y >= RuinedBastionDistrict.worldY(390f)) {
             cityShortcutUnlocked = true
             platforms.remove(RuinedBastionDistrict.shortcutGate)
             audio.play("checkpoint")

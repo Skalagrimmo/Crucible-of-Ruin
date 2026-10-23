@@ -61,7 +61,7 @@ data class PlayerAfterimage(
 )
 
 class BreakableUrn(
-    val x: Float,
+    var x: Float,
     val y: Float,
     val w: Float = 24f,
     val h: Float = 24f,
