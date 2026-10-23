@@ -66,7 +66,7 @@ class PlayerEntity(var x: Float, var y: Float) {
 
     val runSpeed: Float = 190f
     val airSpeed: Float = 160f
-    val jumpForce: Float = -430f
+    val jumpForce: Float = -500f
     val gravity: Float = 1050f
     var coyoteTime: Float = 0f
     var jumpBuffer: Float = 0f
