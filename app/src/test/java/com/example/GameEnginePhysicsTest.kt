@@ -2,6 +2,7 @@ package com.example
 
 import com.example.game.GameEngine
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -18,6 +19,26 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36])
 class GameEnginePhysicsTest {
+
+    @Test
+    fun clearingHeldInputsReleasesEveryControl() {
+        val engine = GameEngine()
+        engine.inputLeft = true
+        engine.inputRight = true
+        engine.inputJump = true
+        engine.inputAttack = true
+        engine.inputSub = true
+        engine.inputDash = true
+
+        engine.clearInputs()
+
+        assertFalse(engine.inputLeft)
+        assertFalse(engine.inputRight)
+        assertFalse(engine.inputJump)
+        assertFalse(engine.inputAttack)
+        assertFalse(engine.inputSub)
+        assertFalse(engine.inputDash)
+    }
 
     @Test
     fun playerSettlesOnStartingPlatform() {
