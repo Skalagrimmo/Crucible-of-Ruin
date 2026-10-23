@@ -48,6 +48,59 @@ class GameInputControllerTest {
     }
 
     @Test
+    fun simultaneousDirectionAndJumpHoldsRemainIndependent() {
+        val engine = GameEngine()
+        val input = GameInputController(engine)
+
+        input.setLeftHeld(true)
+        input.setJumpHeld(true)
+        input.setLeftHeld(false)
+
+        assertFalse(engine.inputLeft)
+        assertTrue(engine.inputJump)
+        assertEquals(0.15f, engine.player.jumpBuffer, 0f)
+    }
+
+    @Test
+    fun cancelHeldInputsClearsMovementJumpAndQueuedJump() {
+        val engine = GameEngine()
+        val input = GameInputController(engine)
+
+        input.setLeftHeld(true)
+        input.setRightHeld(true)
+        input.setJumpHeld(true)
+
+        input.cancelHeldInputs()
+
+        assertFalse(engine.inputLeft)
+        assertFalse(engine.inputRight)
+        assertFalse(engine.inputJump)
+        assertEquals(0f, engine.player.jumpBuffer, 0f)
+    }
+
+    @Test
+    fun inputControllerIgnoresMovementAndActionsWhilePaused() {
+        val engine = GameEngine().apply { state = "paused" }
+        val input = GameInputController(engine)
+
+        input.setLeftHeld(true)
+        input.setRightHeld(true)
+        input.setJumpHeld(true)
+        input.tapFlask()
+        input.tapDash()
+        input.tapAttack()
+
+        assertFalse(engine.inputLeft)
+        assertFalse(engine.inputRight)
+        assertFalse(engine.inputJump)
+        assertEquals(0f, engine.player.jumpBuffer, 0f)
+        assertEquals(3, engine.player.flasks)
+        assertEquals(0, engine.projectiles.activeCount)
+        assertFalse(engine.player.isDashing)
+        assertFalse(engine.player.attacking)
+    }
+
+    @Test
     fun actionTapsDelegateToExistingEngineActions() {
         val flaskEngine = GameEngine()
         GameInputController(flaskEngine).tapFlask()
