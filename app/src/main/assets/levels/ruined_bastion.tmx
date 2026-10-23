@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="60" height="17" tilewidth="32" tileheight="32" infinite="0" nextlayerid="5" nextobjectid="19">
+ <properties>
+  <property name="section" type="string" value="Ruined Bastion"/>
+  <property name="units" type="string" value="pixels"/>
+  <property name="levelWidth" type="int" value="1920"/>
+  <property name="levelHeight" type="int" value="540"/>
+  <property name="runtimeSource" type="string" value="prototype-only; GameLevelFactory remains authoritative until all sections are migrated"/>
+ </properties>
+ <objectgroup id="1" name="Platforms" color="#777777" draworder="topdown">
+  <object id="1" name="starting_floor" class="platform" x="0" y="460" width="600" height="80">
+   <properties><property name="style" type="string" value="STONE"/></properties>
+  </object>
+  <object id="2" name="first_far_floor" class="platform" x="680" y="460" width="500" height="80">
+   <properties><property name="style" type="string" value="STONE"/></properties>
+  </object>
+  <object id="3" name="ledge_01" class="platform" x="240" y="390" width="90" height="20">
+   <properties><property name="style" type="string" value="STONE_LEDGE"/></properties>
+  </object>
+  <object id="4" name="ledge_02" class="platform" x="360" y="320" width="100" height="20">
+   <properties><property name="style" type="string" value="STONE_LEDGE"/></properties>
+  </object>
+  <object id="5" name="ledge_03" class="platform" x="500" y="250" width="110" height="20">
+   <properties><property name="style" type="string" value="STONE_LEDGE"/></properties>
+  </object>
+  <object id="6" name="girder_01" class="platform" x="800" y="380" width="120" height="20">
+   <properties><property name="style" type="string" value="IRON_GIRDER"/></properties>
+  </object>
+  <object id="7" name="girder_02" class="platform" x="1000" y="310" width="130" height="20">
+   <properties><property name="style" type="string" value="IRON_GIRDER"/></properties>
+  </object>
+  <object id="8" name="bastion_ledge" class="platform" x="1200" y="420" width="350" height="120">
+   <properties><property name="style" type="string" value="STONE"/></properties>
+  </object>
+  <object id="9" name="broken_wall_floor" class="platform" x="1600" y="400" width="320" height="140">
+   <properties><property name="style" type="string" value="STONE"/></properties>
+  </object>
+ </objectgroup>
+ <objectgroup id="2" name="Hazards" color="#25c4a5" draworder="topdown">
+  <object id="10" name="acid_gap_01" class="hazard" x="600" y="500" width="80" height="40">
+   <properties><property name="type" type="string" value="ACID"/></properties>
+  </object>
+  <object id="11" name="spikes_01" class="hazard" x="1550" y="510" width="50" height="30">
+   <properties><property name="type" type="string" value="SPIKES"/></properties>
+  </object>
+ </objectgroup>
+ <objectgroup id="3" name="Enemies" color="#cf5a78" draworder="topdown">
+  <object id="12" name="lurker_01" class="enemy" x="420" y="410" width="30" height="36">
+   <properties>
+    <property name="archetype" type="string" value="LURKER"/>
+    <property name="patrolRange" type="float" value="120"/>
+   </properties>
+  </object>
+  <object id="13" name="lurker_02" class="enemy" x="920" y="410" width="30" height="36">
+   <properties>
+    <property name="archetype" type="string" value="LURKER"/>
+    <property name="patrolRange" type="float" value="140"/>
+   </properties>
+  </object>
+  <object id="14" name="cherub_01" class="enemy" x="520" y="180" width="26" height="24">
+   <properties>
+    <property name="archetype" type="string" value="CHERUB"/>
+    <property name="patrolRange" type="float" value="110"/>
+   </properties>
+  </object>
+  <object id="15" name="cherub_02" class="enemy" x="1100" y="240" width="26" height="24">
+   <properties>
+    <property name="archetype" type="string" value="CHERUB"/>
+    <property name="patrolRange" type="float" value="120"/>
+   </properties>
+  </object>
+  <object id="16" name="lurker_03" class="enemy" x="1420" y="370" width="30" height="36">
+   <properties>
+    <property name="archetype" type="string" value="LURKER"/>
+    <property name="patrolRange" type="float" value="100"/>
+   </properties>
+  </object>
+ </objectgroup>
+ <objectgroup id="4" name="Breakables" color="#ddb75f" draworder="topdown">
+  <object id="17" name="urn_health_01" class="breakable" x="380" y="296" width="24" height="24">
+   <properties><property name="dropType" type="string" value="health"/></properties>
+  </object>
+  <object id="18" name="urn_flask_01" class="breakable" x="1240" y="396" width="24" height="24">
+   <properties><property name="dropType" type="string" value="flask"/></properties>
+  </object>
+ </objectgroup>
+</map>

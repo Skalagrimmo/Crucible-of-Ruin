@@ -27,7 +27,8 @@ app/src/main/java/com/example/
 ├── MainActivity.kt          # Screen routing, edge-to-edge setup
 ├── game/
 │   ├── GameEngine.kt        # Core simulation (player, enemies, physics, camera)
-│   ├── GameLevelFactory.kt  # Static world layout and encounter setup
+│   ├── GameLevelFactory.kt  # Current full level layout and encounter setup
+│   ├── TiledLevelLoader.kt  # TMX object-layer importer (prototype, not live yet)
 │   ├── GameRenderer.kt      # Canvas rendering
 │   ├── GameScreen.kt        # HUD, touch controls, game loop host
 │   ├── MainMenuScreen.kt    # Menu, settings, cloud sign-in
@@ -38,6 +39,8 @@ app/src/main/java/com/example/
 │   ├── codex/               # Grimoire bestiary UI
 │   └── data/                # Auth + save repositories (local & Firestore)
 └── ui/theme/
+
+app/src/main/assets/levels/ruined_bastion.tmx  # First editable Tiled section
 ```
 
 ## Building
@@ -54,13 +57,19 @@ Requires JDK 21 and Android SDK 36.
 
 Successful GitHub Actions runs upload `app-debug.apk` as the `crucible-of-ruin-debug-apk` artifact for 14 days. The CI APK uses a placeholder Firebase configuration when the real `google-services.json` is absent. It can be used for an offline/gameplay smoke test, but Google Sign-In and cloud saves require the real Firebase configuration.
 
+## Level editing (Tiled prototype)
+
+The first editable slice of the level is `app/src/main/assets/levels/ruined_bastion.tmx`. Open this file in Tiled Map Editor 1.12 or newer. Its object layers are `Platforms`, `Hazards`, `Enemies`, and `Breakables`; object coordinates and sizes are expressed in world pixels, and gameplay types are stored as object properties.
+
+This is deliberately a prototype, not yet the live level source: `GameEngine` still loads the full world from `GameLevelFactory`. `TiledLevelLoader` converts the TMX objects into existing game models, and `TiledLevelLoaderTest` checks key coordinates and object counts. Finish mapping the remaining sections and add full-level parity checks before switching gameplay to imported maps.
+
 ## Testing
 
 ```bash
 ./gradlew :app:testDebugUnitTest
 ```
 
-`BossUnitTest` covers boss phases, weak-point stagger, status-effect DoT, dash/riposte mechanics, combo progression, poise/knockback, and the damage-number pool. `GameEnginePhysicsTest` covers player landing on the starting platform and pit-fall death/respawn handling. `GameLevelLayoutTest` checks representative level landmarks and current world-object counts.
+`BossUnitTest` covers boss phases, weak-point stagger, status-effect DoT, dash/riposte mechanics, combo progression, poise/knockback, and the damage-number pool. `GameEnginePhysicsTest` covers player landing on the starting platform and pit-fall death/respawn handling. `GameLevelLayoutTest` checks representative level landmarks and current world-object counts. `TiledLevelLoaderTest` validates the editable Ruined Bastion TMX prototype and its geometry.
 
 ## Save and backup behavior
 

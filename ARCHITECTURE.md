@@ -19,6 +19,7 @@ This document describes the code as it exists today. It is a map of current resp
 | `GameScreen.kt` | Frame scheduling, touch controls, HUD and overlays, alchemy-to-engine integration, checkpoint/victory saves | `GameEngine`, `GameRenderer`, `AlchemyViewModel`, repositories |
 | `GameEngine.kt` | Runtime simulation/update order, player physics/platform collision, combat, enemy updates, status ticking, projectiles/pickups, checkpoint and camera updates; loads static content from `GameLevelFactory` | Models/pools, level factory, boss classes, status controller, audio/haptics, callbacks |
 | `GameLevelFactory.kt` | Creates fresh lists of level platforms, hazards, breakables, enemies, and a new boss instance | Called by `GameEngine.initLevel()`; its results populate the engine's runtime collections |
+| `TiledLevelLoader.kt` + `assets/levels/ruined_bastion.tmx` | Prototype import of Tiled object layers into existing world models | Covered by `TiledLevelLoaderTest`; not yet wired into the live engine, and only section one is mapped |
 | `GameRenderer.kt` | Draws the current world and combat state on a Compose Canvas | Reads `GameEngine` and its entities |
 | `GameModels.kt` | Platform/hazard/checkpoint/breakable/pickup/projectile/particle/damage-number models and object pools | Engine creates/updates; renderer draws |
 | `boss/` | Boss types, phases, attack/weak-point behavior, boss state; a dedicated health-bar composable | Engine updates boss; UI displays boss state |
@@ -28,6 +29,12 @@ This document describes the code as it exists today. It is a map of current resp
 | `AssetCache.kt`, `GameAudio.kt`, `GameHaptics.kt` | Preloaded/generated audio and textures plus sound/vibration helpers | Activity lifecycle and gameplay callbacks |
 
 A small naming detail worth knowing: `PlayerEntity` and `EnemyEntity` currently live in `GameEngine.kt`; `GameModels.kt` holds many of the other world/effect models and pools.
+
+## Tiled level-editor prototype
+
+`app/src/main/assets/levels/ruined_bastion.tmx` is an editable first-section prototype. `TiledLevelLoader` maps object-layer rectangles and custom properties into existing Kotlin models. The TMX uses world-pixel coordinates so current collision boxes can be preserved without introducing tile-based collision.
+
+**The live game does not load this file yet.** The authoritative full level remains `GameLevelFactory`; the TMX currently covers only Ruined Bastion, with no checkpoint or boss metadata. Keep the factory unchanged until all sections and required encounter metadata have been migrated and automated parity tests prove the imported layout matches the existing world.
 
 ## Important data paths
 
@@ -57,7 +64,7 @@ These are observations, not immediate change requests:
 
 1. Keep this map current and use actual gameplay recordings to choose the next issue.
 2. Extend the baseline regression tests before changing ownership, especially around platform-edge/gap transitions and input-to-engine wiring; retain tests for movement, fall handling, and status-effect death accounting.
-3. Static world construction is now extracted to `GameLevelFactory` under landmark/count tests. The next candidate is collision/physics, after regression tests cover platform-edge/gap transitions and input wiring. Preserve the existing update order.
+3. Static world construction lives in `GameLevelFactory`; a separate Tiled importer is being validated against the existing models. Complete the level migration and parity tests before changing the live source. The next engine extraction candidate remains collision/physics, after regression tests cover platform-edge/gap transitions and input wiring. Preserve the existing update order.
 4. Reduce the responsibilities in `GameScreen` incrementally: separate presentation/input wiring from persistence orchestration only when the boundaries are clear.
 5. Consider decoupling gameplay data from Compose presentation types after the existing behavior is covered by tests.
 
