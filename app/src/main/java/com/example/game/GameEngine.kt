@@ -363,6 +363,7 @@ class GameEngine {
     }
 
     fun restart() {
+        clearInputs()
         initLevel()
         player.respawn(activeCheckpoint)
         state = "playing"
@@ -393,6 +394,16 @@ class GameEngine {
 
     fun onJumpPressed() {
         player.jumpBuffer = 0.15f
+    }
+
+    /** Release all held controls when gameplay is interrupted or the screen is disposed. */
+    fun clearInputs() {
+        inputLeft = false
+        inputRight = false
+        inputJump = false
+        inputAttack = false
+        inputSub = false
+        inputDash = false
     }
 
     fun onAttackPressed() {
