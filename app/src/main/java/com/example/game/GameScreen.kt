@@ -35,6 +35,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import com.example.game.alchemy.AlchemyWorkbench
@@ -113,6 +114,14 @@ fun GameScreen(
                 alchemyViewModel.collectResource(res)
             }
         }
+    }
+
+    // Never carry a held movement/action input across a pause or screen exit.
+    LaunchedEffect(engine.state) {
+        if (engine.state != "playing") engine.clearInputs()
+    }
+    androidx.compose.runtime.DisposableEffect(engine) {
+        onDispose { engine.clearInputs() }
     }
 
     LaunchedEffect(user) {
@@ -977,6 +986,7 @@ fun TouchHoldButton(
     modifier: Modifier = Modifier
 ) {
     var isPressed by remember { mutableStateOf(false) }
+    val currentOnHoldChange by rememberUpdatedState(onHoldChange)
 
     Box(
         modifier = modifier
@@ -994,10 +1004,13 @@ fun TouchHoldButton(
                 detectTapGestures(
                     onPress = {
                         isPressed = true
-                        onHoldChange(true)
-                        tryAwaitRelease()
-                        isPressed = false
-                        onHoldChange(false)
+                        try {
+                            currentOnHoldChange(true)
+                            tryAwaitRelease()
+                        } finally {
+                            isPressed = false
+                            currentOnHoldChange(false)
+                        }
                     }
                 )
             },
@@ -1031,6 +1044,7 @@ fun TouchTapButton(
     modifier: Modifier = Modifier
 ) {
     var isPressed by remember { mutableStateOf(false) }
+    val currentOnTap by rememberUpdatedState(onTap)
 
     Box(
         modifier = modifier
@@ -1048,9 +1062,13 @@ fun TouchTapButton(
                 detectTapGestures(
                     onPress = {
                         isPressed = true
-                        onTap()
-                        tryAwaitRelease()
-                        isPressed = false
+                        try {
+                            // Trigger on touch-down for combat responsiveness.
+                            currentOnTap()
+                            tryAwaitRelease()
+                        } finally {
+                            isPressed = false
+                        }
                     }
                 )
             },
