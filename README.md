@@ -59,7 +59,7 @@ Successful GitHub Actions runs upload `app-debug.apk` as the `crucible-of-ruin-d
 ./gradlew :app:testDebugUnitTest
 ```
 
-`BossUnitTest` covers boss phases, weak-point stagger, status-effect DoT, dash/riposte mechanics, combo progression, poise/knockback, and the damage-number pool.
+`BossUnitTest` covers boss phases, weak-point stagger, status-effect DoT, dash/riposte mechanics, combo progression, poise/knockback, and the damage-number pool. `GameEnginePhysicsTest` covers player landing on the starting platform and pit-fall death/respawn handling.
 
 ## Save and backup behavior
 
