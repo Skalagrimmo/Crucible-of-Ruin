@@ -6,12 +6,14 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -94,11 +96,16 @@ fun MainMenuScreen(
         AssetCache.isMuted = soundMuted
     }
 
-    Box(
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
             .background(Color(0xFF0C0714))
     ) {
+        // The menu originally exceeded the usable height on short landscape screens,
+        // causing the title/header and footer/buttons to overlap.
+        val compactLayout = maxHeight < 420.dp
+        val reservedVerticalSpace = if (compactLayout) 68.dp else 104.dp
+        val menuMaxHeight = (maxHeight - reservedVerticalSpace).coerceAtLeast(220.dp)
         // Atmospheric Gothic Background with Floating Embers
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = size.width
@@ -119,7 +126,7 @@ fun MainMenuScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 14.dp),
+                .padding(horizontal = 24.dp, vertical = if (compactLayout) 6.dp else 14.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -227,6 +234,8 @@ fun MainMenuScreen(
             modifier = Modifier
                 .align(Alignment.Center)
                 .widthIn(max = 380.dp)
+                .heightIn(max = menuMaxHeight)
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
@@ -235,22 +244,22 @@ fun MainMenuScreen(
             Text(
                 text = "CRUCIBLE OF RUIN",
                 color = Color(0xFFFFD700),
-                fontSize = 32.sp,
+                fontSize = if (compactLayout) 24.sp else 32.sp,
                 fontFamily = FontFamily.Serif,
                 fontWeight = FontWeight.ExtraBold,
                 letterSpacing = 2.sp,
                 textAlign = TextAlign.Center
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(if (compactLayout) 2.dp else 4.dp))
             Text(
                 text = "An Alchemical Dark Fantasy Platformer",
                 color = Color(0xFFBCA6DF),
-                fontSize = 12.sp,
+                fontSize = if (compactLayout) 10.sp else 12.sp,
                 fontWeight = FontWeight.Medium,
-                letterSpacing = 1.sp
+                letterSpacing = if (compactLayout) 0.5.sp else 1.sp
             )
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(if (compactLayout) 14.dp else 28.dp))
 
             // 1. CONTINUE GAME (If checkpoint reached)
             val hasSaveProgress = userSave.lastCheckpoint > 0
@@ -266,7 +275,7 @@ fun MainMenuScreen(
                 shape = RoundedCornerShape(10.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(44.dp)
+                    .height(if (compactLayout) 36.dp else 44.dp)
                     .border(
                         1.5.dp,
                         if (hasSaveProgress) Color(0xFFFFD700) else Color(0x33FFFFFF),
@@ -283,7 +292,7 @@ fun MainMenuScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(if (compactLayout) 6.dp else 10.dp))
 
             // 2. NEW GAME
             Button(
@@ -294,7 +303,7 @@ fun MainMenuScreen(
                 shape = RoundedCornerShape(10.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(44.dp)
+                    .height(if (compactLayout) 36.dp else 44.dp)
                     .border(1.dp, Color(0xFF8F77AA), RoundedCornerShape(10.dp))
                     .testTag("menu_start_button")
             ) {
@@ -307,7 +316,7 @@ fun MainMenuScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(if (compactLayout) 6.dp else 10.dp))
 
             // 3. SETTINGS & OPTIONS
             Button(
@@ -316,14 +325,14 @@ fun MainMenuScreen(
                 shape = RoundedCornerShape(10.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(42.dp)
+                    .height(if (compactLayout) 34.dp else 42.dp)
                     .border(1.dp, Color(0x668F77AA), RoundedCornerShape(10.dp))
                     .testTag("menu_options_button")
             ) {
                 Text("OPTIONS & PERFORMANCE", color = Color(0xFFDCCFF5), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(if (compactLayout) 6.dp else 10.dp))
 
             // Grimoire Codex & Bestiary
             Button(
@@ -332,7 +341,7 @@ fun MainMenuScreen(
                 shape = RoundedCornerShape(10.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(42.dp)
+                    .height(if (compactLayout) 34.dp else 42.dp)
                     .border(1.dp, Color(0xFFFFD700), RoundedCornerShape(10.dp))
                     .testTag("menu_grimoire_button")
             ) {
@@ -348,7 +357,7 @@ fun MainMenuScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(if (compactLayout) 6.dp else 10.dp))
 
             // 4. ARCHIVES / STATS / CLOUD
             Row(
@@ -361,7 +370,7 @@ fun MainMenuScreen(
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier
                         .weight(1f)
-                        .height(40.dp)
+                        .height(if (compactLayout) 32.dp else 40.dp)
                         .border(1.dp, Color(0x558F77AA), RoundedCornerShape(10.dp))
                         .testTag("menu_stats_button")
                 ) {
@@ -374,7 +383,7 @@ fun MainMenuScreen(
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier
                         .weight(1f)
-                        .height(40.dp)
+                        .height(if (compactLayout) 32.dp else 40.dp)
                         .border(1.dp, Color(0x558F77AA), RoundedCornerShape(10.dp))
                         .testTag("menu_controls_button")
                 ) {
@@ -387,7 +396,7 @@ fun MainMenuScreen(
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 12.dp)
+                .padding(bottom = if (compactLayout) 4.dp else 12.dp)
         ) {
             val status = if (user != null) "Cloud Sync Active • Firebase Connected" else "Guest Mode • Sign in to save progress to the cloud"
             Text(
