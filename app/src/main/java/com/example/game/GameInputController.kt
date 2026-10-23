@@ -9,28 +9,42 @@ package com.example.game
  */
 internal class GameInputController(private val engine: GameEngine) {
 
+    private fun canAcceptGameplayInput(): Boolean = engine.state == "playing"
+
     fun setLeftHeld(isHeld: Boolean) {
-        engine.inputLeft = isHeld
+        engine.inputLeft = isHeld && canAcceptGameplayInput()
     }
 
     fun setRightHeld(isHeld: Boolean) {
-        engine.inputRight = isHeld
+        engine.inputRight = isHeld && canAcceptGameplayInput()
     }
 
     fun setJumpHeld(isHeld: Boolean) {
-        engine.inputJump = isHeld
-        if (isHeld) engine.onJumpPressed()
+        val acceptInput = canAcceptGameplayInput()
+        engine.inputJump = isHeld && acceptInput
+        if (isHeld && acceptInput) engine.onJumpPressed()
+    }
+
+    /**
+     * Cancel pointer-driven state when pausing or leaving gameplay.
+     * A buffered jump is also cleared so it cannot unexpectedly fire on resume.
+     */
+    fun cancelHeldInputs() {
+        engine.inputLeft = false
+        engine.inputRight = false
+        engine.inputJump = false
+        engine.player.jumpBuffer = 0f
     }
 
     fun tapFlask() {
-        engine.onSubPressed()
+        if (canAcceptGameplayInput()) engine.onSubPressed()
     }
 
     fun tapDash() {
-        engine.onDashPressed()
+        if (canAcceptGameplayInput()) engine.onDashPressed()
     }
 
     fun tapAttack() {
-        engine.onAttackPressed()
+        if (canAcceptGameplayInput()) engine.onAttackPressed()
     }
 }
