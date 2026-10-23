@@ -734,7 +734,13 @@ fun GameScreen(
                     }
                     Spacer(modifier = Modifier.height(10.dp))
                     Button(
-                        onClick = { targetFps = if (targetFps == 30) 60 else 30 },
+                        onClick = {
+                            val updatedFps = nextTargetFps(targetFps)
+                            targetFps = updatedFps
+                            saveRepo.saveLocalUserSave(
+                                saveRepo.getLocalUserSave(user?.uid ?: "").copy(targetFps = updatedFps)
+                            )
+                        },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF37274E)),
                         modifier = Modifier.testTag("toggle_fps_pause_menu")
                     ) {
@@ -1067,6 +1073,9 @@ fun TouchTapButton(
     }
 }
 
+
+/** Toggle between the supported low-power and full-rate settings. */
+internal fun nextTargetFps(current: Int): Int = if (current == 30) 60 else 30
 
 /** Returns only counters that have not yet been included in a persisted snapshot. */
 internal fun pendingCounterDelta(current: Int, previouslySaved: Int): Int =
