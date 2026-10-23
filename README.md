@@ -27,7 +27,8 @@ app/src/main/java/com/example/
 ├── MainActivity.kt          # Screen routing, edge-to-edge setup
 ├── game/
 │   ├── GameEngine.kt        # Core simulation (player, enemies, physics, camera)
-│   ├── GameLevelFactory.kt  # Static world layout and encounter setup
+│   ├── GameLevelFactory.kt  # Current full level layout and encounter setup
+│   ├── TiledLevelLoader.kt  # TMX object-layer importer (prototype, not live yet)
 │   ├── GameRenderer.kt      # Canvas rendering
 │   ├── GameScreen.kt        # HUD, touch controls, game loop host
 │   ├── MainMenuScreen.kt    # Menu, settings, cloud sign-in
@@ -38,6 +39,8 @@ app/src/main/java/com/example/
 │   ├── codex/               # Grimoire bestiary UI
 │   └── data/                # Auth + save repositories (local & Firestore)
 └── ui/theme/
+
+app/src/main/assets/levels/ruined_bastion.tmx  # First editable Tiled section
 ```
 
 ## Building
