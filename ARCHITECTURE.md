@@ -16,7 +16,8 @@ This document describes the code as it exists today. It is a map of current resp
 |---|---|---|
 | `MainActivity.kt` | Android lifecycle, orientation, immersive mode, menu/game routing | `AssetCache`, `MainMenuScreen`, `GameScreen` |
 | `MainMenuScreen.kt` | Main menu, local options, account state, stats/controls/codex dialogs | `AuthRepository`, `UserSaveRepository`, `AssetCache` |
-| `GameScreen.kt` | Frame scheduling, touch controls, HUD and overlays, alchemy-to-engine integration, checkpoint/victory saves | `GameEngine`, `GameRenderer`, `AlchemyViewModel`, repositories |
+| `GameScreen.kt` | Frame scheduling, touch-control composition, HUD/overlays, alchemy integration, checkpoint/victory saves | `GameEngine`, `GameInputController`, `GameRenderer`, `AlchemyViewModel`, repositories |
+| `GameInputController.kt` | Adapts touch hold/tap callbacks to movement flags, jump buffering, flask, dash, and attack actions | Used by `GameScreen`; mapping and held-state semantics are covered by `GameInputControllerTest` |
 | `GameEngine.kt` | Runtime simulation/update order, movement intent/input flags, combat, enemy updates, status ticking, projectiles/pickups, hazard handling, checkpoint and camera updates; loads static content from `GameLevelFactory` | Models/pools, `GamePhysics`, level factory, boss classes, status controller, audio/haptics, callbacks |\n| `GamePhysics.kt` | Integrates player vertical velocity and resolves horizontal then vertical AABB collisions with platforms; sets grounded state and coyote time on landing | Called from `GameEngine.updatePlayer()` after movement intent is calculated; keeps the current collision/update order |
 | `GameLevelFactory.kt` | Creates fresh lists of level platforms, hazards, breakables, enemies, and a new boss instance | Called by `GameEngine.initLevel()`; its results populate the engine's runtime collections |
 | `TiledLevelLoader.kt` + `assets/levels/ruined_bastion.tmx` | Prototype import of Tiled object layers into existing world models | Covered by `TiledLevelLoaderTest`; not yet wired into the live engine, and only section one is mapped |
@@ -63,8 +64,8 @@ These are observations, not immediate change requests:
 ## Safe order for future structural work
 
 1. Keep this map current and use actual gameplay recordings to choose the next issue.
-2. Extend the baseline regression tests before changing ownership, especially around platform-edge/gap transitions and input-to-engine wiring; retain tests for movement, fall handling, and status-effect death accounting.
-3. Static world construction lives in `GameLevelFactory`; a separate Tiled importer is being validated against the existing models. Player integration and platform collision now live in `GamePhysics`, with landing, gap, coyote-time, jump-buffer, and pit-fall regression tests guarding behavior. Next, cover hazard/knockback interactions and touch-to-engine input wiring before considering further extraction. Preserve the existing update order.
+2. Keep input-to-engine mappings in `GameInputController` and protect movement, jump-buffer/coyote, gap-fall, hazard/invulnerability, and input semantics with regression tests. Retain status-effect and save coverage.
+3. Static world construction lives in `GameLevelFactory`; a separate Tiled importer is being validated against the existing models. Player integration and platform collision now live in `GamePhysics`, while `GameInputController` isolates touch-to-engine mapping. Landing, gap, jump-window, input, and hazard-invulnerability behavior now have regression coverage. Next, validate touch interaction end-to-end on device, then split `GameScreen` responsibilities only where the save/presentation boundaries are clear.
 4. Reduce the responsibilities in `GameScreen` incrementally: separate presentation/input wiring from persistence orchestration only when the boundaries are clear.
 5. Consider decoupling gameplay data from Compose presentation types after the existing behavior is covered by tests.
 

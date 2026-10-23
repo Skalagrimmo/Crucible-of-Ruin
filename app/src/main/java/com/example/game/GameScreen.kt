@@ -114,6 +114,7 @@ fun GameScreen(
             }
         }
     }
+    val inputController = remember(engine) { GameInputController(engine) }
 
     LaunchedEffect(user) {
         val currentUid = user?.uid ?: ""
@@ -578,13 +579,13 @@ fun GameScreen(
                 TouchHoldButton(
                     symbol = "◀",
                     label = "Left",
-                    onHoldChange = { isPressed -> engine.inputLeft = isPressed },
+                    onHoldChange = { isPressed -> inputController.setLeftHeld(isPressed) },
                     modifier = Modifier.testTag("btn_left")
                 )
                 TouchHoldButton(
                     symbol = "▶",
                     label = "Right",
-                    onHoldChange = { isPressed -> engine.inputRight = isPressed },
+                    onHoldChange = { isPressed -> inputController.setRightHeld(isPressed) },
                     modifier = Modifier.testTag("btn_right")
                 )
             }
@@ -601,7 +602,7 @@ fun GameScreen(
                     size = 56,
                     color = Color(0x9945193C),
                     borderColor = Color(0xFFB050D0),
-                    onTap = { engine.onSubPressed() },
+                    onTap = { inputController.tapFlask() },
                     modifier = Modifier
                         .padding(bottom = 16.dp)
                         .testTag("btn_flask")
@@ -615,7 +616,7 @@ fun GameScreen(
                     size = 56,
                     color = if (isDashReady) Color(0x99182E48) else Color(0x66101624),
                     borderColor = if (isDashReady) Color(0xFF00E5FF) else Color(0x44406888),
-                    onTap = { engine.onDashPressed() },
+                    onTap = { inputController.tapDash() },
                     modifier = Modifier
                         .padding(bottom = 16.dp)
                         .testTag("btn_dash")
@@ -679,7 +680,7 @@ fun GameScreen(
                         size = 68,
                         color = if (comboTimer > 0f && isFinisherReady) Color(0xCC4A0E18) else Color(0x992E1B46),
                         borderColor = if (comboTimer > 0f && isFinisherReady) Color(0xFFFF2040) else if (comboTimer > 0f) Color(0xFFFFB300) else Color(0xFF8F77AA),
-                        onTap = { engine.onAttackPressed() },
+                        onTap = { inputController.tapAttack() },
                         modifier = Modifier.testTag("btn_attack")
                     )
                 }
@@ -691,10 +692,7 @@ fun GameScreen(
                     size = 68,
                     color = Color(0x99261C3D),
                     borderColor = Color(0xFFB096DA),
-                    onHoldChange = { isHeld ->
-                        engine.inputJump = isHeld
-                        if (isHeld) engine.onJumpPressed()
-                    },
+                    onHoldChange = { isHeld -> inputController.setJumpHeld(isHeld) },
                     modifier = Modifier.testTag("btn_jump")
                 )
             }
