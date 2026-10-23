@@ -115,6 +115,9 @@ fun GameScreen(
         }
     }
     val inputController = remember(engine) { GameInputController(engine) }
+    androidx.compose.runtime.DisposableEffect(inputController) {
+        onDispose { inputController.cancelHeldInputs() }
+    }
 
     LaunchedEffect(user) {
         val currentUid = user?.uid ?: ""
@@ -544,7 +547,12 @@ fun GameScreen(
 
             IconButton(
                 onClick = {
-                    engine.state = if (engine.state == "paused") "playing" else "paused"
+                    if (engine.state == "paused") {
+                        engine.state = "playing"
+                    } else {
+                        inputController.cancelHeldInputs()
+                        engine.state = "paused"
+                    }
                 },
                 modifier = Modifier
                     .size(40.dp)
@@ -580,12 +588,14 @@ fun GameScreen(
                     symbol = "◀",
                     label = "Left",
                     onHoldChange = { isPressed -> inputController.setLeftHeld(isPressed) },
+                    enabled = engine.state == "playing",
                     modifier = Modifier.testTag("btn_left")
                 )
                 TouchHoldButton(
                     symbol = "▶",
                     label = "Right",
                     onHoldChange = { isPressed -> inputController.setRightHeld(isPressed) },
+                    enabled = engine.state == "playing",
                     modifier = Modifier.testTag("btn_right")
                 )
             }
@@ -603,6 +613,7 @@ fun GameScreen(
                     color = Color(0x9945193C),
                     borderColor = Color(0xFFB050D0),
                     onTap = { inputController.tapFlask() },
+                    enabled = engine.state == "playing",
                     modifier = Modifier
                         .padding(bottom = 16.dp)
                         .testTag("btn_flask")
@@ -617,6 +628,7 @@ fun GameScreen(
                     color = if (isDashReady) Color(0x99182E48) else Color(0x66101624),
                     borderColor = if (isDashReady) Color(0xFF00E5FF) else Color(0x44406888),
                     onTap = { inputController.tapDash() },
+                    enabled = engine.state == "playing",
                     modifier = Modifier
                         .padding(bottom = 16.dp)
                         .testTag("btn_dash")
@@ -681,6 +693,7 @@ fun GameScreen(
                         color = if (comboTimer > 0f && isFinisherReady) Color(0xCC4A0E18) else Color(0x992E1B46),
                         borderColor = if (comboTimer > 0f && isFinisherReady) Color(0xFFFF2040) else if (comboTimer > 0f) Color(0xFFFFB300) else Color(0xFF8F77AA),
                         onTap = { inputController.tapAttack() },
+                        enabled = engine.state == "playing",
                         modifier = Modifier.testTag("btn_attack")
                     )
                 }
@@ -693,6 +706,7 @@ fun GameScreen(
                     color = Color(0x99261C3D),
                     borderColor = Color(0xFFB096DA),
                     onHoldChange = { isHeld -> inputController.setJumpHeld(isHeld) },
+                    enabled = engine.state == "playing",
                     modifier = Modifier.testTag("btn_jump")
                 )
             }
@@ -972,6 +986,7 @@ fun TouchHoldButton(
     color: Color = Color(0x991A1426),
     borderColor: Color = Color(0x73B096DA),
     onHoldChange: (Boolean) -> Unit,
+    enabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     var isPressed by remember { mutableStateOf(false) }
@@ -988,20 +1003,22 @@ fun TouchHoldButton(
                 if (isPressed) Color(0xFFF0C050) else borderColor,
                 RoundedCornerShape((size / 3).dp)
             )
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onPress = {
-                        isPressed = true
-                        onHoldChange(true)
-                        try {
-                            tryAwaitRelease()
-                        } finally {
-                            // Pointer cancellation must release movement/jump just like a normal touch-up.
-                            isPressed = false
-                            onHoldChange(false)
+            .pointerInput(enabled) {
+                if (enabled) {
+                    detectTapGestures(
+                        onPress = {
+                            isPressed = true
+                            onHoldChange(true)
+                            try {
+                                tryAwaitRelease()
+                            } finally {
+                                // Release held input and visual state even when gameplay disables the gesture.
+                                isPressed = false
+                                onHoldChange(false)
+                            }
                         }
-                    }
-                )
+                    )
+                }
             },
         contentAlignment = Alignment.Center
     ) {
@@ -1030,6 +1047,7 @@ fun TouchTapButton(
     color: Color = Color(0x991A1426),
     borderColor: Color = Color(0x73B096DA),
     onTap: () -> Unit,
+    enabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     var isPressed by remember { mutableStateOf(false) }
@@ -1046,15 +1064,20 @@ fun TouchTapButton(
                 if (isPressed) Color(0xFFF0C050) else borderColor,
                 CircleShape
             )
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onPress = {
-                        isPressed = true
-                        onTap()
-                        tryAwaitRelease()
-                        isPressed = false
-                    }
-                )
+            .pointerInput(enabled) {
+                if (enabled) {
+                    detectTapGestures(
+                        onPress = {
+                            isPressed = true
+                            try {
+                                onTap()
+                                tryAwaitRelease()
+                            } finally {
+                                isPressed = false
+                            }
+                        }
+                    )
+                }
             },
         contentAlignment = Alignment.Center
     ) {
