@@ -993,9 +993,13 @@ fun TouchHoldButton(
                     onPress = {
                         isPressed = true
                         onHoldChange(true)
-                        tryAwaitRelease()
-                        isPressed = false
-                        onHoldChange(false)
+                        try {
+                            tryAwaitRelease()
+                        } finally {
+                            // Pointer cancellation must release movement/jump just like a normal touch-up.
+                            isPressed = false
+                            onHoldChange(false)
+                        }
                     }
                 )
             },
