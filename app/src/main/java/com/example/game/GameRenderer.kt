@@ -28,11 +28,85 @@ object GameRenderer {
     private val COLOR_BOSS_GATE = Color(0xFF241A2E)
     private val COLOR_BOSS_GATE_INNER = Color(0xFF7A3090)
 
+    private val COLOR_CITY_FACADE = Color(0xB51E1628)
+    private val COLOR_CITY_FACADE_EDGE = Color(0xFF45334F)
+    private val COLOR_CITY_FACADE_SEAM = Color(0xFF2A2034)
+    private val COLOR_CITY_WINDOW_FRAME = Color(0xFF5C4666)
+    private val COLOR_CITY_WINDOW_GLASS = Color(0xFF242D43)
+    private val COLOR_CITY_WINDOW_GLOW = Color(0x6659BFA6)
+
+    private data class CityFacade(
+        val x: Float,
+        val y: Float,
+        val w: Float,
+        val h: Float,
+        val windowColumns: Int
+    )
+
+    private val CITY_FACADES = listOf(
+        CityFacade(284f, 242f, 306f, 168f, 4),
+        CityFacade(714f, 202f, 256f, 208f, 3),
+        CityFacade(1224f, 242f, 376f, 168f, 5)
+    )
+
     private val COLOR_ACID_BASE = Color(0xFF0F4422)
     private val COLOR_ACID_SURFACE = Color(0xFF2FF078)
     private val COLOR_ACID_BUBBLE = Color(0xFF80FFA8)
     private val COLOR_SPIKE = Color(0xFF6B5E78)
     private val COLOR_SLASH_ARC = Color(0xFF40F0FF)
+
+    private fun DrawScope.drawCityArchitecture(camX: Float, camY: Float) {
+        for (facade in CITY_FACADES) {
+            if (facade.x + facade.w < camX || facade.x > camX + 960f) continue
+
+            val x = facade.x - camX
+            val y = facade.y - camY
+
+            drawRect(COLOR_CITY_FACADE, topLeft = Offset(x, y), size = Size(facade.w, facade.h))
+            drawRect(COLOR_CITY_FACADE_EDGE, topLeft = Offset(x, y), size = Size(facade.w, 4f))
+            drawRect(COLOR_CITY_FACADE_EDGE, topLeft = Offset(x, y + facade.h - 4f), size = Size(facade.w, 4f))
+
+            // Window frames are purely decorative. Their low-contrast glow makes
+            // each building read as a distinct interior instead of loose ledges.
+            val columnStep = facade.w / (facade.windowColumns + 1)
+            for (column in 1..facade.windowColumns) {
+                val windowX = x + columnStep * column - 10f
+                val windowY = y + 24f
+                drawRect(
+                    COLOR_CITY_WINDOW_FRAME,
+                    topLeft = Offset(windowX, windowY),
+                    size = Size(20f, 32f)
+                )
+                drawRect(
+                    COLOR_CITY_WINDOW_GLASS,
+                    topLeft = Offset(windowX + 3f, windowY + 3f),
+                    size = Size(14f, 26f)
+                )
+                drawRect(
+                    COLOR_CITY_WINDOW_GLOW,
+                    topLeft = Offset(windowX + 5f, windowY + 5f),
+                    size = Size(4f, 8f)
+                )
+                drawRect(
+                    COLOR_CITY_FACADE_EDGE,
+                    topLeft = Offset(windowX + 9f, windowY + 3f),
+                    size = Size(2f, 26f)
+                )
+            }
+
+            // Thin masonry courses make the surfaces read as walls without
+            // obscuring the silhouettes or turning decoration into collision.
+            var courseY = y + 68f
+            while (courseY < y + facade.h - 8f) {
+                drawRect(
+                    COLOR_CITY_FACADE_SEAM,
+                    topLeft = Offset(x + 4f, courseY),
+                    size = Size(facade.w - 8f, 2f)
+                )
+                courseY += 34f
+            }
+        }
+    }
 
     fun render(drawScope: DrawScope, engine: GameEngine) {
         AssetCache.init()
@@ -85,7 +159,11 @@ object GameRenderer {
                 px += 320f
             }
 
-            // 2. Platforms (Spatial Culling)
+            // 2. City architecture: visual-only facade layer, drawn behind
+            // platforms and actors so it adds depth without changing collision.
+            drawCityArchitecture(camX, camY)
+
+            // 3. Platforms (Spatial Culling)
             for (p in engine.platforms) {
                 if (p.x + p.w < camX || p.x > camX + 960f) continue
                 val dx = p.x - camX
@@ -103,6 +181,18 @@ object GameRenderer {
                     PlatformStyle.BOSS_GATE -> {
                         drawRect(COLOR_BOSS_GATE, topLeft = Offset(dx, dy), size = Size(p.w, p.h))
                         drawRect(COLOR_BOSS_GATE_INNER, topLeft = Offset(dx + 6f, dy), size = Size(p.w - 12f, p.h))
+                    }
+                    PlatformStyle.CITY_LEDGE -> {
+                        drawRect(Color(0xFF30253A), topLeft = Offset(dx, dy), size = Size(p.w, p.h))
+                        drawRect(Color(0xFF695174), topLeft = Offset(dx, dy), size = Size(p.w, 3f))
+                        if (p.h > 7f) {
+                            drawRect(Color(0xFF211927), topLeft = Offset(dx, dy + p.h - 3f), size = Size(p.w, 3f))
+                        }
+                        var seamX = dx + 22f
+                        while (seamX < dx + p.w - 4f) {
+                            drawRect(COLOR_CITY_FACADE_SEAM, topLeft = Offset(seamX, dy + 4f), size = Size(2f, (p.h - 7f).coerceAtLeast(1f)))
+                            seamX += 28f
+                        }
                     }
                     else -> {
                         drawRect(COLOR_STONE_BASE, topLeft = Offset(dx, dy), size = Size(p.w, p.h))

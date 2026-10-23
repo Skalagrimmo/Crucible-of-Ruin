@@ -313,7 +313,7 @@ class GameEngine {
     var enemiesDefeated: Int = 0
 
     val checkpoints = listOf(
-        Checkpoint(0, 80f, 380f, "Section 1: Ruined Bastion", true),
+        Checkpoint(0, 80f, 380f, "Section 1: Lower Bastion City", true),
         Checkpoint(1, 1980f, 340f, "Section 2: Crucible Laboratories", false),
         Checkpoint(2, 4400f, 340f, "Section 3: Sanctum Approach", false)
     )
