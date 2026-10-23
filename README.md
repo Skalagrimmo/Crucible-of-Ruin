@@ -31,7 +31,7 @@ app/src/main/java/com/example/
 │   ├── GameLevelFactory.kt  # Current full level layout and encounter setup
 │   ├── TiledLevelLoader.kt  # TMX object-layer importer (prototype, not live yet)
 │   ├── GameRenderer.kt      # Canvas rendering
-│   ├── GameScreen.kt        # HUD, touch controls, game loop host
+│   ├── GameScreen.kt        # HUD, touch controls, game loop host\n│   ├── GameInputController.kt # Testable adapter from touch controls to engine inputs
 │   ├── MainMenuScreen.kt    # Menu, settings, cloud sign-in
 │   ├── AssetCache.kt        # Sound/texture preloading
 │   ├── boss/                # Boss AI, models, health bar
@@ -70,7 +70,7 @@ This is deliberately a prototype, not yet the live level source: `GameEngine` st
 ./gradlew :app:testDebugUnitTest
 ```
 
-`BossUnitTest` covers boss phases, weak-point stagger, status-effect DoT, dash/riposte mechanics, combo progression, poise/knockback, and the damage-number pool. `GameEnginePhysicsTest` covers starting-platform landing, pit-fall death/respawn, walking off a platform edge, coyote-time jumping, and jump buffering. `GameLevelLayoutTest` checks representative level landmarks and current world-object counts. `TiledLevelLoaderTest` validates the editable Ruined Bastion TMX prototype and its geometry.
+`BossUnitTest` covers boss phases, weak-point stagger, status-effect DoT, dash/riposte mechanics, combo progression, poise/knockback, and the damage-number pool. `GameEnginePhysicsTest` covers starting-platform landing, pit-fall death/respawn, walking off a platform edge, coyote-time jumping, jump buffering, and hazard invulnerability. `GameInputControllerTest` covers touch hold/tap routing into the engine. `GameLevelLayoutTest` checks representative level landmarks and current world-object counts. `TiledLevelLoaderTest` validates the editable Ruined Bastion TMX prototype and its geometry.
 
 ## Save and backup behavior
 
