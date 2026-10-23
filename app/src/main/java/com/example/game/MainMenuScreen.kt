@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -94,11 +95,15 @@ fun MainMenuScreen(
         AssetCache.isMuted = soundMuted
     }
 
-    Box(
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
             .background(Color(0xFF0C0714))
     ) {
+        // Landscape phones need a compact menu: the header and the centered menu
+        // otherwise collide when the title wraps onto two lines.
+        val compactLandscape = maxWidth > maxHeight
+
         // Atmospheric Gothic Background with Floating Embers
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = size.width
@@ -226,7 +231,7 @@ fun MainMenuScreen(
         Column(
             modifier = Modifier
                 .align(Alignment.Center)
-                .widthIn(max = 380.dp)
+                .widthIn(max = if (compactLandscape) 480.dp else 380.dp)
                 .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
@@ -235,7 +240,7 @@ fun MainMenuScreen(
             Text(
                 text = "CRUCIBLE OF RUIN",
                 color = Color(0xFFFFD700),
-                fontSize = 32.sp,
+                fontSize = if (compactLandscape) 28.sp else 32.sp,
                 fontFamily = FontFamily.Serif,
                 fontWeight = FontWeight.ExtraBold,
                 letterSpacing = 2.sp,
@@ -250,7 +255,7 @@ fun MainMenuScreen(
                 letterSpacing = 1.sp
             )
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(if (compactLandscape) 12.dp else 28.dp))
 
             // 1. CONTINUE GAME (If checkpoint reached)
             val hasSaveProgress = userSave.lastCheckpoint > 0
@@ -266,7 +271,7 @@ fun MainMenuScreen(
                 shape = RoundedCornerShape(10.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(44.dp)
+                    .height(if (compactLandscape) 34.dp else 44.dp)
                     .border(
                         1.5.dp,
                         if (hasSaveProgress) Color(0xFFFFD700) else Color(0x33FFFFFF),
@@ -283,7 +288,7 @@ fun MainMenuScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(if (compactLandscape) 5.dp else 10.dp))
 
             // 2. NEW GAME
             Button(
@@ -316,7 +321,7 @@ fun MainMenuScreen(
                 shape = RoundedCornerShape(10.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(42.dp)
+                    .height(if (compactLandscape) 34.dp else 42.dp)
                     .border(1.dp, Color(0x668F77AA), RoundedCornerShape(10.dp))
                     .testTag("menu_options_button")
             ) {
@@ -361,7 +366,7 @@ fun MainMenuScreen(
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier
                         .weight(1f)
-                        .height(40.dp)
+                        .height(if (compactLandscape) 32.dp else 40.dp)
                         .border(1.dp, Color(0x558F77AA), RoundedCornerShape(10.dp))
                         .testTag("menu_stats_button")
                 ) {
