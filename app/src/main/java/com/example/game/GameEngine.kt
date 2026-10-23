@@ -306,7 +306,7 @@ class GameEngine {
     val damageNumbers = DamageNumberPool(36)
 
     val levelWidth = 6200f
-    val levelHeight = 540f
+    val levelHeight = 780f
 
     var state: String = "playing"
     var timeElapsed: Float = 0f
@@ -339,6 +339,7 @@ class GameEngine {
     var timeDilationTimer: Float = 0f
 
     private var attackCounter: Long = 1L
+    private var cityShortcutUnlocked: Boolean = false
 
     var haptics: GameHaptics? = null
     var damageMultiplier: Float = 1.0f
@@ -381,30 +382,11 @@ class GameEngine {
         enemies.clear()
         projectiles.clear()
 
-        // --- SECTION 1: THE RUINED BASTION (x: 0 - 1900) ---
-        platforms.add(Platform(0f, 460f, 600f, 80f, PlatformStyle.STONE))
-        platforms.add(Platform(680f, 460f, 500f, 80f, PlatformStyle.STONE))
-        hazards.add(Hazard(600f, 500f, 80f, 40f, HazardType.ACID))
-
-        platforms.add(Platform(240f, 390f, 90f, 20f, PlatformStyle.STONE_LEDGE))
-        platforms.add(Platform(360f, 320f, 100f, 20f, PlatformStyle.STONE_LEDGE))
-        platforms.add(Platform(500f, 250f, 110f, 20f, PlatformStyle.STONE_LEDGE))
-
-        platforms.add(Platform(800f, 380f, 120f, 20f, PlatformStyle.IRON_GIRDER))
-        platforms.add(Platform(1000f, 310f, 130f, 20f, PlatformStyle.IRON_GIRDER))
-        platforms.add(Platform(1200f, 420f, 350f, 120f, PlatformStyle.STONE))
-
-        platforms.add(Platform(1600f, 400f, 320f, 140f, PlatformStyle.STONE))
-        hazards.add(Hazard(1550f, 510f, 50f, 30f, HazardType.SPIKES))
-
-        enemies.add(EnemyEntity(420f, 410f, EnemyArchetype.LURKER, 120f))
-        enemies.add(EnemyEntity(920f, 410f, EnemyArchetype.LURKER, 140f))
-        enemies.add(EnemyEntity(520f, 180f, EnemyArchetype.CHERUB, 110f))
-        enemies.add(EnemyEntity(1100f, 240f, EnemyArchetype.CHERUB, 120f))
-        enemies.add(EnemyEntity(1420f, 370f, EnemyArchetype.LURKER, 100f))
-
-        breakables.add(BreakableUrn(380f, 296f, dropType = "health"))
-        breakables.add(BreakableUrn(1240f, 396f, dropType = "flask"))
+        // --- SECTION 1: LOWER BASTION CITY (x: 0 - 1900) ---
+        // The district is authored separately so the geometry can evolve without
+        // mixing it into combat, boss, and later-section setup.
+        cityShortcutUnlocked = false
+        RuinedBastionDistrict.populate(platforms, breakables, enemies)
 
         // --- SECTION 2: THE CRUCIBLE LABORATORIES (x: 1900 - 4300) ---
         platforms.add(Platform(1920f, 420f, 380f, 120f, PlatformStyle.STONE))
@@ -648,6 +630,7 @@ class GameEngine {
         }
 
         updatePlayer(dt)
+        updateCityShortcut()
         updateEnemies(dt)
         updateBoss(dt)
         updateProjectiles(dt)
@@ -656,6 +639,28 @@ class GameEngine {
         damageNumbers.update(dt)
 
         camera.update(player.x, player.y, player.facing, levelWidth, levelHeight, dt)
+    }
+
+    private fun updateCityShortcut() {
+        if (cityShortcutUnlocked || player.dead) return
+
+        // The gate is blocked from the street. Reaching its far side by the
+        // rooftop route opens it, creating a permanent shortcut for this run.
+        if (player.x >= 1760f && player.x < 1900f && player.y >= 390f) {
+            cityShortcutUnlocked = true
+            platforms.remove(RuinedBastionDistrict.shortcutGate)
+            audio.play("checkpoint")
+            camera.shake(4f)
+            particles.spawn(
+                RuinedBastionDistrict.shortcutGate.x + RuinedBastionDistrict.shortcutGate.w / 2f,
+                RuinedBastionDistrict.shortcutGate.y + RuinedBastionDistrict.shortcutGate.h / 2f,
+                Color(0xFFFFD700),
+                count = 16,
+                speed = 105f,
+                life = 0.45f,
+                size = 3.5f
+            )
+        }
     }
 
     private fun updatePlayer(dt: Float) {
@@ -822,6 +827,9 @@ class GameEngine {
         // Physics X
         player.x += player.vx * dt
         for (p in platforms) {
+            // City ledges are one-way: don't let their sides or undersides
+            // interfere with movement while the player is below them.
+            if (p.style == PlatformStyle.CITY_LEDGE) continue
             if (aabbIntersects(player.x, player.y, player.w, player.h, p.x, p.y, p.w, p.h)) {
                 if (player.vx > 0f) {
                     player.x = p.x - player.w
@@ -833,9 +841,30 @@ class GameEngine {
         }
 
         // Physics Y
+        val previousY = player.y
         player.y += player.vy * dt
         player.grounded = false
         for (p in platforms) {
+            if (p.style == PlatformStyle.CITY_LEDGE) {
+                val previousBottom = previousY + player.h
+                val currentBottom = player.y + player.h
+                val crossedTopWhileFalling =
+                    player.vy >= 0f &&
+                    player.y >= previousY &&
+                    previousBottom <= p.y &&
+                    currentBottom >= p.y &&
+                    player.x + player.w > p.x &&
+                    player.x < p.x + p.w
+
+                if (crossedTopWhileFalling) {
+                    player.y = p.y - player.h
+                    player.vy = 0f
+                    player.grounded = true
+                    player.coyoteTime = 0.12f
+                }
+                continue
+            }
+
             if (aabbIntersects(player.x, player.y, player.w, player.h, p.x, p.y, p.w, p.h)) {
                 if (player.vy > 0f) {
                     player.y = p.y - player.h

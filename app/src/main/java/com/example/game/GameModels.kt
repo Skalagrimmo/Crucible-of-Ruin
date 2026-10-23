@@ -19,7 +19,8 @@ enum class PlatformStyle {
     STONE,
     IRON_GIRDER,
     STONE_LEDGE,
-    BOSS_GATE
+    BOSS_GATE,
+    CITY_LEDGE
 }
 
 enum class HazardType {
