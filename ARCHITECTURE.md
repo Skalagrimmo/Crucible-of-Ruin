@@ -17,7 +17,8 @@ This document describes the code as it exists today. It is a map of current resp
 | `MainActivity.kt` | Android lifecycle, orientation, immersive mode, menu/game routing | `AssetCache`, `MainMenuScreen`, `GameScreen` |
 | `MainMenuScreen.kt` | Main menu, local options, account state, stats/controls/codex dialogs | `AuthRepository`, `UserSaveRepository`, `AssetCache` |
 | `GameScreen.kt` | Frame scheduling, touch controls, HUD and overlays, alchemy-to-engine integration, checkpoint/victory saves | `GameEngine`, `GameRenderer`, `AlchemyViewModel`, repositories |
-| `GameEngine.kt` | World initialization, simulation update order, player movement/physics, platform collision, combat, enemy updates, status ticking, projectiles/pickups, checkpoint and camera updates | Models/pools, boss classes, status controller, audio/haptics, callbacks |
+| `GameEngine.kt` | Runtime simulation/update order, player physics/platform collision, combat, enemy updates, status ticking, projectiles/pickups, checkpoint and camera updates; loads static content from `GameLevelFactory` | Models/pools, level factory, boss classes, status controller, audio/haptics, callbacks |
+| `GameLevelFactory.kt` | Creates fresh lists of level platforms, hazards, breakables, enemies, and a new boss instance | Called by `GameEngine.initLevel()`; its results populate the engine's runtime collections |
 | `GameRenderer.kt` | Draws the current world and combat state on a Compose Canvas | Reads `GameEngine` and its entities |
 | `GameModels.kt` | Platform/hazard/checkpoint/breakable/pickup/projectile/particle/damage-number models and object pools | Engine creates/updates; renderer draws |
 | `boss/` | Boss types, phases, attack/weak-point behavior, boss state; a dedicated health-bar composable | Engine updates boss; UI displays boss state |
@@ -46,17 +47,17 @@ A hit/skill applies a status to an entity's `StatusEffectController`. Each engin
 
 These are observations, not immediate change requests:
 
-- `GameEngine.kt` is a large coordinator as well as the home of world setup, physics/collision, and much of combat/AI. Changes in those areas can therefore affect one another.
+- `GameEngine.kt` remains a large coordinator for physics/collision, combat, and AI. Static level content is now constructed in `GameLevelFactory`, while the engine still owns the mutable runtime collections and update order.
 - `GameScreen.kt` combines several roles: frame-loop host, touch-input adapter, HUD/overlay composition, alchemy bridge, and save orchestration.
 - The screen and renderer read mutable engine/entity state directly. The event callbacks help with some outward events, but there is not yet a separate immutable render snapshot or narrow engine API.
 - `CombatStatusType` contains Compose `Color` values alongside gameplay parameters. That is practical for the current app, but it ties part of the status definition to presentation types.
-- Existing tests cover significant boss/combat/status and save behavior. `GameEnginePhysicsTest` now verifies landing on the starting platform and the pit-fall death/respawn path; targeted coverage is still missing for platform-edge/gap transitions, hazard/knockback interactions, and touch-to-engine input wiring.
+- Existing tests cover significant boss/combat/status and save behavior. `GameEnginePhysicsTest` verifies starting-platform landing and pit-fall handling; `GameLevelLayoutTest` protects representative level landmarks and object counts. Targeted coverage is still missing for platform-edge/gap transitions, hazard/knockback interactions, and touch-to-engine input wiring.
 
 ## Safe order for future structural work
 
 1. Keep this map current and use actual gameplay recordings to choose the next issue.
 2. Extend the baseline regression tests before changing ownership, especially around platform-edge/gap transitions and input-to-engine wiring; retain tests for movement, fall handling, and status-effect death accounting.
-3. Extract one responsibility at a time from `GameEngine` (world definitions and collision/physics are clearer candidates than a broad rewrite). Preserve the existing update order until tests make changes safe.
+3. Static world construction is now extracted to `GameLevelFactory` under landmark/count tests. The next candidate is collision/physics, after regression tests cover platform-edge/gap transitions and input wiring. Preserve the existing update order.
 4. Reduce the responsibilities in `GameScreen` incrementally: separate presentation/input wiring from persistence orchestration only when the boundaries are clear.
 5. Consider decoupling gameplay data from Compose presentation types after the existing behavior is covered by tests.
 

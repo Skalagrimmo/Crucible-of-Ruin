@@ -27,6 +27,7 @@ app/src/main/java/com/example/
 ├── MainActivity.kt          # Screen routing, edge-to-edge setup
 ├── game/
 │   ├── GameEngine.kt        # Core simulation (player, enemies, physics, camera)
+│   ├── GameLevelFactory.kt  # Static world layout and encounter setup
 │   ├── GameRenderer.kt      # Canvas rendering
 │   ├── GameScreen.kt        # HUD, touch controls, game loop host
 │   ├── MainMenuScreen.kt    # Menu, settings, cloud sign-in
@@ -59,7 +60,7 @@ Successful GitHub Actions runs upload `app-debug.apk` as the `crucible-of-ruin-d
 ./gradlew :app:testDebugUnitTest
 ```
 
-`BossUnitTest` covers boss phases, weak-point stagger, status-effect DoT, dash/riposte mechanics, combo progression, poise/knockback, and the damage-number pool. `GameEnginePhysicsTest` covers player landing on the starting platform and pit-fall death/respawn handling.
+`BossUnitTest` covers boss phases, weak-point stagger, status-effect DoT, dash/riposte mechanics, combo progression, poise/knockback, and the damage-number pool. `GameEnginePhysicsTest` covers player landing on the starting platform and pit-fall death/respawn handling. `GameLevelLayoutTest` checks representative level landmarks and current world-object counts.
 
 ## Save and backup behavior
 
