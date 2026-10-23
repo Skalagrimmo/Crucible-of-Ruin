@@ -299,7 +299,7 @@ fun MainMenuScreen(
                 shape = RoundedCornerShape(10.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(44.dp)
+                    .height(if (compactLandscape) 34.dp else 44.dp)
                     .border(1.dp, Color(0xFF8F77AA), RoundedCornerShape(10.dp))
                     .testTag("menu_start_button")
             ) {
@@ -312,7 +312,7 @@ fun MainMenuScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(if (compactLandscape) 5.dp else 10.dp))
 
             // 3. SETTINGS & OPTIONS
             Button(
@@ -328,7 +328,7 @@ fun MainMenuScreen(
                 Text("OPTIONS & PERFORMANCE", color = Color(0xFFDCCFF5), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(if (compactLandscape) 5.dp else 10.dp))
 
             // Grimoire Codex & Bestiary
             Button(
@@ -337,7 +337,7 @@ fun MainMenuScreen(
                 shape = RoundedCornerShape(10.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(42.dp)
+                    .height(if (compactLandscape) 34.dp else 42.dp)
                     .border(1.dp, Color(0xFFFFD700), RoundedCornerShape(10.dp))
                     .testTag("menu_grimoire_button")
             ) {
@@ -353,7 +353,7 @@ fun MainMenuScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(if (compactLandscape) 5.dp else 10.dp))
 
             // 4. ARCHIVES / STATS / CLOUD
             Row(
@@ -379,7 +379,7 @@ fun MainMenuScreen(
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier
                         .weight(1f)
-                        .height(40.dp)
+                        .height(if (compactLandscape) 32.dp else 40.dp)
                         .border(1.dp, Color(0x558F77AA), RoundedCornerShape(10.dp))
                         .testTag("menu_controls_button")
                 ) {
