@@ -730,7 +730,7 @@ class GameEngine {
                 val baseSpeed = if (player.grounded) player.runSpeed else player.airSpeed
                 val effectiveSpeedMult = speedMultiplier * player.statusController.getSpeedMultiplier()
                 val targetSpeed = moveDir * baseSpeed * effectiveSpeedMult
-                player.vx += (targetSpeed - player.vx) * (if (player.grounded) 14f else 7f) * dt
+                player.vx += (targetSpeed - player.vx) * (if (player.grounded) 14f else 8f) * dt
                 player.walkAnimTimer += dt * 10f
             } else {
                 player.vx += (0f - player.vx) * (if (player.grounded) 18f else 6f) * dt
