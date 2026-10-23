@@ -31,7 +31,8 @@ app/src/main/java/com/example/
 │   ├── GameLevelFactory.kt  # Current full level layout and encounter setup
 │   ├── TiledLevelLoader.kt  # TMX object-layer importer (prototype, not live yet)
 │   ├── GameRenderer.kt      # Canvas rendering
-│   ├── GameScreen.kt        # HUD, touch controls, game loop host\n│   ├── GameInputController.kt # Testable adapter from touch controls to engine inputs
+│   ├── GameScreen.kt        # HUD, touch controls, game loop host
+│   ├── GameInputController.kt # Testable adapter from touch controls to engine inputs
 │   ├── MainMenuScreen.kt    # Menu, settings, cloud sign-in
 │   ├── AssetCache.kt        # Sound/texture preloading
 │   ├── boss/                # Boss AI, models, health bar
