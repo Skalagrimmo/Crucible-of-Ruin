@@ -752,38 +752,7 @@ class GameEngine {
             }
         }
 
-        player.vy += player.gravity * dt
-        if (player.vy > 750f) player.vy = 750f
-
-        // Physics X
-        player.x += player.vx * dt
-        for (p in platforms) {
-            if (aabbIntersects(player.x, player.y, player.w, player.h, p.x, p.y, p.w, p.h)) {
-                if (player.vx > 0f) {
-                    player.x = p.x - player.w
-                } else if (player.vx < 0f) {
-                    player.x = p.x + p.w
-                }
-                player.vx = 0f
-            }
-        }
-
-        // Physics Y
-        player.y += player.vy * dt
-        player.grounded = false
-        for (p in platforms) {
-            if (aabbIntersects(player.x, player.y, player.w, player.h, p.x, p.y, p.w, p.h)) {
-                if (player.vy > 0f) {
-                    player.y = p.y - player.h
-                    player.vy = 0f
-                    player.grounded = true
-                    player.coyoteTime = 0.12f
-                } else if (player.vy < 0f) {
-                    player.y = p.y + p.h
-                    player.vy = 0f
-                }
-            }
-        }
+        GamePhysics.movePlayer(player, platforms, dt)
 
         // Hazards
         for (h in hazards) {

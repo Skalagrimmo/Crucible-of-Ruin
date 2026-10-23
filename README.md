@@ -26,7 +26,8 @@ Melee-combat focused side-scroller built natively with Kotlin and Jetpack Compos
 app/src/main/java/com/example/
 ├── MainActivity.kt          # Screen routing, edge-to-edge setup
 ├── game/
-│   ├── GameEngine.kt        # Core simulation (player, enemies, physics, camera)
+│   ├── GameEngine.kt        # Simulation coordinator, combat, enemy AI, events and camera
+│   ├── GamePhysics.kt       # Player velocity integration and platform collision resolution
 │   ├── GameLevelFactory.kt  # Current full level layout and encounter setup
 │   ├── TiledLevelLoader.kt  # TMX object-layer importer (prototype, not live yet)
 │   ├── GameRenderer.kt      # Canvas rendering
@@ -69,7 +70,7 @@ This is deliberately a prototype, not yet the live level source: `GameEngine` st
 ./gradlew :app:testDebugUnitTest
 ```
 
-`BossUnitTest` covers boss phases, weak-point stagger, status-effect DoT, dash/riposte mechanics, combo progression, poise/knockback, and the damage-number pool. `GameEnginePhysicsTest` covers player landing on the starting platform and pit-fall death/respawn handling. `GameLevelLayoutTest` checks representative level landmarks and current world-object counts. `TiledLevelLoaderTest` validates the editable Ruined Bastion TMX prototype and its geometry.
+`BossUnitTest` covers boss phases, weak-point stagger, status-effect DoT, dash/riposte mechanics, combo progression, poise/knockback, and the damage-number pool. `GameEnginePhysicsTest` covers starting-platform landing, pit-fall death/respawn, walking off a platform edge, coyote-time jumping, and jump buffering. `GameLevelLayoutTest` checks representative level landmarks and current world-object counts. `TiledLevelLoaderTest` validates the editable Ruined Bastion TMX prototype and its geometry.
 
 ## Save and backup behavior
 
