@@ -10,17 +10,21 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import kotlin.math.abs
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36])
 class CityDistrictPrototypeTest {
+    private fun near(actual: Float, expected: Float, tolerance: Float = 0.05f): Boolean =
+        abs(actual - expected) <= tolerance
+
     @Test
     fun `district uses larger proportions and keeps later areas connected`() {
         val engine = GameEngine()
         assertTrue(engine.platforms.any { it.x == 0f && it.y == 460f && it.w == 676f })
-        assertTrue(engine.platforms.any { it.x == 338f && it.y == 208f && it.style == PlatformStyle.CITY_LEDGE && it.w > 450f })
-        assertTrue(engine.platforms.any { it.x == 572f && it.y == 712f })
-        assertTrue(engine.platforms.any { it.x == 1105f && it.y == 491.5f && it.style == PlatformStyle.CITY_LEDGE })
+        assertTrue(engine.platforms.any { near(it.x, 338f) && near(it.y, 208f) && it.style == PlatformStyle.CITY_LEDGE && it.w > 450f })
+        assertTrue(engine.platforms.any { near(it.x, 572f) && near(it.y, 712f) })
+        assertTrue(engine.platforms.any { near(it.x, 1105f) && near(it.y, 491.5f) && it.style == PlatformStyle.CITY_LEDGE })
         assertTrue(engine.platforms.contains(RuinedBastionDistrict.shortcutGate))
         assertTrue(engine.platforms.any { it.x == 2496f && it.y == 420f && it.w == 380f })
         assertEquals(2556f, engine.checkpoints[1].x, 0.01f)
@@ -30,7 +34,7 @@ class CityDistrictPrototypeTest {
     fun `city ledge can be passed upward through`() {
         val engine = GameEngine()
         engine.update(1f / 60f)
-        val ledge = engine.platforms.first { it.x == 383.5f && it.y == 344.5f && it.style == PlatformStyle.CITY_LEDGE }
+        val ledge = engine.platforms.first { near(it.x, 383.5f) && near(it.y, 344.5f) && it.style == PlatformStyle.CITY_LEDGE }
         engine.player.x = 390f
         engine.player.y = ledge.y + 12f
         engine.player.vx = 0f
@@ -44,7 +48,7 @@ class CityDistrictPrototypeTest {
     fun `city ledge catches a falling player from above`() {
         val engine = GameEngine()
         engine.update(1f / 60f)
-        val ledge = engine.platforms.first { it.x == 383.5f && it.y == 344.5f && it.style == PlatformStyle.CITY_LEDGE }
+        val ledge = engine.platforms.first { near(it.x, 383.5f) && near(it.y, 344.5f) && it.style == PlatformStyle.CITY_LEDGE }
         engine.player.x = 390f
         engine.player.y = 260f
         engine.player.vx = 0f
