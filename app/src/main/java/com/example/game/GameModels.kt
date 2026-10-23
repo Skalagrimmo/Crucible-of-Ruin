@@ -19,7 +19,8 @@ enum class PlatformStyle {
     STONE,
     IRON_GIRDER,
     STONE_LEDGE,
-    BOSS_GATE
+    BOSS_GATE,
+    CITY_LEDGE
 }
 
 enum class HazardType {
@@ -60,7 +61,7 @@ data class PlayerAfterimage(
 )
 
 class BreakableUrn(
-    val x: Float,
+    var x: Float,
     val y: Float,
     val w: Float = 24f,
     val h: Float = 24f,
