@@ -283,11 +283,11 @@ class EnemyEntity(
             if (Math.random() < 0.70) {
                 val r = Math.random()
                 val dropType = when {
-                    r < 0.20 -> "health"
-                    r < 0.38 -> "flask"
-                    r < 0.65 -> "sulfur"
-                    r < 0.88 -> "mercury"
-                    else -> "vitriol"
+                    r < 0.20 -> PickupType.HEALTH
+                    r < 0.38 -> PickupType.FLASK
+                    r < 0.65 -> PickupType.SULFUR
+                    r < 0.88 -> PickupType.MERCURY
+                    else -> PickupType.VITRIOL
                 }
                 engine.pickups.spawn(x + w / 2f - 8f, y + h / 2f - 8f, dropType)
             }
@@ -895,11 +895,11 @@ class GameEngine {
                     if (Math.random() < 0.70) {
                         val r = Math.random()
                         val dropType = when {
-                            r < 0.20 -> "health"
-                            r < 0.38 -> "flask"
-                            r < 0.65 -> "sulfur"
-                            r < 0.88 -> "mercury"
-                            else -> "vitriol"
+                            r < 0.20 -> PickupType.HEALTH
+                            r < 0.38 -> PickupType.FLASK
+                            r < 0.65 -> PickupType.SULFUR
+                            r < 0.88 -> PickupType.MERCURY
+                            else -> PickupType.VITRIOL
                         }
                         pickups.spawn(e.x + e.w / 2f - 8f, e.y + e.h / 2f - 8f, dropType)
                     }
@@ -1227,17 +1227,17 @@ class GameEngine {
             if (aabbIntersects(pk.x, pk.y, pk.w, pk.h, player.x, player.y, player.w, player.h)) {
                 var isResource = false
                 when (pk.type) {
-                    "health" -> player.hp = min(player.maxHp, player.hp + 35f)
-                    "flask" -> player.flasks = min(player.maxFlasks, player.flasks + 2)
-                    "sulfur" -> {
+                    PickupType.HEALTH -> player.hp = min(player.maxHp, player.hp + 35f)
+                    PickupType.FLASK -> player.flasks = min(player.maxFlasks, player.flasks + 2)
+                    PickupType.SULFUR -> {
                         isResource = true
                         onResourceCollected?.invoke(com.example.game.alchemy.ResourceType.SULFUR_ASH)
                     }
-                    "mercury" -> {
+                    PickupType.MERCURY -> {
                         isResource = true
                         onResourceCollected?.invoke(com.example.game.alchemy.ResourceType.QUICKSILVER)
                     }
-                    "vitriol" -> {
+                    PickupType.VITRIOL -> {
                         isResource = true
                         onResourceCollected?.invoke(com.example.game.alchemy.ResourceType.VITRIOL_CRYSTAL)
                     }
@@ -1247,12 +1247,11 @@ class GameEngine {
                     haptics?.onResourceCollected()
                 }
                 val particleColor = when (pk.type) {
-                    "health" -> Color(0xFFFF3050)
-                    "flask" -> Color(0xFF40FFB0)
-                    "sulfur" -> Color(0xFFFFB039)
-                    "mercury" -> Color(0xFF64D8CB)
-                    "vitriol" -> Color(0xFFB388FF)
-                    else -> Color.White
+                    PickupType.HEALTH -> Color(0xFFFF3050)
+                    PickupType.FLASK -> Color(0xFF40FFB0)
+                    PickupType.SULFUR -> Color(0xFFFFB039)
+                    PickupType.MERCURY -> Color(0xFF64D8CB)
+                    PickupType.VITRIOL -> Color(0xFFB388FF)
                 }
                 particles.spawn(pk.x + 8f, pk.y + 8f, particleColor, 12, 110f, 0.4f, 3.5f)
                 pickups.removeAt(i)
