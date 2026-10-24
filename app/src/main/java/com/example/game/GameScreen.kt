@@ -578,15 +578,17 @@ fun GameScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
-                .padding(horizontal = 24.dp, vertical = 14.dp),
+                .padding(horizontal = 14.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Bottom
         ) {
             // Directional Buttons (Left / Right)
-            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TouchHoldButton(
                     symbol = "◀",
                     label = "Left",
+                    size = 48,
+                    showLabel = false,
                     onHoldChange = { isPressed -> inputController.setLeftHeld(isPressed) },
                     enabled = engine.state == "playing",
                     modifier = Modifier.testTag("btn_left")
@@ -594,6 +596,8 @@ fun GameScreen(
                 TouchHoldButton(
                     symbol = "▶",
                     label = "Right",
+                    size = 48,
+                    showLabel = false,
                     onHoldChange = { isPressed -> inputController.setRightHeld(isPressed) },
                     enabled = engine.state == "playing",
                     modifier = Modifier.testTag("btn_right")
@@ -602,20 +606,21 @@ fun GameScreen(
 
             // Action Buttons (Sub, Dash, Attack, Jump)
             Row(
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.Bottom
             ) {
                 // Flask Sub-Weapon
                 TouchTapButton(
                     symbol = "🧪",
                     label = "Flask",
-                    size = 56,
-                    color = Color(0x9945193C),
+                    size = 44,
+                    showLabel = false,
+                    color = Color(0x7745193C),
                     borderColor = Color(0xFFB050D0),
                     onTap = { inputController.tapFlask() },
                     enabled = engine.state == "playing",
                     modifier = Modifier
-                        .padding(bottom = 16.dp)
+                        .padding(bottom = 12.dp)
                         .testTag("btn_flask")
                 )
 
@@ -624,13 +629,13 @@ fun GameScreen(
                 TouchTapButton(
                     symbol = "💨",
                     label = if (isDashReady) "Dash" else "${String.format("%.1f", engine.player.dashCooldown)}s",
-                    size = 56,
-                    color = if (isDashReady) Color(0x99182E48) else Color(0x66101624),
+                    size = 44,
+                    color = if (isDashReady) Color(0x77182E48) else Color(0x44101624),
                     borderColor = if (isDashReady) Color(0xFF00E5FF) else Color(0x44406888),
                     onTap = { inputController.tapDash() },
                     enabled = engine.state == "playing",
                     modifier = Modifier
-                        .padding(bottom = 16.dp)
+                        .padding(bottom = 12.dp)
                         .testTag("btn_dash")
                 )
 
@@ -689,8 +694,8 @@ fun GameScreen(
                     TouchTapButton(
                         symbol = "⚔️",
                         label = if (comboTimer > 0f && isFinisherReady) "Finisher" else "Attack",
-                        size = 68,
-                        color = if (comboTimer > 0f && isFinisherReady) Color(0xCC4A0E18) else Color(0x992E1B46),
+                        size = 60,
+                        color = if (comboTimer > 0f && isFinisherReady) Color(0xCC4A0E18) else Color(0x772E1B46),
                         borderColor = if (comboTimer > 0f && isFinisherReady) Color(0xFFFF2040) else if (comboTimer > 0f) Color(0xFFFFB300) else Color(0xFF8F77AA),
                         onTap = { inputController.tapAttack() },
                         enabled = engine.state == "playing",
@@ -702,8 +707,8 @@ fun GameScreen(
                 TouchHoldButton(
                     symbol = "▲",
                     label = "Jump",
-                    size = 68,
-                    color = Color(0x99261C3D),
+                    size = 60,
+                    color = Color(0x77261C3D),
                     borderColor = Color(0xFFB096DA),
                     onHoldChange = { isHeld -> inputController.setJumpHeld(isHeld) },
                     enabled = engine.state == "playing",
@@ -983,7 +988,8 @@ fun TouchHoldButton(
     symbol: String,
     label: String,
     size: Int = 64,
-    color: Color = Color(0x991A1426),
+    showLabel: Boolean = true,
+    color: Color = Color(0x771A1426),
     borderColor: Color = Color(0x73B096DA),
     onHoldChange: (Boolean) -> Unit,
     enabled: Boolean = true,
@@ -996,12 +1002,12 @@ fun TouchHoldButton(
             .size(size.dp)
             .background(
                 if (isPressed) Color(0xCC7846B4) else color,
-                RoundedCornerShape((size / 3).dp)
+                CircleShape
             )
             .border(
                 2.dp,
                 if (isPressed) Color(0xFFF0C050) else borderColor,
-                RoundedCornerShape((size / 3).dp)
+                CircleShape
             )
             .pointerInput(enabled) {
                 if (enabled) {
@@ -1029,12 +1035,14 @@ fun TouchHoldButton(
                 fontSize = (size * 0.36f).sp,
                 fontWeight = FontWeight.Bold
             )
-            Text(
-                text = label,
-                color = Color(0xB3E5DBF7),
-                fontSize = 8.sp,
-                fontWeight = FontWeight.SemiBold
-            )
+            if (showLabel) {
+                Text(
+                    text = label,
+                    color = Color(0xB3E5DBF7),
+                    fontSize = 8.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
         }
     }
 }
@@ -1044,7 +1052,8 @@ fun TouchTapButton(
     symbol: String,
     label: String,
     size: Int = 64,
-    color: Color = Color(0x991A1426),
+    showLabel: Boolean = true,
+    color: Color = Color(0x771A1426),
     borderColor: Color = Color(0x73B096DA),
     onTap: () -> Unit,
     enabled: Boolean = true,
@@ -1088,12 +1097,14 @@ fun TouchTapButton(
                 fontSize = (size * 0.32f).sp,
                 fontWeight = FontWeight.Bold
             )
-            Text(
-                text = label,
-                color = Color(0xB3E5DBF7),
-                fontSize = 8.sp,
-                fontWeight = FontWeight.SemiBold
-            )
+            if (showLabel) {
+                Text(
+                    text = label,
+                    color = Color(0xB3E5DBF7),
+                    fontSize = 8.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
         }
     }
 }
