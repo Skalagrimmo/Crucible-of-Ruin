@@ -59,12 +59,29 @@ data class PlayerAfterimage(
     val color: Color = Color(0xFF00E5FF)
 )
 
+/**
+ * Stable identifiers for world drops. The id is used by editable level data;
+ * gameplay logic and rendering should use the enum value instead of raw strings.
+ */
+enum class PickupType(val id: String) {
+    HEALTH("health"),
+    FLASK("flask"),
+    SULFUR("sulfur"),
+    MERCURY("mercury"),
+    VITRIOL("vitriol");
+
+    companion object {
+        fun fromId(id: String): PickupType? =
+            values().firstOrNull { it.id.equals(id.trim(), ignoreCase = true) }
+    }
+}
+
 class BreakableUrn(
     val x: Float,
     val y: Float,
     val w: Float = 24f,
     val h: Float = 24f,
-    val dropType: String, // "health" or "flask"
+    val dropType: PickupType,
     var dead: Boolean = false
 )
 
@@ -73,10 +90,10 @@ class PickupItem {
     var y: Float = 0f
     var w: Float = 16f
     var h: Float = 16f
-    var type: String = "health"
+    var type: PickupType = PickupType.HEALTH
     var vy: Float = -130f
 
-    fun init(spawnX: Float, spawnY: Float, pickupType: String) {
+    fun init(spawnX: Float, spawnY: Float, pickupType: PickupType) {
         x = spawnX
         y = spawnY
         type = pickupType
@@ -94,7 +111,7 @@ class PickupPool(val capacity: Int = 24) {
 
     fun get(index: Int): PickupItem = pool[index]
 
-    fun spawn(spawnX: Float, spawnY: Float, type: String): PickupItem {
+    fun spawn(spawnX: Float, spawnY: Float, type: PickupType): PickupItem {
         val item = if (activeCount < capacity) {
             pool[activeCount++]
         } else {
