@@ -71,7 +71,8 @@ internal object TiledLevelLoader {
                 y = obj.floatAttribute("y"),
                 w = obj.floatAttribute("width"),
                 h = obj.floatAttribute("height"),
-                dropType = obj.requiredProperty("dropType")
+                dropType = PickupType.fromId(obj.requiredProperty("dropType"))
+                    ?: throw IllegalArgumentException("Unsupported dropType in Tiled map")
             )
         }
 
