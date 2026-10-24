@@ -52,7 +52,7 @@ class TiledLevelLoaderTest {
         assertEquals(120f, firstLurker.patrolRange, 0f)
 
         val healthUrn = section.breakables.first { it.x == 380f }
-        assertEquals("health", healthUrn.dropType)
+        assertEquals(com.example.game.PickupType.HEALTH, healthUrn.dropType)
     }
 
     @Test

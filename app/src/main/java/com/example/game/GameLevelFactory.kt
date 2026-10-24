@@ -52,8 +52,8 @@ internal object GameLevelFactory {
         enemies.add(EnemyEntity(1100f, 240f, EnemyArchetype.CHERUB, 120f))
         enemies.add(EnemyEntity(1420f, 370f, EnemyArchetype.LURKER, 100f))
 
-        breakables.add(BreakableUrn(380f, 296f, dropType = "health"))
-        breakables.add(BreakableUrn(1240f, 396f, dropType = "flask"))
+        breakables.add(BreakableUrn(380f, 296f, dropType = PickupType.HEALTH))
+        breakables.add(BreakableUrn(1240f, 396f, dropType = PickupType.FLASK))
 
         // --- SECTION 2: THE CRUCIBLE LABORATORIES (x: 1900 - 4300) ---
         platforms.add(Platform(1920f, 420f, 380f, 120f, PlatformStyle.STONE))
@@ -73,7 +73,7 @@ internal object GameLevelFactory {
 
         platforms.add(Platform(3250f, 320f, 140f, 20f, PlatformStyle.IRON_GIRDER))
         platforms.add(Platform(3440f, 240f, 160f, 20f, PlatformStyle.IRON_GIRDER))
-        breakables.add(BreakableUrn(3500f, 216f, dropType = "flask"))
+        breakables.add(BreakableUrn(3500f, 216f, dropType = PickupType.FLASK))
         enemies.add(EnemyEntity(3480f, 190f, EnemyArchetype.CHERUB, 100f))
 
         platforms.add(Platform(3800f, 440f, 200f, 100f, PlatformStyle.STONE))
@@ -91,7 +91,7 @@ internal object GameLevelFactory {
 
         platforms.add(Platform(5070f, 430f, 200f, 110f, PlatformStyle.STONE))
         enemies.add(EnemyEntity(5120f, 370f, EnemyArchetype.GOLEM, 70f))
-        breakables.add(BreakableUrn(5180f, 406f, dropType = "health"))
+        breakables.add(BreakableUrn(5180f, 406f, dropType = PickupType.HEALTH))
 
         // --- BOSS ARENA: GRAND SANCTUM (x: 5270 - 6200) ---
         platforms.add(Platform(5270f, 450f, 930f, 90f, PlatformStyle.STONE))
