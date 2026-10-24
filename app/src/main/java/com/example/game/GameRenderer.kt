@@ -154,23 +154,23 @@ object GameRenderer {
             for (i in 0 until engine.pickups.activeCount) {
                 val pk = engine.pickups.get(i)
                 when (pk.type) {
-                    "health" -> drawImage(AssetCache.texPickupHealth, topLeft = Offset(pk.x - camX, pk.y - camY))
-                    "flask" -> drawImage(AssetCache.texPickupFlask, topLeft = Offset(pk.x - camX, pk.y - camY))
-                    "sulfur" -> {
+                    PickupType.HEALTH -> drawImage(AssetCache.texPickupHealth, topLeft = Offset(pk.x - camX, pk.y - camY))
+                    PickupType.FLASK -> drawImage(AssetCache.texPickupFlask, topLeft = Offset(pk.x - camX, pk.y - camY))
+                    PickupType.SULFUR -> {
                         // Glowing Sulfur Crystal
                         val cx = pk.x - camX + 8f
                         val cy = pk.y - camY + 8f
                         drawCircle(Color(0xFFFFB039), radius = 7f, center = Offset(cx, cy))
                         drawCircle(Color(0xFFFFE082), radius = 3.5f, center = Offset(cx, cy))
                     }
-                    "mercury" -> {
+                    PickupType.MERCURY -> {
                         // Liquid Quicksilver Sphere
                         val cx = pk.x - camX + 8f
                         val cy = pk.y - camY + 8f
                         drawCircle(Color(0xFF64D8CB), radius = 7f, center = Offset(cx, cy))
                         drawCircle(Color(0xFFE0F7FA), radius = 3.5f, center = Offset(cx, cy))
                     }
-                    "vitriol" -> {
+                    PickupType.VITRIOL -> {
                         // Resonant Vitriol Jewel
                         val cx = pk.x - camX + 8f
                         val cy = pk.y - camY + 8f
