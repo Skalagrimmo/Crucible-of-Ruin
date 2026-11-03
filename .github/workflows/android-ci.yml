@@ -74,6 +74,21 @@ jobs:
           set -o pipefail
           ./gradlew :app:testDebugUnitTest --stacktrace --no-daemon 2>&1 | tee build-output.log
 
+      - name: Annotate failure details
+        if: failure()
+        shell: bash
+        run: |
+          marks=$(grep -E "FAILED|AssertionError|failed:|^e: |e: file|error: |Execution failed|There were failing tests|BUILD FAILED" build-output.log | sort -u | head -45 || true)
+          if [ -n "$marks" ]; then
+            while IFS= read -r line; do
+              printf '::error::%s\n' "$(printf '%s' "$line" | cut -c1-230 | tr ':' ' ')"
+            done <<< "$marks"
+          else
+            tail -n 45 build-output.log | while IFS= read -r line; do
+              printf '::error::%s\n' "$(printf '%s' "$line" | cut -c1-230 | tr ':' ' ')"
+            done
+          fi
+
       - name: Build debug APK
         shell: bash
         run: |
