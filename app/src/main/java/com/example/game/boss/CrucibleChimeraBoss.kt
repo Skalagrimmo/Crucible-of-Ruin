@@ -124,8 +124,10 @@ class CrucibleChimeraBoss(
                 }
                 for (i in 0 until count) {
                     val spread = (i - (count - 1) / 2f) * 85f
-                    val bVx = facing * (190f + Math.random().toFloat() * 90f) + spread
-                    val bVy = -410f - Math.random().toFloat() * 90f
+                    // Stage 6a (#38): the mortar spread rolls use the engine's
+                    // seeded gameplay RNG so replays reproduce the barrage exactly.
+                    val bVx = facing * (190f + engine.rng.nextFloat() * 90f) + spread
+                    val bVy = -410f - engine.rng.nextFloat() * 90f
                     engine.projectiles.spawn(
                         x + w / 2f,
                         y + 10f,

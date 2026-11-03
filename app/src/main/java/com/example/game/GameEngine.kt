@@ -12,6 +12,7 @@ import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
+import kotlin.random.Random
 
 class Camera2D(val viewW: Float = 960f, val viewH: Float = 540f) {
     var x: Float = 0f
@@ -212,7 +213,9 @@ class EnemyEntity(
     var staggerTimer: Float = 0f
     var shootCooldown: Float = 2.0f
     var charging: Boolean = false
-    var flyPhase: Float = (Math.random() * Math.PI * 2.0).toFloat()
+    // Stage 6a (#38): the flight phase offset is derived from spawn x instead of
+    // an unseeded roll, so replays reproduce flyer patterns exactly.
+    var flyPhase: Float = (x * 0.613f) % (Math.PI.toFloat() * 2f)
     var targetY: Float = y
 
     // Combat status effect controller (debuffs, DoTs, Corrosion, Alchemy-Burn)
@@ -294,8 +297,9 @@ class EnemyEntity(
             dead = true
             engine.enemiesDefeated++
             engine.particles.spawnEnemyDeath(x + w / 2f, y + h / 2f, Color(0xFF8018A0))
-            if (Math.random() < 0.70) {
-                val r = Math.random()
+            // Stage 6a (#38): the loot roll runs through the engine's seeded RNG.
+            if (engine.rng.nextDouble() < 0.70) {
+                val r = engine.rng.nextDouble()
                 val dropType = when {
                     r < 0.20 -> "health"
                     r < 0.38 -> "flask"
@@ -311,7 +315,10 @@ class EnemyEntity(
 
 typealias BossEntity = BaseBoss
 
-class GameEngine {
+class GameEngine(
+    /** Seed of the gameplay RNG (Stage 6a, #38): same seed = same drops, procs, and AI rolls. */
+    val rngSeed: Long = System.nanoTime()
+) {
     companion object {
         /** Fixed simulation tick (Stage 1, #33): 1/60 s, immune to the frame-rate cap. */
         const val FIXED_DT = 1f / 60f
@@ -371,6 +378,14 @@ class GameEngine {
     private var timeDebt = 0f
 
     val audio = GameAudio()
+
+    /**
+     * Deterministic gameplay RNG (Stage 6a, #38): loot rolls, status procs, and
+     * AI cooldown jitter run through this stream so replays reproduce exactly.
+     * Visual randomness (particles, damage numbers, camera shake) stays on the
+     * global sources — it never affects simulation outcome.
+     */
+    val rng = Random(rngSeed)
     val camera = Camera2D()
     val particles = ParticlePool(160)
     val projectiles = ProjectilePool(40)
@@ -922,10 +937,10 @@ class GameEngine {
                     // Player melee applies status debuffs (higher chance on finisher)
                     val burnChance = if (isFinisher) 0.65 else 0.40
                     val corrChance = if (isFinisher) 0.55 else 0.35
-                    if (Math.random() < burnChance) {
+                    if (rng.nextDouble() < burnChance) {
                         e.statusController.applyEffect(CombatStatusType.ALCHEMY_BURN, duration = 4.5f, stacks = 1)
                     }
-                    if (Math.random() < corrChance) {
+                    if (rng.nextDouble() < corrChance) {
                         e.statusController.applyEffect(CombatStatusType.CORROSION, duration = 5.0f, stacks = 1)
                     }
                 }
@@ -965,10 +980,10 @@ class GameEngine {
                 // Player melee applies status debuffs to boss
                 val burnChance = if (isFinisher) 0.65 else 0.45
                 val corrChance = if (isFinisher) 0.55 else 0.40
-                if (Math.random() < burnChance) {
+                if (rng.nextDouble() < burnChance) {
                     boss.statusController.applyEffect(CombatStatusType.ALCHEMY_BURN, duration = 4.5f, stacks = 1)
                 }
-                if (Math.random() < corrChance) {
+                if (rng.nextDouble() < corrChance) {
                     boss.statusController.applyEffect(CombatStatusType.CORROSION, duration = 5.0f, stacks = 1)
                 }
             }
@@ -1009,8 +1024,8 @@ class GameEngine {
                     e.dead = true
                     enemiesDefeated++
                     particles.spawnEnemyDeath(e.x + e.w / 2f, e.y + e.h / 2f, Color(0xFF8018A0))
-                    if (Math.random() < 0.70) {
-                        val r = Math.random()
+                    if (rng.nextDouble() < 0.70) {
+                        val r = rng.nextDouble()
                         val dropType = when {
                             r < 0.20 -> "health"
                             r < 0.38 -> "flask"
@@ -1125,7 +1140,7 @@ class GameEngine {
                     }
                     if (e.shootCooldown <= 0f) {
                         e.charging = false
-                        e.shootCooldown = 2.4f + Math.random().toFloat() * 0.6f
+                        e.shootCooldown = 2.4f + rng.nextFloat() * 0.6f
                         if (distToPlayer < 480f) {
                             audio.play("throw")
                             val spawnX = if (e.facing > 0) e.x + e.w else e.x - 8f
@@ -1227,8 +1242,8 @@ class GameEngine {
         e.dead = true
         enemiesDefeated++
         particles.spawnEnemyDeath(e.x + e.w / 2f, e.y + e.h / 2f, Color(0xFF8018A0))
-        if (Math.random() < 0.70) {
-            val r = Math.random()
+        if (rng.nextDouble() < 0.70) {
+            val r = rng.nextDouble()
             val dropType = when {
                 r < 0.20 -> "health"
                 r < 0.38 -> "flask"
