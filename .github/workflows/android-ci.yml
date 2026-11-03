@@ -84,9 +84,11 @@ jobs:
           import glob, os
           import xml.etree.ElementTree as ET
 
+          CR = chr(13)
+          LF = chr(10)
+
           def esc(s):
-              return s.replace('%', '%25').replace('', '%0D').replace('
-', '%0A')
+              return s.replace('%', '%25').replace(CR, '%0D').replace(LF, '%0A')
 
           found = 0
           for f in glob.glob('app/build/test-results/testDebugUnitTest/*.xml'):
@@ -100,7 +102,7 @@ jobs:
                   for kind in ('failure', 'error'):
                       for fl in tc.findall(kind):
                           msg = (fl.get('message') or (fl.text or ''))[:400]
-                          print('::error title=%s.%s::%s: %s' % (esc(cls), esc(name), kind.upper(), esc(msg)))
+                          print('::error title=' + esc(cls) + '.' + esc(name) + '::' + kind.upper() + ': ' + esc(msg))
                           found += 1
           if not found:
               if os.path.exists('build-output.log'):
@@ -109,7 +111,7 @@ jobs:
                       if ('e: ' in l or 'FAILED' in l or 'error:' in l.lower() or 'Exception' in l):
                           hits.append(l.strip()[:400])
                   for l in hits[:40]:
-                      print('::error::%s' % esc(l))
+                      print('::error::' + esc(l))
                   if not hits:
                       print('::error::No failing tests and no error lines found in build-output.log')
               else:
