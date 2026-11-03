@@ -342,6 +342,9 @@ class GameEngine {
         )
 
         // CHERUB flyers move by velocity but ignore gravity and platforms entirely.
+        // Stage 4 (#36): confirmed as intended — the cherub is an aerial haunt
+        // that phases through the world's geometry; the out-of-bounds sweep in
+        // updateEnemies still removes any that drift below the level.
         private val ENEMY_FLYER_PHYSICS = ActorPhysicsConfig(
             gravity = 0f,
             terminalVelocity = 650f,
@@ -1163,6 +1166,24 @@ class GameEngine {
             }
             }
 
+            // Stage 4 (#36): ledge probe — patrolling grounded archetypes look
+            // before they step. Without ground under the leading edge they turn
+            // around, so survival no longer depends on hand-tuned patrol ranges
+            // and knockback cannot walk them into a pit.
+            if (e.grounded && e.state == "patrol") {
+                val probeX = if (e.facing > 0) e.x + e.w + 6f else e.x - 6f
+                val feetY = e.y + e.h
+                val groundAhead = platforms.any { p ->
+                    p.collision != PlatformCollision.OPEN &&
+                        probeX >= p.x && probeX <= p.x + p.w &&
+                        abs(p.y - feetY) <= 2f
+                }
+                if (!groundAhead) {
+                    e.facing = -e.facing
+                    e.vx = e.facing * e.speed
+                }
+            }
+
             // Stage 2 (#34): the shared resolver replaces the per-archetype gravity
             // and collision blocks. Grounded archetypes resolve against every
             // platform and flip on walls; CHERUB flyers ignore platforms entirely.
@@ -1183,6 +1204,35 @@ class GameEngine {
                     }
                 }
             }
+
+            // Stage 4 (#36): pits kill like a hazard (AoS semantics). An enemy that
+            // falls out of the world dies with its loot roll instead of updating
+            // forever below the level.
+            if (e.y > levelHeight + 200f) {
+                defeatEnemyWithDrop(e)
+            }
+        }
+    }
+
+    /**
+     * Kills an enemy and rolls its loot drop (Stage 4, #36): out-of-bounds pit
+     * deaths go through the same defeat path as combat deaths, so drops are
+     * not silently lost when an enemy falls out of the world.
+     */
+    private fun defeatEnemyWithDrop(e: EnemyEntity) {
+        e.dead = true
+        enemiesDefeated++
+        particles.spawnEnemyDeath(e.x + e.w / 2f, e.y + e.h / 2f, Color(0xFF8018A0))
+        if (Math.random() < 0.70) {
+            val r = Math.random()
+            val dropType = when {
+                r < 0.20 -> "health"
+                r < 0.38 -> "flask"
+                r < 0.65 -> "sulfur"
+                r < 0.88 -> "mercury"
+                else -> "vitriol"
+            }
+            pickups.spawn(e.x + e.w / 2f - 8f, e.y + e.h / 2f - 8f, dropType)
         }
     }
 
@@ -1299,6 +1349,13 @@ class GameEngine {
             val pk = pickups.get(i)
             // Stage 2 (#34): shared Y-only resolver with the new terminal velocity.
             ActorPhysics.moveAndResolve(pk, platforms, PICKUP_PHYSICS, dt)
+
+            // Stage 4 (#36): a pickup that falls out of the world despawns instead
+            // of updating forever below the level.
+            if (pk.y > levelHeight + 200f) {
+                pickups.removeAt(i)
+                continue
+            }
 
             if (aabbIntersects(pk.x, pk.y, pk.w, pk.h, player.x, player.y, player.w, player.h)) {
                 var isResource = false
