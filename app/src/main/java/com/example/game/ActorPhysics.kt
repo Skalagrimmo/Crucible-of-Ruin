@@ -90,6 +90,9 @@ object ActorPhysics {
             if (!config.ignorePlatforms) {
                 for (platform in platforms) {
                     if (!matches(platform.collision, config.horizontalFilter)) continue
+                    // Stage 3 (#35): a one-way surface is only a floor — it never
+                    // acts as a side wall for any archetype.
+                    if (platform.oneWay) continue
                     if (aabbIntersects(
                             actor.x, actor.y, actor.w, actor.h,
                             platform.x, platform.y, platform.w, platform.h
@@ -166,7 +169,15 @@ object ActorPhysics {
                             platform.x, platform.y, platform.w, platform.h
                         )
                     ) {
-                        if (actor.vy > 0f) {
+                        // Stage 3 (#35): one-way surfaces never block rising motion,
+                        // and they only catch actors whose feet crossed the top this
+                        // tick — a side entry with feet already below the top falls
+                        // through instead of being teleported on top.
+                        if (platform.oneWay) {
+                            if (actor.vy > 0f && previousFeet <= platform.y + LANDING_SLOP) {
+                                landOn(actor, platform)
+                            }
+                        } else if (actor.vy > 0f) {
                             landOn(actor, platform)
                         } else if (actor.vy < 0f) {
                             actor.y = platform.y + platform.h
