@@ -39,16 +39,28 @@ enum class HazardType {
     SPIKES
 }
 
+/**
+ * Collision behavior a platform of this style receives when no explicit override
+ * is supplied (Stage 3, #35): thin girders and ledges are pass-through one-way
+ * surfaces, floors and arena gates are solid.
+ */
+val PlatformStyle.defaultCollision: PlatformCollision
+    get() = when (this) {
+        PlatformStyle.STONE_LEDGE, PlatformStyle.IRON_GIRDER -> PlatformCollision.ONE_WAY
+        PlatformStyle.STONE, PlatformStyle.BOSS_GATE -> PlatformCollision.SOLID
+    }
+
+/** True when the platform only catches descending actors (Stage 3, #35). */
+val Platform.oneWay: Boolean
+    get() = collision == PlatformCollision.ONE_WAY
+
 data class Platform(
     val x: Float,
     val y: Float,
     val w: Float,
     val h: Float,
     val style: PlatformStyle,
-    val collision: PlatformCollision = when (style) {
-        PlatformStyle.STONE_LEDGE, PlatformStyle.IRON_GIRDER -> PlatformCollision.ONE_WAY
-        PlatformStyle.STONE, PlatformStyle.BOSS_GATE -> PlatformCollision.SOLID
-    }
+    val collision: PlatformCollision = style.defaultCollision
 )
 
 data class Hazard(

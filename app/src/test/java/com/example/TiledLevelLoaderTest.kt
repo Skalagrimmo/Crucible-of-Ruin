@@ -5,6 +5,7 @@ import com.example.game.GameLevelFactory
 import com.example.game.Hazard
 import com.example.game.HazardType
 import com.example.game.Platform
+import com.example.game.PlatformCollision
 import com.example.game.PlatformStyle
 import com.example.game.TiledLevelLoader
 import org.junit.Assert.assertEquals
@@ -13,6 +14,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.io.ByteArrayInputStream
 import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
@@ -70,5 +72,54 @@ class TiledLevelLoaderTest {
         assertTrue(fullLayout.hazards.contains(section.hazards.first()))
         assertEquals(28, fullLayout.platforms.size)
         assertEquals(6, fullLayout.hazards.size)
+    }
+
+    @Test
+    fun oneWayTmxPropertyOverridesTheStyleDefaultCollision() {
+        // Stage 3 (#35): an explicit oneWay property beats the style default, and
+        // a missing property keeps the style default untouched.
+        val tmx = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <map orientation="orthogonal" width="40" height="20" tilewidth="16" tileheight="16">
+              <objectgroup name="Platforms">
+                <object name="solid-girder" x="0" y="100" width="80" height="16">
+                  <properties>
+                    <property name="style" value="IRON_GIRDER"/>
+                    <property name="oneWay" value="false"/>
+                  </properties>
+                </object>
+                <object name="one-way-stone" x="100" y="100" width="80" height="16">
+                  <properties>
+                    <property name="style" value="STONE"/>
+                    <property name="oneWay" value="true"/>
+                  </properties>
+                </object>
+                <object name="default-girder" x="200" y="100" width="80" height="16">
+                  <properties>
+                    <property name="style" value="IRON_GIRDER"/>
+                  </properties>
+                </object>
+              </objectgroup>
+            </map>
+        """.trimIndent()
+
+        val section = TiledLevelLoader.load(ByteArrayInputStream(tmx.toByteArray(Charsets.UTF_8)))
+
+        assertEquals(3, section.platforms.size)
+        assertEquals(
+            "oneWay=false must make a girder fully solid",
+            PlatformCollision.SOLID,
+            section.platforms[0].collision
+        )
+        assertEquals(
+            "oneWay=true must make a stone slab pass-through",
+            PlatformCollision.ONE_WAY,
+            section.platforms[1].collision
+        )
+        assertEquals(
+            "A missing oneWay property keeps the style default",
+            PlatformCollision.ONE_WAY,
+            section.platforms[2].collision
+        )
     }
 }

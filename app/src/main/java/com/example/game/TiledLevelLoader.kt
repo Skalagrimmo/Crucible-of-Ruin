@@ -40,12 +40,20 @@ internal object TiledLevelLoader {
         }
 
         val platforms = objectsInLayer(document, "Platforms").map { obj ->
+            val style = enumProperty(obj, "style", PlatformStyle::valueOf)
             Platform(
                 x = obj.floatAttribute("x"),
                 y = obj.floatAttribute("y"),
                 w = obj.floatAttribute("width"),
                 h = obj.floatAttribute("height"),
-                style = enumProperty(obj, "style", PlatformStyle::valueOf)
+                style = style,
+                // Stage 3 (#35): an explicit oneWay TMX property overrides the
+                // style default; without it the style's defaultCollision applies.
+                collision = when (obj.optionalProperty("oneWay")?.trim()?.lowercase()) {
+                    "true" -> PlatformCollision.ONE_WAY
+                    "false" -> PlatformCollision.SOLID
+                    else -> style.defaultCollision
+                }
             )
         }
         val hazards = objectsInLayer(document, "Hazards").map { obj ->
