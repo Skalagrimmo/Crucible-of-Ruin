@@ -35,12 +35,12 @@ internal object GameLevelFactory {
         platforms.add(Platform(680f, 460f, 500f, 80f, PlatformStyle.STONE))
         hazards.add(Hazard(600f, 500f, 80f, 40f, HazardType.ACID))
 
-        platforms.add(Platform(240f, 390f, 90f, 20f, PlatformStyle.STONE_LEDGE))
-        platforms.add(Platform(360f, 320f, 100f, 20f, PlatformStyle.STONE_LEDGE))
-        platforms.add(Platform(500f, 250f, 110f, 20f, PlatformStyle.STONE_LEDGE))
+        platforms.add(Platform(240f, 390f, 90f, 20f, PlatformStyle.STONE_LEDGE, PlatformCollision.ONE_WAY))
+        platforms.add(Platform(360f, 320f, 100f, 20f, PlatformStyle.STONE_LEDGE, PlatformCollision.ONE_WAY))
+        platforms.add(Platform(500f, 250f, 110f, 20f, PlatformStyle.STONE_LEDGE, PlatformCollision.ONE_WAY))
 
-        platforms.add(Platform(800f, 380f, 120f, 20f, PlatformStyle.IRON_GIRDER))
-        platforms.add(Platform(1000f, 310f, 130f, 20f, PlatformStyle.IRON_GIRDER))
+        platforms.add(Platform(800f, 380f, 120f, 20f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY))
+        platforms.add(Platform(1000f, 310f, 130f, 20f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY))
         platforms.add(Platform(1200f, 420f, 350f, 120f, PlatformStyle.STONE))
 
         platforms.add(Platform(1600f, 400f, 320f, 140f, PlatformStyle.STONE))
@@ -60,8 +60,8 @@ internal object GameLevelFactory {
 
         platforms.add(Platform(2360f, 460f, 120f, 80f, PlatformStyle.STONE))
         hazards.add(Hazard(2300f, 500f, 60f, 40f, HazardType.ACID))
-        platforms.add(Platform(2540f, 400f, 130f, 20f, PlatformStyle.IRON_GIRDER))
-        platforms.add(Platform(2730f, 340f, 140f, 20f, PlatformStyle.IRON_GIRDER))
+        platforms.add(Platform(2540f, 400f, 130f, 20f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY))
+        platforms.add(Platform(2730f, 340f, 140f, 20f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY))
         hazards.add(Hazard(2480f, 510f, 350f, 30f, HazardType.ACID))
 
         platforms.add(Platform(2940f, 260f, 160f, 280f, PlatformStyle.STONE))
@@ -71,8 +71,8 @@ internal object GameLevelFactory {
         enemies.add(EnemyEntity(3300f, 370f, EnemyArchetype.GOLEM, 150f))
         enemies.add(EnemyEntity(3560f, 380f, EnemyArchetype.LURKER, 90f))
 
-        platforms.add(Platform(3250f, 320f, 140f, 20f, PlatformStyle.IRON_GIRDER))
-        platforms.add(Platform(3440f, 240f, 160f, 20f, PlatformStyle.IRON_GIRDER))
+        platforms.add(Platform(3250f, 320f, 140f, 20f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY))
+        platforms.add(Platform(3440f, 240f, 160f, 20f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY))
         breakables.add(BreakableUrn(3500f, 216f, dropType = "flask"))
         enemies.add(EnemyEntity(3480f, 190f, EnemyArchetype.CHERUB, 100f))
 
@@ -84,9 +84,9 @@ internal object GameLevelFactory {
         // --- SECTION 3: THE SANCTUM APPROACH (x: 4300 - 5100) ---
         platforms.add(Platform(4360f, 420f, 320f, 120f, PlatformStyle.STONE))
 
-        platforms.add(Platform(4740f, 360f, 110f, 20f, PlatformStyle.STONE_LEDGE))
+        platforms.add(Platform(4740f, 360f, 110f, 20f, PlatformStyle.STONE_LEDGE, PlatformCollision.ONE_WAY))
         hazards.add(Hazard(4680f, 510f, 260f, 30f, HazardType.ACID))
-        platforms.add(Platform(4900f, 300f, 120f, 20f, PlatformStyle.STONE_LEDGE))
+        platforms.add(Platform(4900f, 300f, 120f, 20f, PlatformStyle.STONE_LEDGE, PlatformCollision.ONE_WAY))
         enemies.add(EnemyEntity(4820f, 220f, EnemyArchetype.CHERUB, 130f))
 
         platforms.add(Platform(5070f, 430f, 200f, 110f, PlatformStyle.STONE))
@@ -97,8 +97,8 @@ internal object GameLevelFactory {
         platforms.add(Platform(5270f, 450f, 930f, 90f, PlatformStyle.STONE))
         platforms.add(Platform(5270f, 100f, 30f, 350f, PlatformStyle.BOSS_GATE))
         platforms.add(Platform(6170f, 100f, 30f, 350f, PlatformStyle.BOSS_GATE))
-        platforms.add(Platform(5420f, 330f, 120f, 18f, PlatformStyle.IRON_GIRDER))
-        platforms.add(Platform(5880f, 330f, 120f, 18f, PlatformStyle.IRON_GIRDER))
+        platforms.add(Platform(5420f, 330f, 120f, 18f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY))
+        platforms.add(Platform(5880f, 330f, 120f, 18f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY))
 
         return GameLevelLayout(
             platforms = platforms,
