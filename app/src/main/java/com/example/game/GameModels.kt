@@ -39,7 +39,10 @@ data class Platform(
     val w: Float,
     val h: Float,
     val style: PlatformStyle,
-    val collision: PlatformCollision = PlatformCollision.SOLID
+    val collision: PlatformCollision = when (style) {
+        PlatformStyle.STONE_LEDGE, PlatformStyle.IRON_GIRDER -> PlatformCollision.ONE_WAY
+        PlatformStyle.STONE, PlatformStyle.BOSS_GATE -> PlatformCollision.SOLID
+    }
 )
 
 data class Hazard(
