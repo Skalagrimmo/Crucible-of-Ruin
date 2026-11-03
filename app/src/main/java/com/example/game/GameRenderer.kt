@@ -385,7 +385,6 @@ object GameRenderer {
             if (!p.dead && (p.invulnTimer <= 0f || (System.currentTimeMillis() / 60) % 2 == 0L)) {
                 val px = p.x - camX
                 val py = p.y - camY
-                val bob = if (p.grounded && abs(p.vx) > 20f) sin(p.walkAnimTimer) * 2f else 0f
 
                 // Perfect Riposte Shockwave Ring
                 if (p.perfectRiposteTimer > 0f) {
@@ -435,7 +434,7 @@ object GameRenderer {
 
                 if (p.attacking) {
                     val tex = if (p.facing > 0) AssetCache.texPlayerAttackRight else AssetCache.texPlayerAttackLeft
-                    drawImage(tex, topLeft = Offset(px - 10f, py + bob))
+                    drawImage(tex, topLeft = Offset(px - 10f, py))
                     // Slash Arc based on combo step
                     val arcColor = when (p.lastComboHit) {
                         3 -> Color(0xFFFF2040)
@@ -460,7 +459,7 @@ object GameRenderer {
                     )
                 } else {
                     val tex = if (p.facing > 0) AssetCache.texPlayerIdleRight else AssetCache.texPlayerIdleLeft
-                    drawImage(tex, topLeft = Offset(px - 3f, py + bob))
+                    drawImage(tex, topLeft = Offset(px - 3f, py))
                 }
             }
 
