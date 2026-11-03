@@ -86,9 +86,11 @@ class BossGateEncounterTest {
         engine.player.takeDamage(1000f, engine.player.x + 1f, engine)
         assertTrue("The player should die during the boss fight", engine.player.dead)
 
-        repeat(300) {
+        // 'break' is not allowed inside the repeat {} lambda, so wait with a loop condition.
+        var respawnFrames = 0
+        while (engine.player.dead && respawnFrames < 300) {
             engine.update(1f / 60f)
-            if (!engine.player.dead) break
+            respawnFrames++
         }
         assertFalse("The player should have respawned at a checkpoint", engine.player.dead)
 
