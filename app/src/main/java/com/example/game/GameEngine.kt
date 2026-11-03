@@ -7,6 +7,7 @@ import com.example.game.boss.CrucibleChimeraBoss
 import com.example.game.status.CombatStatusType
 import com.example.game.status.StatusEffectController
 import kotlin.math.abs
+import kotlin.math.exp
 import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
@@ -23,20 +24,26 @@ class Camera2D(val viewW: Float = 960f, val viewH: Float = 540f) {
     }
 
     fun update(targetX: Float, targetY: Float, targetFacing: Int, maxW: Float, maxH: Float, dt: Float) {
+        // Time-based smoothing (Stage 1): exponential blends converge identically per
+        // second at any tick rate, replacing the frame-count-dependent lerp factors.
+        val leadBlend = 1f - exp(-4f * dt)
         val targetLead = targetFacing * 40f
-        lookAhead += (targetLead - lookAhead) * 4f * dt
+        lookAhead += (targetLead - lookAhead) * leadBlend
 
         val desiredX = targetX - viewW / 2f + lookAhead
         val desiredY = targetY - viewH / 2f - 20f
 
-        x += (desiredX - x) * 6f * dt
-        y += (desiredY - y) * 4f * dt
+        x += (desiredX - x) * (1f - exp(-6f * dt))
+        y += (desiredY - y) * (1f - exp(-4f * dt))
 
         x = x.coerceIn(0f, maxW - viewW)
         y = y.coerceIn(0f, maxH - viewH)
 
+        // Time-based shake decay: at dt = 1/60 s this equals the legacy 0.9-per-frame
+        // factor, so the 60 FPS cap keeps its tuned feel while the 30 FPS cap no
+        // longer decays at a different rate per second.
         if (shakeIntensity > 0.1f) {
-            shakeIntensity *= (0.9f).coerceAtLeast(0f)
+            shakeIntensity *= Math.pow(0.9, dt * 60.0).toFloat()
         } else {
             shakeIntensity = 0f
         }
@@ -298,6 +305,20 @@ class EnemyEntity(
 typealias BossEntity = BaseBoss
 
 class GameEngine {
+    companion object {
+        /** Fixed simulation tick (Stage 1, #33): 1/60 s, immune to the frame-rate cap. */
+        const val FIXED_DT = 1f / 60f
+
+        /** Anti-spiral: never simulate more than ~83 ms worth of ticks per update call. */
+        private const val MAX_TICKS_PER_FRAME = 5
+
+        /** Clamp for a single raw delta (resume from pause, debugger stalls). */
+        private const val MAX_RAW_DT = 0.25f
+    }
+
+    /** Sub-tick time carried between update() calls (fixed-step accumulator). */
+    private var timeDebt = 0f
+
     val audio = GameAudio()
     val camera = Camera2D()
     val particles = ParticlePool(160)
@@ -371,6 +392,7 @@ class GameEngine {
         perfectDodgesCount = 0
         timeDilation = 1.0f
         timeDilationTimer = 0f
+        timeDebt = 0f
     }
 
     fun initLevel() {
@@ -573,14 +595,32 @@ class GameEngine {
     fun update(rawDt: Float) {
         if (state == "paused") return
 
-        // Time dilation (slow-mo on perfect riposte)
+        // Time dilation (slow-mo on perfect riposte). The dilation window itself runs
+        // on real time; only the simulated time it governs is scaled.
         if (timeDilationTimer > 0f) {
             timeDilationTimer -= rawDt
             if (timeDilationTimer <= 0f) {
                 timeDilation = 1.0f
             }
         }
-        val dt = rawDt * timeDilation
+
+        // Fixed-step accumulator (Stage 1, #33): the simulation always advances in
+        // exact 1/60 s ticks, so jump arcs, knockback, and thin-platform collisions
+        // are identical at the 30 and 60 FPS caps. The frame's raw delta only decides
+        // how many fixed ticks run; sub-tick leftovers carry into the next frame.
+        timeDebt += rawDt.coerceIn(0f, MAX_RAW_DT) * timeDilation
+        var ticks = 0
+        while (timeDebt >= FIXED_DT && ticks < MAX_TICKS_PER_FRAME) {
+            step(FIXED_DT)
+            timeDebt -= FIXED_DT
+            ticks++
+        }
+        // Clamp leftover debt so a long stall can never spiral into catch-up bursts.
+        if (timeDebt > FIXED_DT) timeDebt = FIXED_DT
+    }
+
+    /** One deterministic 1/60 s simulation tick — the former variable-dt update body. */
+    private fun step(dt: Float) {
         timeElapsed += dt
 
         // Checkpoint detection

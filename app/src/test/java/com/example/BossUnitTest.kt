@@ -233,12 +233,14 @@ class BossUnitTest {
         engine.onDashPressed()
         assertEquals(currentCd, player.dashCooldown, 0.001f)
 
-        // Advance past dash duration (0.22s)
-        engine.update(0.25f)
+        // Advance past dash duration (0.22s). The fixed-step accumulator simulates at
+        // most five 1/60 s ticks per update() call, so long waits advance one
+        // frame-sized tick at a time — exactly like the real frame loop does.
+        repeat(15) { engine.update(1f / 60f) }
         assertFalse("Player should have completed dash", player.isDashing)
 
-        // Advance past remaining cooldown
-        engine.update(player.maxDashCooldown + 0.1f)
+        // Advance past the remaining cooldown (~0.85 s), one fixed tick at a time.
+        repeat(60) { engine.update(1f / 60f) }
         assertEquals(0f, player.dashCooldown, 0.001f)
     }
 
@@ -318,8 +320,9 @@ class BossUnitTest {
         assertEquals(1, player.comboIndex)
         assertTrue(player.comboResetTimer > 0f)
 
-        // Advance through attack 1 duration
-        engine.update(0.24f)
+        // Advance through attack 1 duration, one fixed tick per step (accumulator
+        // semantics: a single update() call never simulates more than ~83 ms).
+        repeat(15) { engine.update(1f / 60f) }
         assertFalse(player.attacking)
 
         // 2. Hit 2 (Horizontal Cleave)
@@ -332,7 +335,7 @@ class BossUnitTest {
         assertTrue(player.vx != vxBeforeHit2) // Forward step surge
 
         // Advance through attack 2 duration
-        engine.update(0.28f)
+        repeat(17) { engine.update(1f / 60f) }
         assertFalse(player.attacking)
 
         // 3. Hit 3 (Crucible Heavy Finisher)
@@ -343,8 +346,8 @@ class BossUnitTest {
         assertEquals(0, player.comboIndex) // Loops back to 0
         assertTrue(player.comboFinisherFlashTimer > 0f)
 
-        // Advance through finisher and past combo reset window (0.65s)
-        engine.update(0.80f)
+        // Advance through the finisher and past the combo reset window (0.65s)
+        repeat(48) { engine.update(1f / 60f) }
         assertEquals(0f, player.comboResetTimer, 0.001f)
         assertEquals(0, player.comboIndex)
     }
@@ -389,7 +392,7 @@ class BossUnitTest {
         assertTrue(enemy.vy < 0f) // Lifted upward by finisher knockback
 
         // Advance through stagger duration (0.85s) -> enemy recovers poise
-        engine.update(0.90f)
+        repeat(54) { engine.update(1f / 60f) }
         assertFalse("Enemy should have recovered from stagger", enemy.isStaggered)
         assertEquals(enemy.maxPoise, enemy.poise, 0.001f)
     }
