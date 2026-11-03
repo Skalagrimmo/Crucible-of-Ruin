@@ -52,13 +52,23 @@ class GameLevelLayoutTest {
             "The final approach should still contain its golem encounter",
             engine.enemies.any { it.x == 5120f && it.type == EnemyArchetype.GOLEM }
         )
+        assertTrue(
+            "The bastion elevator should be a moving platform over the first acid pit",
+            engine.platforms.any { it.motion != null && it.x == 610f && it.y == 330f }
+        )
+        assertTrue(
+            "The laboratory ferry should be a moving platform near the cultist tower",
+            engine.platforms.any { it.motion != null && it.x == 2800f && it.y == 250f }
+        )
     }
 
     @Test
     fun initialWorldObjectCountsRemainStable() {
         val engine = GameEngine()
 
-        assertEquals("Unexpected number of platforms", 28, engine.platforms.size)
+        // Stage 6c (#38): the bastion elevator and the laboratory ferry are
+        // moving platforms on top of the 28 static ones.
+        assertEquals("Unexpected number of platforms", 30, engine.platforms.size)
         assertEquals("Unexpected number of hazards", 6, engine.hazards.size)
         assertEquals("Unexpected number of enemies", 12, engine.enemies.size)
         assertEquals("Unexpected number of breakable urns", 4, engine.breakables.size)

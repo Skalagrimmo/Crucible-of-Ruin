@@ -33,6 +33,9 @@ internal class LevelGrid(val widthPx: Float, val heightPx: Float) {
     private val cellHazard = ByteArray(cols * rows)
     private val cellPlatform = IntArray(cols * rows) { -1 }
 
+    /** Cells each platform index painted, so a re-sync clears only those cells. */
+    private val paintedCells = HashMap<Int, ArrayList<Int>>()
+
     /** The platform list the grid was built from; landing hooks receive these exact instances. */
     private val sourcePlatforms = ArrayList<Platform>()
 
@@ -41,6 +44,7 @@ internal class LevelGrid(val widthPx: Float, val heightPx: Float) {
         cellCollision.fill(0)
         cellHazard.fill(0)
         cellPlatform.fill(-1)
+        paintedCells.clear()
         sourcePlatforms.clear()
         sourcePlatforms.addAll(platforms)
         for (index in platforms.indices) {
@@ -57,10 +61,17 @@ internal class LevelGrid(val widthPx: Float, val heightPx: Float) {
      * together with its index.
      */
     fun syncPlatform(platform: Platform, index: Int) {
-        for (i in cellPlatform.indices) {
-            if (cellPlatform[i] == index) {
-                cellPlatform[i] = -1
-                cellCollision[i] = 0
+        // Stage 6c (#38): clearing walks only the cells this index painted, so a
+        // moving platform re-rasterizes in O(its own cells) instead of a
+        // full-world scan. Cells another platform overwrote keep their owner —
+        // the cellPlatform ownership check skips them.
+        val stale = paintedCells.remove(index)
+        if (stale != null) {
+            for (i in stale) {
+                if (cellPlatform[i] == index) {
+                    cellPlatform[i] = -1
+                    cellCollision[i] = 0
+                }
             }
         }
         while (sourcePlatforms.size <= index) sourcePlatforms.add(platform)
@@ -75,11 +86,14 @@ internal class LevelGrid(val widthPx: Float, val heightPx: Float) {
             // OPEN is a purely visual state — it occupies no collision cells.
             PlatformCollision.OPEN -> return
         }
+        val painted = ArrayList<Int>()
         rasterizeRect(platform.x, platform.y, platform.w, platform.h) { col, row ->
             val i = row * cols + col
             cellCollision[i] = collision
             cellPlatform[i] = index
+            painted.add(i)
         }
+        paintedCells[index] = painted
     }
 
     private fun rasterizeHazard(hazard: Hazard) {

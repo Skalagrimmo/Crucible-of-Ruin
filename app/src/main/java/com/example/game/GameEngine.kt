@@ -329,6 +329,9 @@ class GameEngine(
         /** Clamp for a single raw delta (resume from pause, debugger stalls). */
         private const val MAX_RAW_DT = 0.25f
 
+        /** Stage 6c (#38): feet-to-surface tolerance that marks an actor as riding a mover. */
+        private const val CARRY_SLOP = 2.5f
+
         // Stage 2 (#34): per-archetype configs for the shared ActorPhysics resolver.
         // The player keeps swept thin-platform-safe landing and solid side walls.
         // Stage 5 (#37): the resolver config reads the shared ruler instead of
@@ -400,6 +403,11 @@ class GameEngine(
     // boss gates seal or reopen, and tests that mutate the lists call rebuildLevelGrid().
     internal val levelGrid = LevelGrid(levelWidth, levelHeight)
 
+    // Stage 6c (#38): absolute clock driving the moving platforms' ping-pong
+    // motion. It advances only with the fixed simulation tick, so platform
+    // positions are a pure function of simulated time.
+    private var motionClock = 0f
+
     var state: String = "playing"
     var timeElapsed: Float = 0f
     var enemiesDefeated: Int = 0
@@ -468,6 +476,9 @@ class GameEngine(
 
     fun initLevel() {
         // Clear the previous runtime instances before loading a fresh level layout.
+        // Stage 6c (#38): the motion clock restarts with every fresh layout, so
+        // restarts and replays begin every ride from the same phase.
+        motionClock = 0f
         platforms.clear()
         hazards.clear()
         breakables.clear()
@@ -729,6 +740,7 @@ class GameEngine(
             camera.shake(12f)
         }
 
+        updateMovingPlatforms(dt)
         updatePlayer(dt)
         updateEnemies(dt)
         updateBoss(dt)
@@ -739,6 +751,64 @@ class GameEngine(
 
         camera.update(player.x, player.y, player.facing, levelWidth, levelHeight, dt)
     }
+
+    /**
+     * Stage 6c (#38): advances every platform carrying a [PlatformMotion] along
+     * its ping-pong path, syncs the moved rectangle into the tile grid, and
+     * carries the actors standing on it before the physics passes run.
+     */
+    private fun updateMovingPlatforms(dt: Float) {
+        motionClock += dt
+        for (index in platforms.indices) {
+            val platform = platforms[index]
+            val motion = platform.motion ?: continue
+            val phase = motion.phaseAt(motionClock)
+            val targetX = motion.baseX + motion.dx * phase
+            val targetY = motion.baseY + motion.dy * phase
+            val dx = targetX - platform.x
+            val dy = targetY - platform.y
+            if (dx == 0f && dy == 0f) continue
+            // Riders leave with the pre-move rectangle — the surface they are
+            // actually standing on — before the platform advances.
+            carryRiders(platform, dx, dy)
+            platforms[index] = platform.copy(x = targetX, y = targetY)
+            // Stage 6b (#38): syncPlatform repaints just this platform's cells.
+            levelGrid.syncPlatform(platforms[index], index)
+        }
+    }
+
+    /** Actors standing on a moving surface ride along with it. */
+    private fun carryRiders(platform: Platform, dx: Float, dy: Float) {
+        if (!player.dead && player.grounded && rides(player, platform)) {
+            player.x += dx
+            player.y += dy
+        }
+        for (enemy in enemies) {
+            if (!enemy.dead && enemy.grounded && rides(enemy, platform)) {
+                enemy.x += dx
+                enemy.y += dy
+            }
+        }
+        var i = 0
+        while (i < pickups.activeCount) {
+            val pickup = pickups.get(i)
+            if (rides(pickup, platform)) {
+                pickup.x += dx
+                pickup.y += dy
+            }
+            i++
+        }
+    }
+
+    /**
+     * True when the actor rests on the platform's top: strict x overlap with
+     * feet within the carry slop of the surface. Pickups have no grounded flag,
+     * so their snap-resolved rest position satisfies the same test.
+     */
+    private fun rides(actor: PhysicsActor, platform: Platform): Boolean =
+        actor.x < platform.x + platform.w &&
+            actor.x + actor.w > platform.x &&
+            abs(actor.y + actor.h - platform.y) <= CARRY_SLOP
 
     private fun updatePlayer(dt: Float) {
         if (player.dead) {

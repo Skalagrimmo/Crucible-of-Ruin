@@ -2,6 +2,7 @@ package com.example.game
 
 import androidx.compose.ui.graphics.Color
 import kotlin.math.cos
+import kotlin.math.hypot
 import kotlin.math.sin
 import kotlin.random.Random
 
@@ -54,13 +55,46 @@ val PlatformStyle.defaultCollision: PlatformCollision
 val Platform.oneWay: Boolean
     get() = collision == PlatformCollision.ONE_WAY
 
+/**
+ * Stage 6c (#38): deterministic ping-pong motion for moving platforms.
+ *
+ * The platform glides from its base position to (base + delta) and back along a
+ * triangle wave parametrized by absolute simulation time — no RNG and no
+ * per-frame accumulation, so replays and the fixed-step loop reproduce the
+ * exact same positions at any tick rate.
+ */
+data class PlatformMotion(
+    val baseX: Float,
+    val baseY: Float,
+    val dx: Float,
+    val dy: Float,
+    val speed: Float,
+    val startPhase: Float = 0f
+) {
+    private val distance: Float = hypot(dx, dy)
+
+    /** One full there-and-back cycle in seconds; 0 for a degenerate motion. */
+    val period: Float = if (distance == 0f || speed <= 0f) 0f else 2f * distance / speed
+
+    /**
+     * Triangle-wave position parameter in [0, 1] at absolute time [t]:
+     * 0 at the base, 1 at the far end, linear in between.
+     */
+    fun phaseAt(t: Float): Float {
+        if (period <= 0f) return 0f
+        val u = (t / period + startPhase) % 1f
+        return if (u < 0.5f) u * 2f else 2f - 2f * u
+    }
+}
+
 data class Platform(
     val x: Float,
     val y: Float,
     val w: Float,
     val h: Float,
     val style: PlatformStyle,
-    val collision: PlatformCollision = style.defaultCollision
+    val collision: PlatformCollision = style.defaultCollision,
+    val motion: PlatformMotion? = null
 )
 
 data class Hazard(

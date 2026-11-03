@@ -331,9 +331,12 @@ object ActorPhysics {
         // top + LANDING_SLOP >= previousFeet and top <= current feet.
         if (actor.vy > 0f) {
             val currentFeet = actor.y + actor.h
-            var row = ceil((previousFeet - LANDING_SLOP) / grid.tile).toInt() - 1
+            // The scan starts one tile above the swept band: a moving platform's
+            // true top can sit up to a tile inside its surface cell (Stage 6c),
+            // and the crossed check below compares against that true top.
+            var row = ceil((previousFeet - LANDING_SLOP) / grid.tile).toInt() - 2
             if (row < 0) row = 0
-            while (row * grid.tile + LANDING_SLOP < previousFeet) row++
+            while (row * grid.tile + grid.tile + LANDING_SLOP < previousFeet) row++
             val endRow = floor(currentFeet / grid.tile).toInt()
             while (row <= endRow) {
                 var col = colFrom
@@ -344,8 +347,12 @@ object ActorPhysics {
                     if (matchesCell(grid.collisionCell(col, row), config.landingFilter) &&
                         grid.collisionCell(col, row - 1) == 0
                     ) {
-                        landOn(actor, row * grid.tile, grid.platformIn(col, row))
-                        return
+                        val platform = grid.platformIn(col, row)
+                        val top = platform?.y ?: row * grid.tile
+                        if (top + LANDING_SLOP >= previousFeet && currentFeet >= top) {
+                            landOn(actor, top, platform)
+                            return
+                        }
                     }
                     col++
                 }
@@ -361,7 +368,8 @@ object ActorPhysics {
                 var col = colFrom
                 while (col <= colTo) {
                     if (matchesCell(grid.collisionCell(col, row), config.overlapFilter)) {
-                        landOn(actor, row * grid.tile, grid.platformIn(col, row))
+                        val platform = grid.platformIn(col, row)
+                        landOn(actor, platform?.y ?: row * grid.tile, platform)
                         return
                     }
                     col++
@@ -405,12 +413,14 @@ object ActorPhysics {
                 var col = colFrom
                 while (col <= colTo) {
                     val cell = grid.collisionCell(col, row)
+                    val platform = grid.platformIn(col, row)
+                    val top = platform?.y ?: row * grid.tile
                     if (matchesCell(cell, config.landingFilter) &&
                         (cell != 2 ||
-                            (row * grid.tile + LANDING_SLOP >= previousFeet &&
+                            (top + LANDING_SLOP >= previousFeet &&
                                 grid.collisionCell(col, row - 1) == 0))
                     ) {
-                        landOn(actor, row * grid.tile, grid.platformIn(col, row))
+                        landOn(actor, top, platform)
                         return
                     }
                     col++
@@ -451,7 +461,8 @@ object ActorPhysics {
             var col = colFrom
             while (col <= colTo) {
                 if (matchesCell(grid.collisionCell(col, row), config.landingFilter)) {
-                    actor.y = row * grid.tile - actor.h
+                    val platform = grid.platformIn(col, row)
+                    actor.y = (platform?.y ?: row * grid.tile) - actor.h
                     actor.vy = 0f
                     return
                 }
