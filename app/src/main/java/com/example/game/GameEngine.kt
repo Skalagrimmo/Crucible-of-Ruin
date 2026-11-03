@@ -395,6 +395,11 @@ class GameEngine(
     val levelWidth = 6200f
     val levelHeight = 540f
 
+    // Stage 6b (#38): the tile grid mirrors the platform/hazard lists for O(1)
+    // collision lookups. It is rebuilt on every initLevel, kept in sync when the
+    // boss gates seal or reopen, and tests that mutate the lists call rebuildLevelGrid().
+    internal val levelGrid = LevelGrid(levelWidth, levelHeight)
+
     var state: String = "playing"
     var timeElapsed: Float = 0f
     var enemiesDefeated: Int = 0
@@ -476,7 +481,20 @@ class GameEngine(
         breakables.addAll(layout.breakables)
         enemies.addAll(layout.enemies)
         boss = layout.boss
+        // Stage 6b (#38): rasterize the fresh layout into the tile grid so the
+        // resolvers, ledge probes, and projectile checks all run against cells.
+        levelGrid.buildFrom(platforms, hazards)
         damageNumbers.clear()
+    }
+
+    /**
+     * Re-rasterizes the runtime platform/hazard lists into the tile grid.
+     * Production code only mutates the lists through initLevel and gate
+     * sealing (which syncs in place); tests that mutate the lists directly
+     * must call this so the grid mirrors their geometry.
+     */
+    fun rebuildLevelGrid() {
+        levelGrid.buildFrom(platforms, hazards)
     }
 
     /**
@@ -488,6 +506,8 @@ class GameEngine(
             val platform = platforms[index]
             if (platform.style == PlatformStyle.BOSS_GATE && platform.collision != collision) {
                 platforms[index] = platform.copy(collision = collision)
+                // Stage 6b (#38): keep the tile grid in sync with the swapped entry.
+                levelGrid.syncPlatform(platforms[index], index)
             }
         }
     }
@@ -884,7 +904,8 @@ class GameEngine(
         }
 
         // Stage 2 (#34): shared resolver — swept landing, solid side walls.
-        ActorPhysics.moveAndResolve(player, platforms, PLAYER_PHYSICS, dt)
+        // Stage 6b (#38): resolves against the tile grid instead of the list.
+        ActorPhysics.moveAndResolve(player, levelGrid, PLAYER_PHYSICS, dt)
 
         // Hazards
         for (h in hazards) {
@@ -1192,11 +1213,9 @@ class GameEngine(
             if (e.grounded && e.state == "patrol") {
                 val probeX = if (e.facing > 0) e.x + e.w + 6f else e.x - 6f
                 val feetY = e.y + e.h
-                val groundAhead = platforms.any { p ->
-                    p.collision != PlatformCollision.OPEN &&
-                        probeX >= p.x && probeX <= p.x + p.w &&
-                        abs(p.y - feetY) <= 2f
-                }
+                // Stage 6b (#38): the probe reads the tile grid (O(1) instead of a
+                // list scan); the grid keeps the legacy inclusive right edge.
+                val groundAhead = levelGrid.hasStandableSurfaceNear(probeX, feetY)
                 if (!groundAhead) {
                     e.facing = -e.facing
                     e.vx = e.facing * e.speed
@@ -1208,7 +1227,8 @@ class GameEngine(
             // platform and flip on walls; CHERUB flyers ignore platforms entirely.
             ActorPhysics.moveAndResolve(
                 e,
-                platforms,
+                // Stage 6b (#38): resolves against the tile grid instead of the list.
+                levelGrid,
                 if (e.type == EnemyArchetype.CHERUB) ENEMY_FLYER_PHYSICS else ENEMY_GROUNDED_PHYSICS,
                 dt
             )
@@ -1275,14 +1295,9 @@ class GameEngine(
 
             // Platform hit
             if (proj.type != ProjectileType.SHOCKWAVE) {
-                var collided = false
-                for (p in platforms) {
-                    if (p.collision == PlatformCollision.OPEN) continue
-                    if (aabbIntersects(proj.x, proj.y, proj.w, proj.h, p.x, p.y, p.w, p.h)) {
-                        collided = true
-                        break
-                    }
-                }
+                // Stage 6b (#38): the tile grid answers the same question in O(1)
+                // (open gates rasterize as empty, matching the old OPEN skip).
+                val collided = levelGrid.rectTouchesCollision(proj.x, proj.y, proj.w, proj.h)
                 if (collided) {
                     explodeProjectile(proj)
                     projectiles.removeAt(i)
@@ -1367,7 +1382,8 @@ class GameEngine(
         while (i < pickups.activeCount) {
             val pk = pickups.get(i)
             // Stage 2 (#34): shared Y-only resolver with the new terminal velocity.
-            ActorPhysics.moveAndResolve(pk, platforms, PICKUP_PHYSICS, dt)
+            // Stage 6b (#38): resolves against the tile grid instead of the list.
+            ActorPhysics.moveAndResolve(pk, levelGrid, PICKUP_PHYSICS, dt)
 
             // Stage 4 (#36): a pickup that falls out of the world despawns instead
             // of updating forever below the level.

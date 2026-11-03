@@ -35,6 +35,8 @@ class EnvironmentBoundsTest {
         // platform so it never dies and respawns into the test scene.
         player.x = 5000f
         platforms.add(Platform(4900f, 460f, 200f, 80f, PlatformStyle.STONE))
+        // Stage 6b (#38): the tile grid must mirror the test geometry.
+        rebuildLevelGrid()
     }
 
     @Test
@@ -42,6 +44,8 @@ class EnvironmentBoundsTest {
         val engine = bareEngine()
         // A short floor with nothing after x=200: a pit.
         engine.platforms.add(Platform(0f, 460f, 200f, 80f, PlatformStyle.STONE))
+        // Stage 6b (#38): the tile grid must mirror the test geometry.
+        engine.rebuildLevelGrid()
         val lurker = EnemyEntity(120f, 424f, EnemyArchetype.LURKER, 500f)
         lurker.facing = 1
         engine.enemies.add(lurker)

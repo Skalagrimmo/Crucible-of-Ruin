@@ -33,6 +33,8 @@ class FixedTimestepTest {
         engine.platforms.add(Platform(0f, 460f, 400f, 80f, PlatformStyle.STONE))
         engine.hazards.clear()
         engine.enemies.clear()
+        // Stage 6b (#38): the tile grid must mirror the test geometry.
+        engine.rebuildLevelGrid()
 
         engine.player.x = 200f
         engine.player.y = 460f - engine.player.h
@@ -53,6 +55,8 @@ class FixedTimestepTest {
         )
         engine.hazards.clear()
         engine.enemies.clear()
+        // Stage 6b (#38): the tile grid must mirror the test geometry.
+        engine.rebuildLevelGrid()
 
         engine.player.x = 150f
         engine.player.y = 100f

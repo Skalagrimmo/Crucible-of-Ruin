@@ -44,6 +44,8 @@ class GameEnginePhysicsTest {
         engine.platforms.add(Platform(0f, 460f, 100f, 80f, PlatformStyle.STONE))
         engine.hazards.clear()
         engine.enemies.clear()
+        // Stage 6b (#38): the tile grid must mirror the test geometry.
+        engine.rebuildLevelGrid()
 
         engine.player.x = 80f
         engine.player.y = 416f
@@ -70,6 +72,8 @@ class GameEnginePhysicsTest {
         engine.platforms.add(Platform(0f, 460f, 100f, 80f, PlatformStyle.STONE))
         engine.hazards.clear()
         engine.enemies.clear()
+        // Stage 6b (#38): the tile grid must mirror the test geometry.
+        engine.rebuildLevelGrid()
 
         // The player's left edge has just cleared the platform, but the coyote
         // timer from the most recent landing has not expired.
@@ -128,6 +132,8 @@ class GameEnginePhysicsTest {
         )
         engine.hazards.clear()
         engine.enemies.clear()
+        // Stage 6b (#38): the tile grid must mirror the test geometry.
+        engine.rebuildLevelGrid()
 
         engine.player.x = 150f
         engine.player.y = 100f
@@ -153,6 +159,8 @@ class GameEnginePhysicsTest {
         )
         engine.hazards.clear()
         engine.enemies.clear()
+        // Stage 6b (#38): the tile grid must mirror the test geometry.
+        engine.rebuildLevelGrid()
 
         engine.player.x = 150f
         engine.player.y = 220f
@@ -178,6 +186,8 @@ class GameEnginePhysicsTest {
         )
         engine.hazards.clear()
         engine.enemies.clear()
+        // Stage 6b (#38): the tile grid must mirror the test geometry.
+        engine.rebuildLevelGrid()
 
         engine.player.x = 60f
         engine.player.y = 180f
@@ -199,6 +209,8 @@ class GameEnginePhysicsTest {
         engine.hazards.clear()
         engine.hazards.add(Hazard(100f, 100f, 100f, 50f, HazardType.ACID))
         engine.enemies.clear()
+        // Stage 6b (#38): the tile grid must mirror the test geometry.
+        engine.rebuildLevelGrid()
 
         engine.player.x = 120f
         engine.player.y = 100f
