@@ -52,7 +52,9 @@ class OneWayPlatformTest {
         engine.player.grounded = false
         engine.inputRight = true
 
-        repeat(10) {
+        // Air acceleration reaches ~113 px/s only after ten ticks; twenty ticks put
+        // the player firmly inside the girder column while still inside its band.
+        repeat(20) {
             engine.update(1f / 60f)
         }
 
