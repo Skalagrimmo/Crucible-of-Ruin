@@ -391,6 +391,25 @@ class GameEngine {
         damageNumbers.clear()
     }
 
+    /**
+     * Swaps the collision behavior of the boss-arena gates. Platform is immutable,
+     * so the entries are replaced through [copy] instead of being mutated in place.
+     */
+    private fun setBossGatesCollision(collision: PlatformCollision) {
+        for (index in platforms.indices) {
+            val platform = platforms[index]
+            if (platform.style == PlatformStyle.BOSS_GATE && platform.collision != collision) {
+                platforms[index] = platform.copy(collision = collision)
+            }
+        }
+    }
+
+    /** Reopens the gates and recreates the boss so the fight starts from scratch. */
+    private fun resetBossEncounter() {
+        setBossGatesCollision(PlatformCollision.OPEN)
+        boss = GameLevelFactory.createBoss()
+    }
+
     fun onJumpPressed() {
         player.jumpBuffer = 0.15f
     }
@@ -576,9 +595,10 @@ class GameEngine {
             }
         }
 
-        // Boss trigger
+        // Boss trigger: seals the arena gates behind the player (AoS room-door pattern).
         if (!boss.active && player.x > 5340f) {
             boss.active = true
+            setBossGatesCollision(PlatformCollision.SOLID)
             audio.play("boss_roar")
             camera.shake(12f)
         }
@@ -600,6 +620,11 @@ class GameEngine {
             if (player.respawnTimer <= 0f) {
                 player.respawn(activeCheckpoint)
                 camera.x = player.x - 400f
+                // A death during the boss fight resets the encounter: the gates
+                // reopen so the arena is reachable again and the boss starts fresh.
+                if (boss.active) {
+                    resetBossEncounter()
+                }
             }
             return
         }
@@ -1126,6 +1151,7 @@ class GameEngine {
             if (proj.type != ProjectileType.SHOCKWAVE) {
                 var collided = false
                 for (p in platforms) {
+                    if (p.collision == PlatformCollision.OPEN) continue
                     if (aabbIntersects(proj.x, proj.y, proj.w, proj.h, p.x, p.y, p.w, p.h)) {
                         collided = true
                         break
@@ -1218,6 +1244,7 @@ class GameEngine {
             pk.y += pk.vy * dt
 
             for (p in platforms) {
+                if (p.collision == PlatformCollision.OPEN) continue
                 if (aabbIntersects(pk.x, pk.y, pk.w, pk.h, p.x, p.y, p.w, p.h)) {
                     pk.y = p.y - pk.h
                     pk.vy = 0f

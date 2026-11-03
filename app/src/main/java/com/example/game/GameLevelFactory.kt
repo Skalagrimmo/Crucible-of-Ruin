@@ -24,6 +24,9 @@ internal data class GameLevelLayout(
  * collisions, combat, and lifecycle/update order.
  */
 internal object GameLevelFactory {
+    /** Creates a fresh boss instance for the initial layout and encounter resets. */
+    fun createBoss(): BaseBoss = CrucibleChimeraBoss(5750f, 360f)
+
     fun create(): GameLevelLayout {
         val platforms = mutableListOf<Platform>()
         val hazards = mutableListOf<Hazard>()
@@ -95,8 +98,10 @@ internal object GameLevelFactory {
 
         // --- BOSS ARENA: GRAND SANCTUM (x: 5270 - 6200) ---
         platforms.add(Platform(5270f, 450f, 930f, 90f, PlatformStyle.STONE))
-        platforms.add(Platform(5270f, 100f, 30f, 350f, PlatformStyle.BOSS_GATE))
-        platforms.add(Platform(6170f, 100f, 30f, 350f, PlatformStyle.BOSS_GATE))
+        // Arena gates start open (no collision) so the approach is walkable.
+        // GameEngine seals them when the boss encounter activates.
+        platforms.add(Platform(5270f, 100f, 30f, 350f, PlatformStyle.BOSS_GATE, PlatformCollision.OPEN))
+        platforms.add(Platform(6170f, 100f, 30f, 350f, PlatformStyle.BOSS_GATE, PlatformCollision.OPEN))
         platforms.add(Platform(5420f, 330f, 120f, 18f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY))
         platforms.add(Platform(5880f, 330f, 120f, 18f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY))
 
@@ -105,7 +110,7 @@ internal object GameLevelFactory {
             hazards = hazards,
             breakables = breakables,
             enemies = enemies,
-            boss = CrucibleChimeraBoss(5750f, 360f)
+            boss = createBoss()
         )
     }
 }

@@ -5,6 +5,7 @@ import com.example.game.GameEngine
 import com.example.game.Hazard
 import com.example.game.HazardType
 import com.example.game.Platform
+import com.example.game.PlatformCollision
 import com.example.game.PlatformStyle
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -44,8 +45,8 @@ class GameLevelLayoutTest {
             engine.platforms.contains(Platform(4360f, 420f, 320f, 120f, PlatformStyle.STONE))
         )
         assertTrue(
-            "Boss arena gates should remain part of the level geometry",
-            engine.platforms.contains(Platform(5270f, 100f, 30f, 350f, PlatformStyle.BOSS_GATE))
+            "Boss arena gates should remain part of the level geometry, open before the fight",
+            engine.platforms.contains(Platform(5270f, 100f, 30f, 350f, PlatformStyle.BOSS_GATE, PlatformCollision.OPEN))
         )
         assertTrue(
             "The final approach should still contain its golem encounter",
