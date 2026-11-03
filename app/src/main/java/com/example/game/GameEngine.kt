@@ -76,10 +76,12 @@ class PlayerEntity(override var x: Float, override var y: Float) : PhysicsActor 
     var maxFlasks: Int = 3
     var flasks: Int = 3
 
-    val runSpeed: Float = 190f
-    val airSpeed: Float = 160f
-    val jumpForce: Float = -500f
-    val gravity: Float = 1050f
+    // Stage 5 (#37): the movement ruler lives in PhysicsTuning so gameplay code
+    // and the reachability tests read a single source of truth.
+    val runSpeed: Float = PhysicsTuning.RUN_SPEED
+    val airSpeed: Float = PhysicsTuning.AIR_SPEED
+    val jumpForce: Float = -PhysicsTuning.JUMP_FORCE
+    val gravity: Float = PhysicsTuning.GRAVITY
     var coyoteTime: Float = 0f
     var jumpBuffer: Float = 0f
 
@@ -322,9 +324,11 @@ class GameEngine {
 
         // Stage 2 (#34): per-archetype configs for the shared ActorPhysics resolver.
         // The player keeps swept thin-platform-safe landing and solid side walls.
+        // Stage 5 (#37): the resolver config reads the shared ruler instead of
+        // duplicating movement literals.
         private val PLAYER_PHYSICS = ActorPhysicsConfig(
-            gravity = 1050f,
-            terminalVelocity = 750f,
+            gravity = PhysicsTuning.GRAVITY,
+            terminalVelocity = PhysicsTuning.TERMINAL_VELOCITY,
             horizontalFilter = PlatformFilter.SOLID_ONLY,
             verticalMode = VerticalResolveMode.SWEPT_LANDING,
             landingFilter = PlatformFilter.NOT_OPEN,

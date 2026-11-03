@@ -102,8 +102,12 @@ internal object GameLevelFactory {
         // GameEngine seals them when the boss encounter activates.
         platforms.add(Platform(5270f, 100f, 30f, 350f, PlatformStyle.BOSS_GATE, PlatformCollision.OPEN))
         platforms.add(Platform(6170f, 100f, 30f, 350f, PlatformStyle.BOSS_GATE, PlatformCollision.OPEN))
-        platforms.add(Platform(5420f, 330f, 120f, 18f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY))
-        platforms.add(Platform(5880f, 330f, 120f, 18f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY))
+        // Stage 5 (#37): arena girders lowered from y=330 to y=350. At y=330 they
+        // sat 120 px above the floor — 1 px over the 119 px base-jump apex, making
+        // them unreachable without the alchemy speed buff. LevelReachabilityTest
+        // pins this choice against PhysicsTuning.
+        platforms.add(Platform(5420f, 350f, 120f, 18f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY))
+        platforms.add(Platform(5880f, 350f, 120f, 18f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY))
 
         return GameLevelLayout(
             platforms = platforms,
