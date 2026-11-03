@@ -32,6 +32,12 @@ This document describes the code as it exists today. It is a map of current resp
 
 A small naming detail worth knowing: `PlayerEntity` and `EnemyEntity` currently live in `GameEngine.kt`; `GameModels.kt` holds many of the other world/effect models and pools.
 
+## Physics stack (Stages 2, 3, 5, 6a–6c)
+
+- `ActorPhysics.moveAndResolve` is the single shared resolver for every archetype. The list overload is the reference implementation; the tile-grid overload (`LevelGrid`, 10 px cells, Stage 6b) is what the engine runs, and `LevelGridParityTest` pins the two together on the real world.
+- Moving platforms (Stage 6c) carry a `PlatformMotion` ping-pong descriptor and stay in the same list and grid as static geometry. `GameEngine.updateMovingPlatforms` advances them on the fixed-step clock, re-rasterizes just their cells through `LevelGrid.syncPlatform`, and carries the actors standing on the surface. Landings snap to the platform's true top — identical to the cell top on the tile-aligned static world, so list/grid parity is unchanged.
+- The gameplay RNG is seeded per engine (Stage 6a). Platform motion is a pure function of simulated time and never rolls.
+
 ## Tiled level-editor prototype
 
 `app/src/main/assets/levels/ruined_bastion.tmx` is an editable first-section prototype. `TiledLevelLoader` maps object-layer rectangles and custom properties into existing Kotlin models. The TMX uses world-pixel coordinates so current collision boxes can be preserved without introducing tile-based collision.

@@ -38,6 +38,18 @@ internal object GameLevelFactory {
         platforms.add(Platform(680f, 460f, 500f, 80f, PlatformStyle.STONE))
         hazards.add(Hazard(600f, 500f, 80f, 40f, HazardType.ACID))
 
+        // Stage 6c (#38): the bastion elevator — a one-way girder riding up and
+        // down across the first acid pit. The bottom stop (top at 450) sits one
+        // tile above the lower floors; the top stop (330) lines up with the
+        // ledge stack's jump band. Base and swept path stay clear of every
+        // static rectangle, so a rider is never pushed into a wall.
+        platforms.add(
+            Platform(
+                610f, 330f, 60f, 20f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY,
+                PlatformMotion(baseX = 610f, baseY = 330f, dx = 0f, dy = 120f, speed = 60f)
+            )
+        )
+
         platforms.add(Platform(240f, 390f, 90f, 20f, PlatformStyle.STONE_LEDGE, PlatformCollision.ONE_WAY))
         platforms.add(Platform(360f, 320f, 100f, 20f, PlatformStyle.STONE_LEDGE, PlatformCollision.ONE_WAY))
         platforms.add(Platform(500f, 250f, 110f, 20f, PlatformStyle.STONE_LEDGE, PlatformCollision.ONE_WAY))
@@ -66,6 +78,18 @@ internal object GameLevelFactory {
         platforms.add(Platform(2540f, 400f, 130f, 20f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY))
         platforms.add(Platform(2730f, 340f, 140f, 20f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY))
         hazards.add(Hazard(2480f, 510f, 350f, 30f, HazardType.ACID))
+
+        // Stage 6c (#38): the laboratory ferry — a one-way girder gliding between
+        // the upper girder and the cultist tower. Its right edge stops exactly at
+        // the tower wall (x 2940), so the swept cells never overlap the tower's
+        // static cells and a re-sync can never punch a hole in its roof; at the
+        // far stop a rider steps down 10 px onto the tower's roof.
+        platforms.add(
+            Platform(
+                2800f, 250f, 80f, 20f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY,
+                PlatformMotion(baseX = 2800f, baseY = 250f, dx = 60f, dy = 0f, speed = 60f)
+            )
+        )
 
         platforms.add(Platform(2940f, 260f, 160f, 280f, PlatformStyle.STONE))
         enemies.add(EnemyEntity(3000f, 210f, EnemyArchetype.CULTIST, 0f))

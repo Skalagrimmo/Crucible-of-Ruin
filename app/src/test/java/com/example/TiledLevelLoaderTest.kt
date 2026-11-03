@@ -70,7 +70,9 @@ class TiledLevelLoaderTest {
         val fullLayout = GameLevelFactory.create()
         assertTrue(fullLayout.platforms.contains(section.platforms.first()))
         assertTrue(fullLayout.hazards.contains(section.hazards.first()))
-        assertEquals(28, fullLayout.platforms.size)
+        // Stage 6c (#38): the two moving platforms (the bastion elevator and the
+        // laboratory ferry) join the 28 static ones in the factory layout.
+        assertEquals(30, fullLayout.platforms.size)
         assertEquals(6, fullLayout.hazards.size)
     }
 
