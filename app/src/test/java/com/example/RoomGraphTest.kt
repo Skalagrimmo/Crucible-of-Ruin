@@ -102,6 +102,10 @@ class RoomGraphTest {
     @Test
     fun crossingBoundariesGrowsTheVisitedSet() {
         val engine = GameEngine()
+        // Chart the spawn room first — the run begins in the entry hall.
+        engine.update(1f / 60f)
+        assertEquals("bastion_entry", engine.currentRoom!!.id)
+
         // Teleport to the Bastion Ascent (floor 680-1180, top 460).
         engine.player.x = 1000f
         engine.player.y = 416f
@@ -147,10 +151,14 @@ class RoomGraphTest {
     @Test
     fun restartResetsTheMapButKeepsTheGraph() {
         val engine = GameEngine()
+        // Chart the entry hall at spawn, then push the map forward by teleport.
+        engine.update(1f / 60f)
         engine.player.x = 5000f
         engine.player.y = 386f
+        engine.player.vy = 0f
+        engine.player.grounded = true
         engine.update(1f / 60f)
-        assertEquals(3, engine.visitedRooms.size)
+        assertEquals(2, engine.visitedRooms.size)
 
         engine.restart()
         assertEquals(
