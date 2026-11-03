@@ -231,7 +231,12 @@ class GameEnginePhysicsTest {
         engine.player.vx = 0f
         engine.player.vy = 0f
 
-        engine.update(0.05f)
+        // The fixed-step accumulator drains at most five 1/60 s ticks per call, and a
+        // 0.05 s delta only yields two ticks of float time (3 * 1/60 rounds above
+        // 0.05f) — not enough fall distance to cross the death boundary from one
+        // pixel above it. Run the same 0.05 s span as three explicit fixed ticks so
+        // the pit fall still crosses the boundary.
+        repeat(3) { engine.update(1f / 60f) }
 
         assertTrue("Falling below the level should mark the player dead", engine.player.dead)
         assertEquals("Pit-fall damage should exhaust player health", 0f, engine.player.hp, 0.001f)
