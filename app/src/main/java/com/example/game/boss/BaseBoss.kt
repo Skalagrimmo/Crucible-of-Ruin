@@ -1,8 +1,13 @@
 package com.example.game.boss
 
 import androidx.compose.ui.graphics.Color
+import com.example.game.ActorPhysics
+import com.example.game.ActorPhysicsConfig
 import com.example.game.GameEngine
-import com.example.game.aabbIntersects
+import com.example.game.PhysicsActor
+import com.example.game.Platform
+import com.example.game.PlatformFilter
+import com.example.game.VerticalResolveMode
 import com.example.game.status.CombatStatusType
 import com.example.game.status.StatusEffectController
 
@@ -13,19 +18,19 @@ import com.example.game.status.StatusEffectController
  * 3. Precision weak-point targeting, critical hits, and stagger breakdown
  */
 abstract class BaseBoss(
-    var x: Float,
-    var y: Float,
-    val w: Float,
-    val h: Float,
+    override var x: Float,
+    override var y: Float,
+    override val w: Float,
+    override val h: Float,
     val maxHp: Float,
     val bossName: String,
     val weakPoint: WeakPoint
-) {
+) : PhysicsActor {
     var hp: Float = maxHp
-    var facing: Int = -1 // 1 = right, -1 = left
-    var vx: Float = 0f
-    var vy: Float = 0f
-    var grounded: Boolean = false
+    override var facing: Int = -1 // 1 = right, -1 = left
+    override var vx: Float = 0f
+    override var vy: Float = 0f
+    override var grounded: Boolean = false
     var dead: Boolean = false
     var active: Boolean = false
     var lastHitId: Long = 0L
@@ -33,6 +38,9 @@ abstract class BaseBoss(
 
     // Combat status effect controller (DoTs, debuffs, corrosion, burn)
     val statusController = StatusEffectController()
+
+    /** Corrosion slow scales the boss's horizontal step inside the shared resolver (Stage 2, #34). */
+    override fun horizontalSpeedMultiplier(): Float = statusController.getSpeedMultiplier()
 
     // --- State Machine ---
     var state: BossState = BossState.IDLE
@@ -260,40 +268,33 @@ abstract class BaseBoss(
     }
 
     protected open fun updatePhysics(dt: Float, engine: GameEngine) {
-        vy += 950f * dt
-        if (vy > 750f) vy = 750f
+        // Stage 2 (#34): the shared ActorPhysics resolver replaces the private
+        // axis-separated loops. Behavior is unchanged — gravity 950 with terminal
+        // 750, resolve against every platform, corrosion-scaled horizontal step,
+        // and the landing hook below still fires for subclasses.
+        physicsEngine = engine
+        ActorPhysics.moveAndResolve(this, engine.platforms, BOSS_PHYSICS_CONFIG, dt)
+        physicsEngine = null
+    }
 
-        // Horizontal movement with corrosion slow penalty & collision
-        val effectiveVx = vx * statusController.getSpeedMultiplier()
-        x += effectiveVx * dt
-        for (p in engine.platforms) {
-            if (aabbIntersects(x, y, w, h, p.x, p.y, p.w, p.h)) {
-                if (effectiveVx > 0f) {
-                    x = p.x - w
-                    vx = 0f
-                } else if (effectiveVx < 0f) {
-                    x = p.x + p.w
-                    vx = 0f
-                }
-            }
-        }
+    /** Transient engine reference so the shared resolver's landing hook can reach it. */
+    private var physicsEngine: GameEngine? = null
 
-        // Vertical movement & collision
-        y += vy * dt
-        grounded = false
-        for (p in engine.platforms) {
-            if (aabbIntersects(x, y, w, h, p.x, p.y, p.w, p.h)) {
-                if (vy > 0f) {
-                    y = p.y - h
-                    vy = 0f
-                    grounded = true
-                    onLandedOnPlatform(p, engine)
-                } else if (vy < 0f) {
-                    y = p.y + p.h
-                    vy = 0f
-                }
-            }
-        }
+    /** Routes the shared resolver's landing event to the engine-aware boss hook. */
+    override fun onLanded(platform: Platform) {
+        val engine = physicsEngine ?: return
+        onLandedOnPlatform(platform, engine)
+    }
+
+    companion object {
+        /** Boss resolver config (Stage 2, #34): overlaps every platform on both axes. */
+        private val BOSS_PHYSICS_CONFIG = ActorPhysicsConfig(
+            gravity = 950f,
+            terminalVelocity = 750f,
+            horizontalFilter = PlatformFilter.ALL,
+            verticalMode = VerticalResolveMode.OVERLAP_LAND_OR_BLOCK,
+            landingFilter = PlatformFilter.ALL
+        )
     }
 
     protected open fun onLandedOnPlatform(platform: com.example.game.Platform, engine: GameEngine) {}

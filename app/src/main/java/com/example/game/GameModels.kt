@@ -84,13 +84,19 @@ class BreakableUrn(
     var dead: Boolean = false
 )
 
-class PickupItem {
-    var x: Float = 0f
-    var y: Float = 0f
-    var w: Float = 16f
-    var h: Float = 16f
+class PickupItem : PhysicsActor {
+    override var x: Float = 0f
+    override var y: Float = 0f
+    override var w: Float = 16f
+    override var h: Float = 16f
     var type: String = "health"
-    var vy: Float = -130f
+    override var vy: Float = -130f
+
+    // Present only to satisfy the shared actor contract (Stage 2, #34): pickups
+    // move on the Y axis only and never read these fields.
+    override var vx: Float = 0f
+    override var grounded: Boolean = false
+    override var facing: Int = 1
 
     fun init(spawnX: Float, spawnY: Float, pickupType: String) {
         x = spawnX
