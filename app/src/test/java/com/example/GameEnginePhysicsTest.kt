@@ -109,6 +109,17 @@ class GameEnginePhysicsTest {
     }
 
     @Test
+    fun platformStylesDeclareTheirDefaultCollisionBehavior() {
+        val stoneLedge = Platform(0f, 100f, 80f, 16f, PlatformStyle.STONE_LEDGE)
+        val ironGirder = Platform(100f, 100f, 80f, 16f, PlatformStyle.IRON_GIRDER)
+        val stoneFloor = Platform(200f, 100f, 80f, 16f, PlatformStyle.STONE)
+
+        assertEquals(PlatformCollision.ONE_WAY, stoneLedge.collision)
+        assertEquals(PlatformCollision.ONE_WAY, ironGirder.collision)
+        assertEquals(PlatformCollision.SOLID, stoneFloor.collision)
+    }
+
+    @Test
     fun oneWayPlatformSnapsLandingToExactTopAtThirtyFps() {
         val engine = GameEngine()
         engine.platforms.clear()
