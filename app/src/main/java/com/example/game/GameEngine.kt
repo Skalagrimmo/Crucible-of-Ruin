@@ -58,13 +58,18 @@ class Camera2D(val viewW: Float = 960f, val viewH: Float = 540f) {
     }
 }
 
-class PlayerEntity(var x: Float, var y: Float) {
-    val w: Float = 26f
-    val h: Float = 44f
-    var vx: Float = 0f
-    var vy: Float = 0f
-    var facing: Int = 1 // 1 = right, -1 = left
-    var grounded: Boolean = false
+class PlayerEntity(override var x: Float, override var y: Float) : PhysicsActor {
+    override val w: Float = 26f
+    override val h: Float = 44f
+    override var vx: Float = 0f
+    override var vy: Float = 0f
+    override var facing: Int = 1 // 1 = right, -1 = left
+    override var grounded: Boolean = false
+
+    /** Restores the jump grace window whenever a resolver pass lands the player (Stage 2, #34). */
+    override fun onLanded(platform: Platform) {
+        coyoteTime = 0.12f
+    }
 
     var maxHp: Float = 100f
     var hp: Float = 100f
@@ -177,25 +182,25 @@ enum class EnemyArchetype {
 }
 
 class EnemyEntity(
-    var x: Float,
-    var y: Float,
+    override var x: Float,
+    override var y: Float,
     val type: EnemyArchetype,
     val patrolRange: Float = 160f
-) {
+) : PhysicsActor {
     val startX: Float = x
     val startY: Float = y
-    var facing: Int = -1
-    var grounded: Boolean = false
+    override var facing: Int = -1
+    override var grounded: Boolean = false
     var dead: Boolean = false
     var lastHitId: Long = 0L
     var hurtTimer: Float = 0f
     var stateTimer: Float = 0f
     var state: String = "patrol"
-    var vx: Float = 0f
-    var vy: Float = 0f
+    override var vx: Float = 0f
+    override var vy: Float = 0f
 
-    val w: Float
-    val h: Float
+    override val w: Float
+    override val h: Float
     var hp: Float
     val maxHp: Float
     val speed: Float
@@ -314,6 +319,45 @@ class GameEngine {
 
         /** Clamp for a single raw delta (resume from pause, debugger stalls). */
         private const val MAX_RAW_DT = 0.25f
+
+        // Stage 2 (#34): per-archetype configs for the shared ActorPhysics resolver.
+        // The player keeps swept thin-platform-safe landing and solid side walls.
+        private val PLAYER_PHYSICS = ActorPhysicsConfig(
+            gravity = 1050f,
+            terminalVelocity = 750f,
+            horizontalFilter = PlatformFilter.SOLID_ONLY,
+            verticalMode = VerticalResolveMode.SWEPT_LANDING,
+            landingFilter = PlatformFilter.NOT_OPEN,
+            overlapFilter = PlatformFilter.SOLID_ONLY
+        )
+
+        // Grounded archetypes collide with every platform and turn around on walls.
+        private val ENEMY_GROUNDED_PHYSICS = ActorPhysicsConfig(
+            gravity = 950f,
+            terminalVelocity = 650f,
+            horizontalFilter = PlatformFilter.ALL,
+            flipOnWall = true,
+            verticalMode = VerticalResolveMode.OVERLAP_LAND_OR_BLOCK,
+            landingFilter = PlatformFilter.ALL
+        )
+
+        // CHERUB flyers move by velocity but ignore gravity and platforms entirely.
+        private val ENEMY_FLYER_PHYSICS = ActorPhysicsConfig(
+            gravity = 0f,
+            terminalVelocity = 650f,
+            ignorePlatforms = true
+        )
+
+        // Pickups fall on the Y axis only and snap onto any non-open surface. The
+        // terminal velocity is the one sanctioned addition of Stage 2 (#34): it
+        // stops long-fall tunneling through thin platforms.
+        private val PICKUP_PHYSICS = ActorPhysicsConfig(
+            gravity = 800f,
+            terminalVelocity = 750f,
+            horizontalMotion = false,
+            verticalMode = VerticalResolveMode.OVERLAP_SNAP_TO_TOP,
+            landingFilter = PlatformFilter.NOT_OPEN
+        )
     }
 
     /** Sub-tick time carried between update() calls (fixed-step accumulator). */
@@ -817,7 +861,8 @@ class GameEngine {
             }
         }
 
-        GamePhysics.movePlayer(player, platforms, dt)
+        // Stage 2 (#34): shared resolver — swept landing, solid side walls.
+        ActorPhysics.moveAndResolve(player, platforms, PLAYER_PHYSICS, dt)
 
         // Hazards
         for (h in hazards) {
@@ -1118,43 +1163,15 @@ class GameEngine {
             }
             }
 
-            if (e.type != EnemyArchetype.CHERUB) {
-                e.vy += 950f * dt
-                if (e.vy > 650f) e.vy = 650f
-            }
-
-            e.x += e.vx * dt
-            if (e.type != EnemyArchetype.CHERUB) {
-                for (p in platforms) {
-                    if (aabbIntersects(e.x, e.y, e.w, e.h, p.x, p.y, p.w, p.h)) {
-                        if (e.vx > 0f) {
-                            e.x = p.x - e.w
-                            e.facing = -1
-                        } else if (e.vx < 0f) {
-                            e.x = p.x + p.w
-                            e.facing = 1
-                        }
-                        e.vx = 0f
-                    }
-                }
-            }
-
-            e.y += e.vy * dt
-            if (e.type != EnemyArchetype.CHERUB) {
-                e.grounded = false
-                for (p in platforms) {
-                    if (aabbIntersects(e.x, e.y, e.w, e.h, p.x, p.y, p.w, p.h)) {
-                        if (e.vy > 0f) {
-                            e.y = p.y - e.h
-                            e.vy = 0f
-                            e.grounded = true
-                        } else if (e.vy < 0f) {
-                            e.y = p.y + p.h
-                            e.vy = 0f
-                        }
-                    }
-                }
-            }
+            // Stage 2 (#34): the shared resolver replaces the per-archetype gravity
+            // and collision blocks. Grounded archetypes resolve against every
+            // platform and flip on walls; CHERUB flyers ignore platforms entirely.
+            ActorPhysics.moveAndResolve(
+                e,
+                platforms,
+                if (e.type == EnemyArchetype.CHERUB) ENEMY_FLYER_PHYSICS else ENEMY_GROUNDED_PHYSICS,
+                dt
+            )
 
             if (!e.isStaggered && aabbIntersects(e.x, e.y, e.w, e.h, player.x, player.y, player.w, player.h)) {
                 if (!player.isDashing && player.invulnTimer <= 0f) {
@@ -1280,16 +1297,8 @@ class GameEngine {
         var i = 0
         while (i < pickups.activeCount) {
             val pk = pickups.get(i)
-            pk.vy += 800f * dt
-            pk.y += pk.vy * dt
-
-            for (p in platforms) {
-                if (p.collision == PlatformCollision.OPEN) continue
-                if (aabbIntersects(pk.x, pk.y, pk.w, pk.h, p.x, p.y, p.w, p.h)) {
-                    pk.y = p.y - pk.h
-                    pk.vy = 0f
-                }
-            }
+            // Stage 2 (#34): shared Y-only resolver with the new terminal velocity.
+            ActorPhysics.moveAndResolve(pk, platforms, PICKUP_PHYSICS, dt)
 
             if (aabbIntersects(pk.x, pk.y, pk.w, pk.h, player.x, player.y, player.w, player.h)) {
                 var isResource = false
