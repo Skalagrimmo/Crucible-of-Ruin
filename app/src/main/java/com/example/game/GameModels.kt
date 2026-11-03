@@ -22,6 +22,12 @@ enum class PlatformStyle {
     BOSS_GATE
 }
 
+/** Collision behavior is data owned by each platform, not inferred by the physics loop. */
+enum class PlatformCollision {
+    SOLID,
+    ONE_WAY
+}
+
 enum class HazardType {
     ACID,
     SPIKES
@@ -32,7 +38,11 @@ data class Platform(
     val y: Float,
     val w: Float,
     val h: Float,
-    val style: PlatformStyle
+    val style: PlatformStyle,
+    val collision: PlatformCollision = when (style) {
+        PlatformStyle.STONE_LEDGE, PlatformStyle.IRON_GIRDER -> PlatformCollision.ONE_WAY
+        PlatformStyle.STONE, PlatformStyle.BOSS_GATE -> PlatformCollision.SOLID
+    }
 )
 
 data class Hazard(
