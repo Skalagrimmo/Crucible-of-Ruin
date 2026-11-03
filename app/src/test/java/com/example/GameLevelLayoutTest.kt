@@ -72,5 +72,7 @@ class GameLevelLayoutTest {
         assertEquals("Unexpected number of hazards", 6, engine.hazards.size)
         assertEquals("Unexpected number of enemies", 12, engine.enemies.size)
         assertEquals("Unexpected number of breakable urns", 4, engine.breakables.size)
+        // Stage 6d (#38): the world map charts the level as nine rooms.
+        assertEquals("Unexpected number of rooms", 9, engine.roomGraph.rooms.size)
     }
 }
