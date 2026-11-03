@@ -338,7 +338,12 @@ object ActorPhysics {
             while (row <= endRow) {
                 var col = colFrom
                 while (col <= colTo) {
-                    if (matchesCell(grid.collisionCell(col, row), config.landingFilter)) {
+                    // A cell is a landable surface only when the cell above it is
+                    // empty: interior rows of a rasterized platform are not tops,
+                    // while the list resolver only ever sees the platform's top y.
+                    if (matchesCell(grid.collisionCell(col, row), config.landingFilter) &&
+                        grid.collisionCell(col, row - 1) == 0
+                    ) {
                         landOn(actor, row * grid.tile, grid.platformIn(col, row))
                         return
                     }
@@ -401,7 +406,9 @@ object ActorPhysics {
                 while (col <= colTo) {
                     val cell = grid.collisionCell(col, row)
                     if (matchesCell(cell, config.landingFilter) &&
-                        (cell != 2 || row * grid.tile + LANDING_SLOP >= previousFeet)
+                        (cell != 2 ||
+                            (row * grid.tile + LANDING_SLOP >= previousFeet &&
+                                grid.collisionCell(col, row - 1) == 0))
                     ) {
                         landOn(actor, row * grid.tile, grid.platformIn(col, row))
                         return
