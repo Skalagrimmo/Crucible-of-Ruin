@@ -371,7 +371,7 @@ object GameRenderer {
                 val tex = if (img.facing > 0) AssetCache.texPlayerIdleRight else AssetCache.texPlayerIdleLeft
                 drawImage(
                     image = tex,
-                    topLeft = Offset(ix - 3f, iy - 2f),
+                    topLeft = Offset(ix - 3f, iy),
                     alpha = img.alpha * 0.65f
                 )
                 drawCircle(
@@ -435,7 +435,7 @@ object GameRenderer {
 
                 if (p.attacking) {
                     val tex = if (p.facing > 0) AssetCache.texPlayerAttackRight else AssetCache.texPlayerAttackLeft
-                    drawImage(tex, topLeft = Offset(px - 10f, py - 4f + bob))
+                    drawImage(tex, topLeft = Offset(px - 10f, py + bob))
                     // Slash Arc based on combo step
                     val arcColor = when (p.lastComboHit) {
                         3 -> Color(0xFFFF2040)
@@ -460,7 +460,7 @@ object GameRenderer {
                     )
                 } else {
                     val tex = if (p.facing > 0) AssetCache.texPlayerIdleRight else AssetCache.texPlayerIdleLeft
-                    drawImage(tex, topLeft = Offset(px - 3f, py - 2f + bob))
+                    drawImage(tex, topLeft = Offset(px - 3f, py + bob))
                 }
             }
 
