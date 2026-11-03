@@ -48,7 +48,7 @@ jobs:
                 },
                 "oauth_client": [
                   {
-                    "client_id": "000000000-placeholder0000000000000000000000000000.apps.googleusercontent.com",
+                    "client_id": "000000000000-placeholder0000000000000000000000000000.apps.googleusercontent.com",
                     "client_type": 3
                   }
                 ],
@@ -73,6 +73,48 @@ jobs:
         run: |
           set -o pipefail
           ./gradlew :app:testDebugUnitTest --stacktrace --no-daemon 2>&1 | tee build-output.log
+
+      # TEMPORARY (diagnostics): surface failing tests / compile errors as public
+      # annotations so failures are visible outside authenticated log downloads.
+      - name: Report failures as annotations
+        if: failure()
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import glob, os
+          import xml.etree.ElementTree as ET
+
+          def esc(s):
+              return s.replace('%', '%25').replace('', '%0D').replace('
+', '%0A')
+
+          found = 0
+          for f in glob.glob('app/build/test-results/testDebugUnitTest/*.xml'):
+              try:
+                  root = ET.parse(f).getroot()
+              except Exception:
+                  continue
+              for tc in root.iter('testcase'):
+                  cls = tc.get('classname') or os.path.basename(f)
+                  name = tc.get('name') or '?'
+                  for kind in ('failure', 'error'):
+                      for fl in tc.findall(kind):
+                          msg = (fl.get('message') or (fl.text or ''))[:400]
+                          print('::error title=%s.%s::%s: %s' % (esc(cls), esc(name), kind.upper(), esc(msg)))
+                          found += 1
+          if not found:
+              if os.path.exists('build-output.log'):
+                  hits = []
+                  for l in open('build-output.log', encoding='utf-8', errors='replace'):
+                      if ('e: ' in l or 'FAILED' in l or 'error:' in l.lower() or 'Exception' in l):
+                          hits.append(l.strip()[:400])
+                  for l in hits[:40]:
+                      print('::error::%s' % esc(l))
+                  if not hits:
+                      print('::error::No failing tests and no error lines found in build-output.log')
+              else:
+                  print('::error::No JUnit results and no build-output.log found')
+          PY
 
       - name: Build debug APK
         shell: bash
