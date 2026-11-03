@@ -140,7 +140,10 @@ class CrucibleChimeraBoss(
             TelegraphType.GROUND_SLAM -> {
                 isSlamFalling = false
                 vy = -560f
-                vx = (player.x - x) * 0.85f
+                // Stage 4 (#36): cap the leap's horizontal speed. The unbounded
+                // distance scale reached ~765 px/s at the far side of the arena,
+                // which risks tunneling through thin geometry at the 30 FPS cap.
+                vx = ((player.x - x) * 0.85f).coerceIn(-420f, 420f)
                 engine.audio.play("boss_roar")
             }
             TelegraphType.VOID_ERUPTION -> {
