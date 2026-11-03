@@ -89,6 +89,28 @@ jobs:
             done
           fi
 
+      # Debug signing: GitHub runners mint a fresh ~/.android/debug.keystore on every
+      # run, so every artifact was signed with a different key — Android then refuses
+      # to update an earlier artifact build over it (often surfaced by phone shells
+      # as an "invalid package / checksum" error). Caching the keystore per repository
+      # keeps the debug signature stable, so new artifacts install as updates.
+      - name: Restore cached debug keystore
+        id: debug_keystore
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: crucible-of-ruin-debug-keystore
+
+      - name: Create debug keystore if absent
+        if: steps.debug_keystore.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          mkdir -p ~/.android
+          keytool -genkeypair -v -keystore ~/.android/debug.keystore \
+            -storepass android -keypass android -alias androiddebugkey \
+            -dname "CN=Android Debug,O=Android,C=US" \
+            -keyalg RSA -keysize 2048 -validity 10000
+
       - name: Build debug APK
         shell: bash
         run: |
@@ -98,12 +120,31 @@ jobs:
       # This APK is built with a placeholder Firebase config when the real config is absent.
       # It is suitable for offline/gameplay smoke tests, but real Google Sign-In/cloud sync
       # require the application's actual google-services.json.
+      # Publishes the APK's SHA-256 in the run summary and inside the artifact, so a
+      # downloaded file can be verified — a truncated download or an HTML login page
+      # saved instead of the zip is the other common cause of "invalid checksum" errors.
+      - name: Publish APK checksum
+        if: success()
+        shell: bash
+        run: |
+          sha256sum app/build/outputs/apk/debug/app-debug.apk | tee apk-sha256.txt
+          {
+            echo "## Debug APK"
+            echo "**SHA-256:**"
+            echo '```'
+            cat apk-sha256.txt
+            echo '```'
+            echo "Compare with the output of: sha256sum app-debug.apk"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload debug APK artifact
         if: success()
         uses: actions/upload-artifact@v7
         with:
           name: crucible-of-ruin-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            apk-sha256.txt
           if-no-files-found: error
           retention-days: 14
 
