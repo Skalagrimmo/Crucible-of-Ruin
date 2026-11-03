@@ -7,6 +7,7 @@ import com.example.game.boss.CrucibleChimeraBoss
 import com.example.game.status.CombatStatusType
 import com.example.game.status.StatusEffectController
 import kotlin.math.abs
+import kotlin.math.exp
 import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
@@ -24,19 +25,19 @@ class Camera2D(val viewW: Float = 960f, val viewH: Float = 540f) {
 
     fun update(targetX: Float, targetY: Float, targetFacing: Int, maxW: Float, maxH: Float, dt: Float) {
         val targetLead = targetFacing * 40f
-        lookAhead += (targetLead - lookAhead) * 4f * dt
+        lookAhead += (targetLead - lookAhead) * (1f - exp(-CAMERA_SMOOTH_LEAD * dt))
 
         val desiredX = targetX - viewW / 2f + lookAhead
         val desiredY = targetY - viewH / 2f - 20f
 
-        x += (desiredX - x) * 6f * dt
-        y += (desiredY - y) * 4f * dt
+        x += (desiredX - x) * (1f - exp(-CAMERA_SMOOTH_X * dt))
+        y += (desiredY - y) * (1f - exp(-CAMERA_SMOOTH_Y * dt))
 
         x = x.coerceIn(0f, maxW - viewW)
         y = y.coerceIn(0f, maxH - viewH)
 
         if (shakeIntensity > 0.1f) {
-            shakeIntensity *= (0.9f).coerceAtLeast(0f)
+            shakeIntensity *= exp(-SHAKE_DECAY_RATE * dt)
         } else {
             shakeIntensity = 0f
         }
@@ -48,6 +49,16 @@ class Camera2D(val viewW: Float = 960f, val viewH: Float = 540f) {
 
     fun getOffsetY(): Float {
         return if (shakeIntensity > 0f) y + ((Math.random().toFloat() - 0.5f) * shakeIntensity) else y
+    }
+
+    companion object {
+        /** Horizontal catch-up rate per second — matches the old `6f * dt` at 60 FPS. */
+        private const val CAMERA_SMOOTH_X = 6f
+        private const val CAMERA_SMOOTH_Y = 4f
+        private const val CAMERA_SMOOTH_LEAD = 4f
+
+        /** Shake decay per second — equals the old 0.9f-per-frame decay at 60 Hz. */
+        private const val SHAKE_DECAY_RATE = 6.32f
     }
 }
 
@@ -296,8 +307,25 @@ class EnemyEntity(
 }
 
 typealias BossEntity = BaseBoss
-
 class GameEngine {
+    companion object {
+        /** Fixed simulation tick (#33): physics always advances in exact 1/60s steps. */
+        const val FIXED_DT = 1f / 60f
+
+        /**
+         * Double-precision tick size for the accumulator bookkeeping. The float
+         * pair (1/30f, 2 * (1/60f)) is not exact — 1/30f < 2 * FIXED_DT — which
+         * would silently drop one tick per second at a 30 FPS cap.
+         */
+        private const val FIXED_DT_SECONDS = 1.0 / 60.0
+
+        /** Maximum simulation ticks paid per display frame; extra time debt is dropped. */
+        const val MAX_TICKS_PER_FRAME = 5
+
+        /** Pickups share the player's terminal fall speed so long drops cannot skip platforms. */
+        const val MAX_PICKUP_FALL_SPEED = 750f
+    }
+
     val audio = GameAudio()
     val camera = Camera2D()
     val particles = ParticlePool(160)
@@ -310,6 +338,12 @@ class GameEngine {
 
     var state: String = "playing"
     var timeElapsed: Float = 0f
+
+    /**
+     * Unscheduled remainder of the last display frame (#33 fixed timestep). Kept
+     * in double precision so a 30 FPS cap accumulates exactly two ticks per frame.
+     */
+    var updateAccumulator: Double = 0.0
     var enemiesDefeated: Int = 0
 
     val checkpoints = listOf(
@@ -374,6 +408,9 @@ class GameEngine {
     }
 
     fun initLevel() {
+        // Drop any unsimulated time debt from the previous run (#33).
+        updateAccumulator = 0.0
+
         // Clear the previous runtime instances before loading a fresh level layout.
         platforms.clear()
         hazards.clear()
@@ -570,18 +607,39 @@ class GameEngine {
         }
     }
 
+    /**
+     * Advances the simulation by [rawDt] of display time through a fixed-step
+     * accumulator (#33). The world only ever moves in FIXED_DT chunks, so a
+     * 30 FPS cap pays two 60 Hz ticks per frame and jump arcs, knockback, and
+     * thin-platform collisions behave identically at either FPS cap. A stalled
+     * frame can pay at most MAX_TICKS_PER_FRAME ticks; the leftover debt is
+     * clamped away so a late frame never snowballs into a physics explosion.
+     */
     fun update(rawDt: Float) {
         if (state == "paused") return
 
-        // Time dilation (slow-mo on perfect riposte)
+        // Time dilation (slow-mo on perfect riposte) is a real-time effect.
         if (timeDilationTimer > 0f) {
             timeDilationTimer -= rawDt
             if (timeDilationTimer <= 0f) {
                 timeDilation = 1.0f
             }
         }
-        val dt = rawDt * timeDilation
-        timeElapsed += dt
+
+        updateAccumulator = (updateAccumulator + rawDt.toDouble() * timeDilation)
+            .coerceAtMost(MAX_TICKS_PER_FRAME * FIXED_DT_SECONDS)
+
+        var ticks = 0
+        while (updateAccumulator >= FIXED_DT_SECONDS && ticks < MAX_TICKS_PER_FRAME) {
+            stepOnce(FIXED_DT)
+            updateAccumulator -= FIXED_DT_SECONDS
+            ticks++
+        }
+        timeElapsed += ticks * FIXED_DT
+    }
+
+    /** One deterministic 1/60 s simulation tick. */
+    private fun stepOnce(dt: Float) {
 
         // Checkpoint detection
         for (cp in checkpoints) {
@@ -1241,6 +1299,7 @@ class GameEngine {
         while (i < pickups.activeCount) {
             val pk = pickups.get(i)
             pk.vy += 800f * dt
+            if (pk.vy > MAX_PICKUP_FALL_SPEED) pk.vy = MAX_PICKUP_FALL_SPEED
             pk.y += pk.vy * dt
 
             for (p in platforms) {
