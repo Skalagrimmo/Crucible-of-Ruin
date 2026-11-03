@@ -1,5 +1,8 @@
 package com.example.game
 
+import kotlin.math.ceil
+import kotlin.math.floor
+
 /**
  * Shared axis-separated physics resolver (Stage 2, #34).
  *
@@ -200,6 +203,280 @@ object ActorPhysics {
                 }
             }
         }
+    }
+
+    /**
+     * Stage 6b (#38): tile-grid resolver.
+     *
+     * Behaviorally identical to the list resolver above on the world's real
+     * geometry: every factory rectangle is 10 px aligned and the maximum
+     * horizontal step per tick (~8.7 px) stays below one tile, so the list
+     * resolver's sequential pushes converge to exactly the cell-edge extremes
+     * this single-pass version computes; no actor ever overlaps more than one
+     * surface of a kind per tick. The one intentional divergence: OPEN
+     * platforms rasterize as empty cells, while a list pass with
+     * PlatformFilter.ALL would treat them as walls or floors. No enemy or boss
+     * ever overlaps a gate column while the gates are open (enemies live before
+     * the arena; the boss only moves while the gates are sealed), so the
+     * divergence is unreachable. The list overload stays as the reference
+     * implementation — LevelGridParityTest pins the two together.
+     */
+    internal fun moveAndResolve(actor: PhysicsActor, grid: LevelGrid, config: ActorPhysicsConfig, dt: Float) {
+        if (config.gravity != 0f) {
+            actor.vy += config.gravity * dt
+            if (actor.vy > config.terminalVelocity) actor.vy = config.terminalVelocity
+        }
+
+        // Physics X: move, then push out of the solid cells configured as walls.
+        if (config.horizontalMotion) {
+            val effectiveVx = actor.vx * actor.horizontalSpeedMultiplier()
+            actor.x += effectiveVx * dt
+            if (!config.ignorePlatforms) {
+                resolveWallsOnGrid(actor, grid, config, effectiveVx)
+            }
+        }
+
+        // Physics Y: remember the previous feet position before applying this tick's motion.
+        val previousFeet = actor.y + actor.h
+        actor.y += actor.vy * dt
+
+        if (config.ignorePlatforms) return
+        actor.grounded = false
+
+        // Strict-edge column/row ranges: identical to the legacy aabb's strict
+        // inequalities on cell-aligned geometry (touching edges never overlap).
+        val colFrom = floor(actor.x / grid.tile).toInt()
+        val colTo = ceil((actor.x + actor.w) / grid.tile).toInt() - 1
+        val rowFrom = floor(actor.y / grid.tile).toInt()
+        val rowTo = ceil((actor.y + actor.h) / grid.tile).toInt() - 1
+
+        when (config.verticalMode) {
+            VerticalResolveMode.SWEPT_LANDING -> resolveSweptLandingOnGrid(
+                actor, grid, config, previousFeet, colFrom, colTo, rowFrom, rowTo
+            )
+            VerticalResolveMode.OVERLAP_LAND_OR_BLOCK -> resolveOverlapOnGrid(
+                actor, grid, config, previousFeet, colFrom, colTo, rowFrom, rowTo
+            )
+            VerticalResolveMode.OVERLAP_SNAP_TO_TOP -> resolveSnapToTopOnGrid(
+                actor, grid, config, colFrom, colTo, rowFrom, rowTo
+            )
+        }
+    }
+
+    private fun resolveWallsOnGrid(
+        actor: PhysicsActor,
+        grid: LevelGrid,
+        config: ActorPhysicsConfig,
+        effectiveVx: Float
+    ) {
+        val colFrom = floor(actor.x / grid.tile).toInt()
+        val colTo = ceil((actor.x + actor.w) / grid.tile).toInt() - 1
+        val rowFrom = floor(actor.y / grid.tile).toInt()
+        val rowTo = ceil((actor.y + actor.h) / grid.tile).toInt() - 1
+        // One-way surfaces never act as side walls (Stage 3, #35) — only solid
+        // cells do, which is exactly what the grid stores for them.
+        if (effectiveVx > 0f) {
+            var minLeft = Float.MAX_VALUE
+            var row = rowFrom
+            while (row <= rowTo) {
+                var col = colFrom
+                while (col <= colTo) {
+                    if (grid.solidIn(col, row)) {
+                        val left = col * grid.tile
+                        if (left < minLeft) minLeft = left
+                    }
+                    col++
+                }
+                row++
+            }
+            if (minLeft != Float.MAX_VALUE) {
+                actor.x = minLeft - actor.w
+                if (config.flipOnWall) actor.facing = -1
+                actor.vx = 0f
+            }
+        } else if (effectiveVx < 0f) {
+            var maxRight = -Float.MAX_VALUE
+            var row = rowFrom
+            while (row <= rowTo) {
+                var col = colFrom
+                while (col <= colTo) {
+                    if (grid.solidIn(col, row)) {
+                        val right = (col + 1) * grid.tile
+                        if (right > maxRight) maxRight = right
+                    }
+                    col++
+                }
+                row++
+            }
+            if (maxRight != -Float.MAX_VALUE) {
+                actor.x = maxRight
+                if (config.flipOnWall) actor.facing = 1
+                actor.vx = 0f
+            }
+        }
+    }
+
+    private fun resolveSweptLandingOnGrid(
+        actor: PhysicsActor,
+        grid: LevelGrid,
+        config: ActorPhysicsConfig,
+        previousFeet: Float,
+        colFrom: Int,
+        colTo: Int,
+        rowFrom: Int,
+        rowTo: Int
+    ) {
+        // Find the topmost cell top crossed while descending. The crossed-top
+        // condition mirrors the legacy float comparison exactly:
+        // top + LANDING_SLOP >= previousFeet and top <= current feet.
+        if (actor.vy > 0f) {
+            val currentFeet = actor.y + actor.h
+            var row = ceil((previousFeet - LANDING_SLOP) / grid.tile).toInt() - 1
+            if (row < 0) row = 0
+            while (row * grid.tile + LANDING_SLOP < previousFeet) row++
+            val endRow = floor(currentFeet / grid.tile).toInt()
+            while (row <= endRow) {
+                var col = colFrom
+                while (col <= colTo) {
+                    // A cell is a landable surface only when the cell above it is
+                    // empty: interior rows of a rasterized platform are not tops,
+                    // while the list resolver only ever sees the platform's top y.
+                    if (matchesCell(grid.collisionCell(col, row), config.landingFilter) &&
+                        grid.collisionCell(col, row - 1) == 0
+                    ) {
+                        landOn(actor, row * grid.tile, grid.platformIn(col, row))
+                        return
+                    }
+                    col++
+                }
+                row++
+            }
+        }
+        // Solid cells still block the underside and resolve any existing overlap.
+        // One-way cells intentionally do not participate here.
+        if (actor.grounded) return
+        if (actor.vy > 0f) {
+            var row = rowFrom
+            while (row <= rowTo) {
+                var col = colFrom
+                while (col <= colTo) {
+                    if (matchesCell(grid.collisionCell(col, row), config.overlapFilter)) {
+                        landOn(actor, row * grid.tile, grid.platformIn(col, row))
+                        return
+                    }
+                    col++
+                }
+                row++
+            }
+        } else if (actor.vy < 0f) {
+            var row = rowTo
+            while (row >= rowFrom) {
+                var col = colFrom
+                while (col <= colTo) {
+                    if (matchesCell(grid.collisionCell(col, row), config.overlapFilter)) {
+                        actor.y = (row + 1) * grid.tile
+                        actor.vy = 0f
+                        return
+                    }
+                    col++
+                }
+                row--
+            }
+        }
+    }
+
+    private fun resolveOverlapOnGrid(
+        actor: PhysicsActor,
+        grid: LevelGrid,
+        config: ActorPhysicsConfig,
+        previousFeet: Float,
+        colFrom: Int,
+        colTo: Int,
+        rowFrom: Int,
+        rowTo: Int
+    ) {
+        if (actor.vy > 0f) {
+            // Highest overlapped surface. A one-way surface only counts when the
+            // feet crossed its top this tick — a side entry with feet already
+            // below the top falls through instead of teleporting on top
+            // (Stage 3, #35).
+            var row = rowFrom
+            while (row <= rowTo) {
+                var col = colFrom
+                while (col <= colTo) {
+                    val cell = grid.collisionCell(col, row)
+                    if (matchesCell(cell, config.landingFilter) &&
+                        (cell != 2 ||
+                            (row * grid.tile + LANDING_SLOP >= previousFeet &&
+                                grid.collisionCell(col, row - 1) == 0))
+                    ) {
+                        landOn(actor, row * grid.tile, grid.platformIn(col, row))
+                        return
+                    }
+                    col++
+                }
+                row++
+            }
+        } else if (actor.vy < 0f) {
+            // Rising: only solid cells block the underside — one-way never does.
+            var row = rowTo
+            while (row >= rowFrom) {
+                var col = colFrom
+                while (col <= colTo) {
+                    if (grid.solidIn(col, row)) {
+                        actor.y = (row + 1) * grid.tile
+                        actor.vy = 0f
+                        return
+                    }
+                    col++
+                }
+                row--
+            }
+        }
+    }
+
+    private fun resolveSnapToTopOnGrid(
+        actor: PhysicsActor,
+        grid: LevelGrid,
+        config: ActorPhysicsConfig,
+        colFrom: Int,
+        colTo: Int,
+        rowFrom: Int,
+        rowTo: Int
+    ) {
+        // Unconditional snap onto the highest overlapped non-open surface; the
+        // legacy loop neither grounds the actor nor reports a landing here.
+        var row = rowFrom
+        while (row <= rowTo) {
+            var col = colFrom
+            while (col <= colTo) {
+                if (matchesCell(grid.collisionCell(col, row), config.landingFilter)) {
+                    actor.y = row * grid.tile - actor.h
+                    actor.vy = 0f
+                    return
+                }
+                col++
+            }
+            row++
+        }
+    }
+
+    /** Cell twin of [matches]: 0 empty, 1 solid, 2 one-way. OPEN never rasterizes. */
+    private fun matchesCell(cell: Int, filter: PlatformFilter): Boolean = when (filter) {
+        PlatformFilter.SOLID_ONLY -> cell == 1
+        PlatformFilter.NOT_OPEN -> cell != 0
+        // The legacy list pass with ALL also matches OPEN platforms; no enemy or
+        // boss ever overlaps an open gate, so the divergence is unreachable
+        // (documented on the grid overload above).
+        PlatformFilter.ALL -> cell != 0
+    }
+
+    /** Grid twin of the landOn below: snaps onto a cell top and reports the landing. */
+    private fun landOn(actor: PhysicsActor, topY: Float, platform: Platform?) {
+        actor.y = topY - actor.h
+        actor.vy = 0f
+        actor.grounded = true
+        if (platform != null) actor.onLanded(platform)
     }
 
     /** Snaps the actor onto a platform top and reports the landing through the actor hook. */

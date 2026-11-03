@@ -42,6 +42,7 @@ class OneWayPlatformTest {
         engine.platforms.add(
             Platform(100f, 300f, 200f, 18f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY)
         )
+        engine.rebuildLevelGrid()
 
         // The player floats beside the girder with feet well below its top and
         // walks right while falling — the overlap must not snap them on top.
@@ -72,6 +73,7 @@ class OneWayPlatformTest {
         engine.platforms.add(
             Platform(100f, 300f, 200f, 18f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY)
         )
+        engine.rebuildLevelGrid()
         val lurker = EnemyEntity(150f, 330f, EnemyArchetype.LURKER, 200f)
         lurker.vy = -300f
         engine.enemies.add(lurker)
@@ -90,6 +92,7 @@ class OneWayPlatformTest {
         engine.platforms.add(
             Platform(100f, 300f, 200f, 18f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY)
         )
+        engine.rebuildLevelGrid()
         val lurker = EnemyEntity(180f, 200f, EnemyArchetype.LURKER, 500f)
         engine.enemies.add(lurker)
 
@@ -107,6 +110,7 @@ class OneWayPlatformTest {
         engine.platforms.add(
             Platform(100f, 300f, 200f, 18f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY)
         )
+        engine.rebuildLevelGrid()
         val lurker = EnemyEntity(60f, 280f, EnemyArchetype.LURKER, 500f)
         lurker.facing = 1
         engine.enemies.add(lurker)
@@ -131,6 +135,7 @@ class OneWayPlatformTest {
         engine.platforms.add(
             Platform(150f, 430f, 60f, 18f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY)
         )
+        engine.rebuildLevelGrid()
         val lurker = EnemyEntity(60f, 424f, EnemyArchetype.LURKER, 500f)
         lurker.facing = 1
         engine.enemies.add(lurker)

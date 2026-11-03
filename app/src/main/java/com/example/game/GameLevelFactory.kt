@@ -106,8 +106,11 @@ internal object GameLevelFactory {
         // sat 120 px above the floor — 1 px over the 119 px base-jump apex, making
         // them unreachable without the alchemy speed buff. LevelReachabilityTest
         // pins this choice against PhysicsTuning.
-        platforms.add(Platform(5420f, 350f, 120f, 18f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY))
-        platforms.add(Platform(5880f, 350f, 120f, 18f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY))
+        // Stage 6b (#38): the girder thickness rounds up from 18 to 20 px so every
+        // factory rectangle snaps exactly onto the 10 px tile grid. The top stays
+        // at 350 — the reachability ruler and jump apex are unaffected.
+        platforms.add(Platform(5420f, 350f, 120f, 20f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY))
+        platforms.add(Platform(5880f, 350f, 120f, 20f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY))
 
         return GameLevelLayout(
             platforms = platforms,

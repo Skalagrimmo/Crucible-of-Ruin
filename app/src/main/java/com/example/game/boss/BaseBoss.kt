@@ -273,7 +273,8 @@ abstract class BaseBoss(
         // 750, resolve against every platform, corrosion-scaled horizontal step,
         // and the landing hook below still fires for subclasses.
         physicsEngine = engine
-        ActorPhysics.moveAndResolve(this, engine.platforms, BOSS_PHYSICS_CONFIG, dt)
+        // Stage 6b (#38): resolves against the tile grid instead of the list.
+        ActorPhysics.moveAndResolve(this, engine.levelGrid, BOSS_PHYSICS_CONFIG, dt)
         physicsEngine = null
     }
 
