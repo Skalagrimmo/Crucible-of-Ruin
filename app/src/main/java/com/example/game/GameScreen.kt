@@ -89,6 +89,10 @@ fun GameScreen(
     val haptics = remember { GameHaptics(context).apply { isEnabled = initialHapticsEnabled } }
     var showCraftingDialog by remember { mutableStateOf(false) }
     var showGrimoireDialog by remember { mutableStateOf(false) }
+    // Stage 6d (#38): world map overlay state. The map pauses a running game;
+    // closing it resumes only when the map itself did the pausing.
+    var showMapOverlay by remember { mutableStateOf(false) }
+    var mapAutoPaused by remember { mutableStateOf(false) }
     var userSaveState by remember { mutableStateOf(saveRepo.getLocalUserSave()) }
     // Track run counters already persisted at checkpoints to avoid counting the same events twice.
     var enemiesCountedThroughLastSave by remember { mutableIntStateOf(0) }
@@ -530,6 +534,25 @@ fun GameScreen(
                 )
             }
 
+            // Stage 6d (#38): World Map toggle — charting pauses the run.
+            IconButton(
+                onClick = {
+                    mapAutoPaused = engine.state == "playing"
+                    if (mapAutoPaused) {
+                        inputController.cancelHeldInputs()
+                        engine.state = "paused"
+                    }
+                    showMapOverlay = true
+                },
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(Color(0x99181124), CircleShape)
+                    .border(1.dp, Color(0x55FFFFFF), CircleShape)
+                    .testTag("map_button")
+            ) {
+                Text(text = "🗺", fontSize = 16.sp)
+            }
+
             var isMuted by remember { mutableStateOf(false) }
             IconButton(
                 onClick = {
@@ -712,6 +735,17 @@ fun GameScreen(
             }
         }
 
+        // Stage 6d (#38): World Map overlay (rooms charted so far).
+        if (showMapOverlay) {
+            RoomMapOverlay(
+                engine = engine,
+                onClose = {
+                    showMapOverlay = false
+                    if (mapAutoPaused) engine.state = "playing"
+                }
+            )
+        }
+
         // Pause Menu Dialog
         if (engine.state == "paused") {
             Box(
@@ -785,6 +819,18 @@ fun GameScreen(
                         modifier = Modifier.testTag("pause_grimoire_button")
                     ) {
                         Text("📖 Grimoire Codex & Bestiary", color = Color(0xFFFFD700))
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Button(
+                        onClick = {
+                            mapAutoPaused = false
+                            showMapOverlay = true
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2C1944)),
+                        modifier = Modifier.testTag("pause_map_button")
+                    ) {
+                        Text("🗺 World Map", color = Color(0xFFFFD700))
                     }
                     Spacer(modifier = Modifier.height(10.dp))
                     Button(

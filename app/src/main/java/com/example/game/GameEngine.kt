@@ -408,6 +408,15 @@ class GameEngine(
     // positions are a pure function of simulated time.
     private var motionClock = 0f
 
+    // Stage 6d (#38): the room/door graph charted by the world map. The graph
+    // itself is static per layout; the current room and the visited set are
+    // runtime progression state that restarts with every fresh layout.
+    internal var roomGraph: RoomGraph = RoomGraph(emptyList())
+        private set
+    internal var currentRoom: LevelRoom? = null
+        private set
+    internal val visitedRooms = LinkedHashSet<String>()
+
     var state: String = "playing"
     var timeElapsed: Float = 0f
     var enemiesDefeated: Int = 0
@@ -460,11 +469,24 @@ class GameEngine(
         player.x = activeCheckpoint.x
         player.y = activeCheckpoint.y
         camera.x = (player.x - 300f).coerceAtLeast(0f)
+        // Stage 6d (#38): starting at a checkpoint charts its room immediately.
+        markCurrentRoom()
+    }
+
+    /** Charts the room the player currently stands in (Stage 6d, #38). */
+    private fun markCurrentRoom() {
+        val room = roomGraph.roomAt(player.x + player.w / 2f, player.y + player.h / 2f)
+        if (room != null) {
+            currentRoom = room
+            visitedRooms.add(room.id)
+        }
     }
 
     fun restart() {
         initLevel()
         player.respawn(activeCheckpoint)
+        // Stage 6d (#38): the run restarts at the checkpoint — re-chart its room.
+        markCurrentRoom()
         state = "playing"
         timeElapsed = 0f
         enemiesDefeated = 0
@@ -495,6 +517,12 @@ class GameEngine(
         // Stage 6b (#38): rasterize the fresh layout into the tile grid so the
         // resolvers, ledge probes, and projectile checks all run against cells.
         levelGrid.buildFrom(platforms, hazards)
+        // Stage 6d (#38): a fresh layout restarts the map progression. The
+        // current room is re-charted from the player's next position (spawn,
+        // checkpoint, or respawn), so nothing stale survives a restart.
+        roomGraph = RoomGraph(layout.rooms)
+        currentRoom = null
+        visitedRooms.clear()
         damageNumbers.clear()
     }
 
@@ -742,6 +770,13 @@ class GameEngine(
 
         updateMovingPlatforms(dt)
         updatePlayer(dt)
+        // Stage 6d (#38): world-map tracking — crossing a room boundary marks
+        // the new room charted.
+        val room = roomGraph.roomAt(player.x + player.w / 2f, player.y + player.h / 2f)
+        if (room != null && room !== currentRoom) {
+            currentRoom = room
+            visitedRooms.add(room.id)
+        }
         updateEnemies(dt)
         updateBoss(dt)
         updateProjectiles(dt)

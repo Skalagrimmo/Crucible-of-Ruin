@@ -15,7 +15,11 @@ internal data class GameLevelLayout(
     val hazards: List<Hazard>,
     val breakables: List<BreakableUrn>,
     val enemies: List<EnemyEntity>,
-    val boss: BaseBoss
+    val boss: BaseBoss,
+    // Stage 6d (#38): the room/door graph for the world map. A single TMX
+    // section carries no rooms yet — the default keeps the loader
+    // source-compatible.
+    val rooms: List<LevelRoom> = emptyList()
 )
 
 /**
@@ -26,6 +30,83 @@ internal data class GameLevelLayout(
 internal object GameLevelFactory {
     /** Creates a fresh boss instance for the initial layout and encounter resets. */
     fun createBoss(): BaseBoss = CrucibleChimeraBoss(5750f, 360f)
+
+    /**
+     * Stage 6d (#38): the room/door graph the world map charts. Rooms are
+     * full-height slices of the corridor; every door sits on the shared
+     * boundary, on the surface the player actually crosses on, and both
+     * sides declare it — so the graph is walkable in both directions.
+     */
+    private fun buildRooms(): List<LevelRoom> = listOf(
+        LevelRoom(
+            id = "bastion_entry", name = "Bastion Entry Hall",
+            x = 0f, y = 0f, w = 600f, h = 540f,
+            doors = listOf(RoomDoor(x = 600f, y = 460f, toRoomId = "bastion_ascent"))
+        ),
+        LevelRoom(
+            id = "bastion_ascent", name = "The Bastion Ascent",
+            x = 600f, y = 0f, w = 600f, h = 540f,
+            doors = listOf(
+                RoomDoor(x = 600f, y = 460f, toRoomId = "bastion_entry"),
+                RoomDoor(x = 1200f, y = 420f, toRoomId = "bastion_ramparts")
+            )
+        ),
+        LevelRoom(
+            id = "bastion_ramparts", name = "The Bastion Ramparts",
+            x = 1200f, y = 0f, w = 720f, h = 540f,
+            doors = listOf(
+                RoomDoor(x = 1200f, y = 420f, toRoomId = "bastion_ascent"),
+                RoomDoor(x = 1920f, y = 420f, toRoomId = "crucible_labs")
+            )
+        ),
+        LevelRoom(
+            id = "crucible_labs", name = "The Crucible Laboratories",
+            x = 1920f, y = 0f, w = 1020f, h = 540f,
+            doors = listOf(
+                RoomDoor(x = 1920f, y = 420f, toRoomId = "bastion_ramparts"),
+                RoomDoor(x = 2940f, y = 260f, toRoomId = "cultist_tower")
+            )
+        ),
+        LevelRoom(
+            id = "cultist_tower", name = "The Cultist Tower",
+            x = 2940f, y = 0f, w = 160f, h = 540f,
+            doors = listOf(
+                RoomDoor(x = 2940f, y = 260f, toRoomId = "crucible_labs"),
+                RoomDoor(x = 3100f, y = 430f, toRoomId = "golem_gallery")
+            )
+        ),
+        LevelRoom(
+            id = "golem_gallery", name = "The Gallery of the Golem",
+            x = 3100f, y = 0f, w = 650f, h = 540f,
+            doors = listOf(
+                RoomDoor(x = 3100f, y = 430f, toRoomId = "cultist_tower"),
+                RoomDoor(x = 3750f, y = 430f, toRoomId = "vitriol_pools")
+            )
+        ),
+        LevelRoom(
+            id = "vitriol_pools", name = "The Vitriol Pools",
+            x = 3750f, y = 0f, w = 610f, h = 540f,
+            doors = listOf(
+                RoomDoor(x = 3750f, y = 430f, toRoomId = "golem_gallery"),
+                RoomDoor(x = 4360f, y = 420f, toRoomId = "sanctum_approach")
+            )
+        ),
+        LevelRoom(
+            id = "sanctum_approach", name = "The Sanctum Approach",
+            x = 4360f, y = 0f, w = 910f, h = 540f,
+            doors = listOf(
+                RoomDoor(x = 4360f, y = 420f, toRoomId = "vitriol_pools"),
+                RoomDoor(x = 5270f, y = 450f, toRoomId = "grand_sanctum")
+            )
+        ),
+        LevelRoom(
+            id = "grand_sanctum", name = "The Grand Sanctum",
+            x = 5270f, y = 0f, w = 930f, h = 540f,
+            doors = listOf(
+                RoomDoor(x = 5270f, y = 450f, toRoomId = "sanctum_approach")
+            )
+        )
+    )
 
     fun create(): GameLevelLayout {
         val platforms = mutableListOf<Platform>()
@@ -141,7 +222,8 @@ internal object GameLevelFactory {
             hazards = hazards,
             breakables = breakables,
             enemies = enemies,
-            boss = createBoss()
+            boss = createBoss(),
+            rooms = buildRooms()
         )
     }
 }

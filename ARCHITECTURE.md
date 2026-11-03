@@ -38,6 +38,12 @@ A small naming detail worth knowing: `PlayerEntity` and `EnemyEntity` currently 
 - Moving platforms (Stage 6c) carry a `PlatformMotion` ping-pong descriptor and stay in the same list and grid as static geometry. `GameEngine.updateMovingPlatforms` advances them on the fixed-step clock, re-rasterizes just their cells through `LevelGrid.syncPlatform`, and carries the actors standing on the surface. Landings snap to the platform's true top — identical to the cell top on the tile-aligned static world, so list/grid parity is unchanged.
 - The gameplay RNG is seeded per engine (Stage 6a). Platform motion is a pure function of simulated time and never rolls.
 
+## Room graph and world map (Stage 6d)
+
+- The level is charted as a `RoomGraph`: `LevelRoom` rectangles with `RoomDoor` edges, declared by `GameLevelFactory` alongside the geometry. `GameEngine` tracks the current room and the visited set on the fixed tick; restarts reset the progression, checkpoint starts chart their room immediately.
+- `RoomMapOverlay` renders the graph as a fog-of-war map (visited rooms labeled, unvisited rooms as silhouettes, doors as gold notches, a live player marker) from a HUD button and the pause menu. Opening the map pauses the run; closing it resumes only when the map did the pausing.
+- The first level is still one corridor — its rooms are full-height slices — but the model is general: future content can branch or stack rooms without touching the map screen.
+
 ## Tiled level-editor prototype
 
 `app/src/main/assets/levels/ruined_bastion.tmx` is an editable first-section prototype. `TiledLevelLoader` maps object-layer rectangles and custom properties into existing Kotlin models. The TMX uses world-pixel coordinates so current collision boxes can be preserved without introducing tile-based collision.
