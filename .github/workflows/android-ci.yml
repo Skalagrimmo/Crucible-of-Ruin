@@ -48,7 +48,7 @@ jobs:
                 },
                 "oauth_client": [
                   {
-                    "client_id": "000000000-placeholder0000000000000000000000000000.apps.googleusercontent.com",
+                    "client_id": "000000000000-placeholder0000000000000000000000000000.apps.googleusercontent.com",
                     "client_type": 3
                   }
                 ],

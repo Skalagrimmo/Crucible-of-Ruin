@@ -5,6 +5,7 @@ package com.example.game
  * platforms. Platform collision behavior is data-driven:
  * - SOLID blocks horizontal movement and both vertical directions.
  * - ONE_WAY only catches a descending player crossing its top surface.
+ * - OPEN is visual only and never blocks or catches the player.
  *
  * GameEngine still owns input intent, combat, statuses, hazards, and update order.
  */
@@ -24,7 +25,7 @@ internal object GamePhysics {
         // Physics X: only solid platforms have side walls.
         player.x += player.vx * dt
         for (platform in platforms) {
-            if (platform.collision == PlatformCollision.ONE_WAY) continue
+            if (platform.collision != PlatformCollision.SOLID) continue
 
             if (aabbIntersects(
                     player.x, player.y, player.w, player.h,
@@ -56,7 +57,9 @@ internal object GamePhysics {
                 val crossedTop = previousFeet <= platform.y + LANDING_SLOP &&
                     currentFeet >= platform.y
 
-                if (overlapsX && crossedTop && (landingTop == null || platform.y < landingTop)) {
+                if (platform.collision != PlatformCollision.OPEN &&
+                    overlapsX && crossedTop && (landingTop == null || platform.y < landingTop)
+                ) {
                     landingTop = platform.y
                 }
             }
@@ -73,7 +76,7 @@ internal object GamePhysics {
         // One-way surfaces intentionally do not participate in this pass.
         if (!player.grounded) {
             for (platform in platforms) {
-                if (platform.collision == PlatformCollision.ONE_WAY) continue
+                if (platform.collision != PlatformCollision.SOLID) continue
 
                 if (aabbIntersects(
                         player.x, player.y, player.w, player.h,

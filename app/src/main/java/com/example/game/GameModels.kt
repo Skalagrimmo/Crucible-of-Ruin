@@ -22,10 +22,16 @@ enum class PlatformStyle {
     BOSS_GATE
 }
 
-/** Collision behavior is data owned by each platform, not inferred by the physics loop. */
+/**
+ * Collision behavior is data owned by each platform, not inferred by the physics loop.
+ * SOLID blocks movement from every side, ONE_WAY only catches descending actors,
+ * and OPEN is a purely visual state with no collision (the boss-arena gates
+ * before the fight starts).
+ */
 enum class PlatformCollision {
     SOLID,
-    ONE_WAY
+    ONE_WAY,
+    OPEN
 }
 
 enum class HazardType {

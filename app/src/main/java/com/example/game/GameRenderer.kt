@@ -101,8 +101,14 @@ object GameRenderer {
                         }
                     }
                     PlatformStyle.BOSS_GATE -> {
-                        drawRect(COLOR_BOSS_GATE, topLeft = Offset(dx, dy), size = Size(p.w, p.h))
-                        drawRect(COLOR_BOSS_GATE_INNER, topLeft = Offset(dx + 6f, dy), size = Size(p.w - 12f, p.h))
+                        // Open gates show as a faint archway; the full gate appears
+                        // only once the encounter seals the arena.
+                        if (p.collision == PlatformCollision.SOLID) {
+                            drawRect(COLOR_BOSS_GATE, topLeft = Offset(dx, dy), size = Size(p.w, p.h))
+                            drawRect(COLOR_BOSS_GATE_INNER, topLeft = Offset(dx + 6f, dy), size = Size(p.w - 12f, p.h))
+                        } else {
+                            drawRect(COLOR_BOSS_GATE_INNER.copy(alpha = 0.22f), topLeft = Offset(dx + 10f, dy), size = Size(p.w - 20f, p.h))
+                        }
                     }
                     else -> {
                         drawRect(COLOR_STONE_BASE, topLeft = Offset(dx, dy), size = Size(p.w, p.h))
