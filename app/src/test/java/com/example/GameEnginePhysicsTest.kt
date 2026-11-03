@@ -5,6 +5,7 @@ import com.example.game.Hazard
 import com.example.game.HazardType
 import com.example.game.Platform
 import com.example.game.PlatformStyle
+import com.example.game.PlatformCollision
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -105,6 +106,79 @@ class GameEnginePhysicsTest {
         assertTrue("Buffered jump should launch the player after landing", engine.player.vy < 0f)
         assertTrue("Player should have left the platform upward after the buffered jump", engine.player.y < 416f)
         assertEquals("Successful jump should consume the jump buffer", 0f, engine.player.jumpBuffer, 0f)
+    }
+
+    @Test
+    fun oneWayPlatformSnapsLandingToExactTopAtThirtyFps() {
+        val engine = GameEngine()
+        engine.platforms.clear()
+        engine.platforms.add(
+            Platform(100f, 200f, 200f, 18f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY)
+        )
+        engine.hazards.clear()
+        engine.enemies.clear()
+
+        engine.player.x = 150f
+        engine.player.y = 100f
+        engine.player.vx = 0f
+        engine.player.vy = 0f
+        engine.player.grounded = false
+
+        repeat(20) {
+            engine.update(1f / 30f)
+        }
+
+        assertTrue("A descending player should land on a one-way surface", engine.player.grounded)
+        assertEquals("Feet should snap exactly to the top surface", 156f, engine.player.y, 0f)
+        assertEquals("Landing should clear vertical velocity", 0f, engine.player.vy, 0f)
+    }
+
+    @Test
+    fun oneWayPlatformCanBePassedThroughFromBelow() {
+        val engine = GameEngine()
+        engine.platforms.clear()
+        engine.platforms.add(
+            Platform(100f, 200f, 200f, 18f, PlatformStyle.STONE_LEDGE, PlatformCollision.ONE_WAY)
+        )
+        engine.hazards.clear()
+        engine.enemies.clear()
+
+        engine.player.x = 150f
+        engine.player.y = 220f
+        engine.player.vx = 0f
+        engine.player.vy = -500f
+        engine.player.grounded = false
+        engine.inputJump = true
+
+        repeat(20) {
+            engine.update(1f / 60f)
+        }
+
+        assertTrue("The player should pass through the platform underside", engine.player.y + engine.player.h < 200f)
+        assertTrue("The player should still be travelling upward", engine.player.vy < 0f)
+    }
+
+    @Test
+    fun oneWayPlatformDoesNotBlockHorizontalMovementFromTheSide() {
+        val engine = GameEngine()
+        engine.platforms.clear()
+        engine.platforms.add(
+            Platform(100f, 200f, 200f, 18f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY)
+        )
+        engine.hazards.clear()
+        engine.enemies.clear()
+
+        engine.player.x = 60f
+        engine.player.y = 180f
+        engine.player.vx = 160f
+        engine.player.vy = 0f
+        engine.player.grounded = false
+
+        repeat(12) {
+            engine.update(1f / 60f)
+        }
+
+        assertTrue("A one-way platform should not behave like a side wall", engine.player.x > 70f)
     }
 
     @Test
