@@ -149,7 +149,7 @@ class LevelReachabilityTest {
         assertEquals("The lift's top stop is pinned to the design position", 460f, topStopTop, 0.01f)
         assertTrue(
             "The step up to the gallery floor must fit under the jump apex",
-            galleryFloor.y - topStopTop in 0f..PhysicsTuning.JUMP_HEIGHT
+            topStopTop - galleryFloor.y in 0f..PhysicsTuning.JUMP_HEIGHT
         )
         assertTrue(
             "The step-off gap onto the gallery floor must fit the base jump reach",
