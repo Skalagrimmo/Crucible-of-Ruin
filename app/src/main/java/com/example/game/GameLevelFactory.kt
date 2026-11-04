@@ -37,10 +37,13 @@ internal object GameLevelFactory {
     fun createBoss(): BaseBoss = CrucibleChimeraBoss(5750f, 360f)
 
     /**
-     * Stage 6d (#38): the room/door graph the world map charts. Rooms are
-     * full-height slices of the corridor; every door sits on the shared
-     * boundary, on the surface the player actually crosses on, and both
-     * sides declare it — so the graph is walkable in both directions.
+     * Stage 6d (#38): the room/door graph the world map charts. Stage 7b (#51):
+     * rooms are arbitrary world rectangles — the corridor is charted as
+     * full-height slices, and the Undercroft stacks a second band of rooms
+     * below the Gallery of the Golem. Every door sits on the surface the
+     * player actually crosses on, and both sides declare it — so the graph is
+     * walkable in both directions. A vertical transition (the shaft) anchors
+     * both ends in one world column: the shaft mouth above, the landing below.
      */
     private fun buildRooms(): List<LevelRoom> = listOf(
         LevelRoom(
@@ -85,6 +88,8 @@ internal object GameLevelFactory {
             x = 3100f, y = 0f, w = 650f, h = 540f,
             doors = listOf(
                 RoomDoor(x = 3100f, y = 430f, toRoomId = "cultist_tower"),
+                // Stage 7b (#51): the shaft mouth — the way down into the Undercroft.
+                RoomDoor(x = 3355f, y = 430f, toRoomId = "sunken_descent"),
                 RoomDoor(x = 3750f, y = 430f, toRoomId = "vitriol_pools")
             )
         ),
@@ -109,6 +114,32 @@ internal object GameLevelFactory {
             x = 5270f, y = 0f, w = 930f, h = 540f,
             doors = listOf(
                 RoomDoor(x = 5270f, y = 450f, toRoomId = "sanctum_approach")
+            )
+        ),
+        // Stage 7b (#51): the Undercroft — a second band of rooms stacked a full
+        // corridor height below the Gallery of the Golem. The door pair of the
+        // vertical transition anchors both ends of the shaft in one world column.
+        LevelRoom(
+            id = "sunken_descent", name = "The Sunken Descent",
+            x = 3100f, y = 540f, w = 400f, h = 540f,
+            doors = listOf(
+                RoomDoor(x = 3355f, y = 1000f, toRoomId = "golem_gallery"),
+                RoomDoor(x = 3500f, y = 1000f, toRoomId = "undercroft_halls")
+            )
+        ),
+        LevelRoom(
+            id = "undercroft_halls", name = "The Undercroft Halls",
+            x = 3500f, y = 540f, w = 500f, h = 540f,
+            doors = listOf(
+                RoomDoor(x = 3500f, y = 1000f, toRoomId = "sunken_descent"),
+                RoomDoor(x = 4000f, y = 1000f, toRoomId = "reliquary_vault")
+            )
+        ),
+        LevelRoom(
+            id = "reliquary_vault", name = "The Reliquary Vault",
+            x = 4000f, y = 540f, w = 360f, h = 540f,
+            doors = listOf(
+                RoomDoor(x = 4000f, y = 1000f, toRoomId = "undercroft_halls")
             )
         )
     )
@@ -180,7 +211,11 @@ internal object GameLevelFactory {
         platforms.add(Platform(2940f, 260f, 160f, 280f, PlatformStyle.STONE))
         enemies.add(EnemyEntity(3000f, 210f, EnemyArchetype.CULTIST, 0f))
 
-        platforms.add(Platform(3100f, 430f, 650f, 110f, PlatformStyle.STONE))
+        // Stage 7b (#51): the gallery floor splits around the Undercroft shaft
+        // (x 3360-3450) — the hole drops the player into the Sunken Descent,
+        // and the lift riding the shaft is the way back up.
+        platforms.add(Platform(3100f, 430f, 260f, 110f, PlatformStyle.STONE))
+        platforms.add(Platform(3450f, 430f, 300f, 110f, PlatformStyle.STONE))
         enemies.add(EnemyEntity(3300f, 370f, EnemyArchetype.GOLEM, 150f))
         enemies.add(EnemyEntity(3560f, 380f, EnemyArchetype.LURKER, 90f))
 
@@ -222,6 +257,54 @@ internal object GameLevelFactory {
         platforms.add(Platform(5420f, 350f, 120f, 20f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY))
         platforms.add(Platform(5880f, 350f, 120f, 20f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY))
 
+        // --- SECTION 4: THE UNDERCROFT (x: 3100 - 4360, y: 540 - 1080) ---
+        // Stage 7b (#51): the vertical district below the Gallery of the Golem.
+        // Every climb is measured against the PhysicsTuning ruler: a base jump
+        // clears 119 px, so no rise on the route exceeds 110 px and no horizontal
+        // gap exceeds the 152 px base-jump reach. The district floors sit at
+        // y = 1000, and the shaft lift rides from the descent floor up to the
+        // gallery level — its top stop (460) is a 30 px step onto the gallery
+        // floor's 430 top, well within a base jump.
+
+        // The shaft lift: rides 960 -> 460 and back. The swept column stays
+        // strictly inside the shaft (x 3360-3450), so it never overlaps the
+        // split gallery floor's static cells.
+        platforms.add(
+            Platform(
+                3370f, 960f, 70f, 20f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY,
+                PlatformMotion(baseX = 3370f, baseY = 960f, dx = 0f, dy = -500f, speed = 110f)
+            )
+        )
+
+        // Sunken Descent: the landing under the shaft, spike teeth near the wall,
+        // a lurker patrolling beside the lift's doorstep.
+        platforms.add(Platform(3100f, 1000f, 400f, 80f, PlatformStyle.STONE))
+        hazards.add(Hazard(3120f, 980f, 60f, 20f, HazardType.SPIKES))
+        enemies.add(EnemyEntity(3250f, 964f, EnemyArchetype.LURKER, 60f))
+        breakables.add(BreakableUrn(3470f, 976f, dropType = "flask"))
+
+        // Undercroft Halls: a zigzag girder climb toward a ledge under the
+        // corridor's ceiling, a cherub haunting the climb, and a cultist
+        // holding the vault door behind an acid strip.
+        platforms.add(Platform(3500f, 1000f, 500f, 80f, PlatformStyle.STONE))
+        platforms.add(Platform(3560f, 890f, 110f, 20f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY))
+        platforms.add(Platform(3720f, 780f, 110f, 20f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY))
+        platforms.add(Platform(3560f, 670f, 110f, 20f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY))
+        platforms.add(Platform(3780f, 600f, 120f, 20f, PlatformStyle.STONE_LEDGE, PlatformCollision.ONE_WAY))
+        hazards.add(Hazard(3900f, 970f, 80f, 30f, HazardType.ACID))
+        enemies.add(EnemyEntity(3700f, 700f, EnemyArchetype.CHERUB, 120f))
+        enemies.add(EnemyEntity(3860f, 958f, EnemyArchetype.CULTIST, 0f))
+        breakables.add(BreakableUrn(3820f, 576f, dropType = "health"))
+
+        // Reliquary Vault: the district's treasure room — spike teeth at the
+        // door, a golem guardian, and a perch with the vault's hoard.
+        platforms.add(Platform(4000f, 1000f, 360f, 80f, PlatformStyle.STONE))
+        platforms.add(Platform(4150f, 890f, 100f, 20f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY))
+        hazards.add(Hazard(4040f, 980f, 60f, 20f, HazardType.SPIKES))
+        enemies.add(EnemyEntity(4200f, 946f, EnemyArchetype.GOLEM, 90f))
+        breakables.add(BreakableUrn(4180f, 866f, dropType = "flask"))
+        breakables.add(BreakableUrn(4290f, 976f, dropType = "health"))
+
         return GameLevelLayout(
             platforms = platforms,
             hazards = hazards,
@@ -229,8 +312,10 @@ internal object GameLevelFactory {
             enemies = enemies,
             boss = createBoss(),
             rooms = buildRooms(),
+            // Stage 7b (#51): the Undercroft stacks below the corridor — the
+            // world grows one corridor height downward.
             width = 6200f,
-            height = 540f
+            height = 1080f
         )
     }
 }

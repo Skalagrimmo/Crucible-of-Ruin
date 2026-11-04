@@ -433,7 +433,10 @@ class GameEngine(
     val checkpoints = listOf(
         Checkpoint(0, 80f, 380f, "Section 1: Ruined Bastion", true),
         Checkpoint(1, 1980f, 340f, "Section 2: Crucible Laboratories", false),
-        Checkpoint(2, 4400f, 340f, "Section 3: Sanctum Approach", false)
+        Checkpoint(2, 4400f, 340f, "Section 3: Sanctum Approach", false),
+        // Stage 7b (#51): the Undercroft checkpoint — on the Halls floor, right
+        // past the shaft landing and at the foot of the girder climb.
+        Checkpoint(3, 3560f, 956f, "Section 4: The Undercroft", false)
     )
     var activeCheckpoint: Checkpoint = checkpoints[0]
 

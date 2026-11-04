@@ -18,9 +18,9 @@ import org.robolectric.annotation.Config
  * Stage 7a (#51): the world's size is a property of the level layout.
  *
  * The engine adopts the layout's bounds for its tile grid, camera clamp, and
- * pit/out-of-bounds thresholds. The stock corridor keeps its 6200x540 bounds;
- * a custom layout may stack districts below it (the prerequisite for the
- * Undercroft).
+ * pit/out-of-bounds thresholds. The stock world is 6200x1080 — the corridor
+ * plus the Undercroft district stacked below it (Stage 7b, #51) — while a
+ * custom layout may adopt any bounds.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36])
@@ -43,13 +43,15 @@ class WorldDimensionsTest {
     )
 
     @Test
-    fun stockCorridorKeepsItsDimensions() {
+    fun stockWorldKeepsItsDimensions() {
         val engine = GameEngine()
 
+        // Stage 7b (#51): the stock world grew one corridor height downward —
+        // the Undercroft district stacks below the 540 px corridor.
         assertEquals(6200f, engine.levelWidth)
-        assertEquals(540f, engine.levelHeight)
+        assertEquals(1080f, engine.levelHeight)
         assertEquals(620, engine.levelGrid.cols)
-        assertEquals(54, engine.levelGrid.rows)
+        assertEquals(108, engine.levelGrid.rows)
     }
 
     @Test
@@ -75,9 +77,9 @@ class WorldDimensionsTest {
         engine.restart()
 
         assertEquals(6200f, engine.levelWidth)
-        assertEquals(540f, engine.levelHeight)
+        assertEquals(1080f, engine.levelHeight)
         assertEquals(620, engine.levelGrid.cols)
-        assertEquals(54, engine.levelGrid.rows)
+        assertEquals(108, engine.levelGrid.rows)
     }
 
     @Test
@@ -117,10 +119,10 @@ class WorldDimensionsTest {
     }
 
     @Test
-    fun layoutDefaultsKeepTheCorridorBounds() {
+    fun layoutDefaultsKeepTheWorldBounds() {
         val layout = GameLevelFactory.create()
 
         assertEquals(6200f, layout.width)
-        assertEquals(540f, layout.height)
+        assertEquals(1080f, layout.height)
     }
 }

@@ -22,24 +22,52 @@ import org.robolectric.annotation.Config
 class RoomGraphTest {
 
     @Test
-    fun roomsPartitionTheWholeWorldIntoContiguousSlices() {
+    fun roomsTileTheBandsWithoutGapsOrOverlaps() {
         val engine = GameEngine()
-        val rooms = engine.roomGraph.rooms.sortedBy { it.x }
-        assertTrue("The world must start with a room at x = 0", rooms.first().x == 0f)
+        val rooms = engine.roomGraph.rooms
+
+        // No room may leave the world's bounds.
         assertTrue(
-            "Every room spans the full world height",
-            rooms.all { it.y == 0f && it.y + it.h == engine.levelHeight }
+            "Every room must fit inside the world bounds",
+            rooms.all {
+                it.x >= 0f && it.y >= 0f &&
+                    it.x + it.w <= engine.levelWidth && it.y + it.h <= engine.levelHeight
+            }
         )
-        for (i in 0 until rooms.size - 1) {
-            assertEquals(
-                "Rooms must tile the world without gaps or overlaps: " + rooms[i].id,
-                rooms[i].x + rooms[i].w, rooms[i + 1].x, 0f
-            )
+        // No two rooms overlap (rooms are half-open rectangles; a shared edge is fine).
+        for (i in rooms.indices) {
+            for (j in i + 1 until rooms.size) {
+                val a = rooms[i]
+                val b = rooms[j]
+                assertTrue(
+                    "Rooms may not overlap: " + a.id + " / " + b.id,
+                    a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y
+                )
+            }
         }
-        assertEquals(
-            "The last room must close the world at levelWidth",
-            engine.levelWidth, rooms.last().x + rooms.last().w, 0f
+        // Stage 7b (#51): the world is charted in bands. The corridor band covers
+        // the full world width; the Undercroft band stacks below it and tiles its
+        // own span without gaps.
+        val corridor = rooms.filter { it.y == 0f }.sortedBy { it.x }
+        assertTrue("The world must start with a room at x = 0", corridor.first().x == 0f)
+        var x = 0f
+        for (room in corridor) {
+            assertEquals("The corridor band must be contiguous at " + room.id, x, room.x, 0f)
+            x += room.w
+        }
+        assertEquals("The corridor band must close the world at levelWidth", engine.levelWidth, x, 0f)
+
+        val undercroft = rooms.filter { it.y > 0f }
+        assertTrue("The Undercroft band must exist below the corridor", undercroft.isNotEmpty())
+        assertTrue(
+            "The Undercroft band must be one full-height strip below the corridor",
+            undercroft.all { it.y == corridor.first().h && it.h == engine.levelHeight - it.y }
         )
+        var ux = undercroft.minOf { it.x }
+        for (room in undercroft.sortedBy { it.x }) {
+            assertEquals("The Undercroft band must be contiguous at " + room.id, ux, room.x, 0f)
+            ux += room.w
+        }
     }
 
     @Test
@@ -69,9 +97,14 @@ class RoomGraphTest {
                     door.x >= room.x && door.x <= room.x + room.w &&
                         door.y >= room.y && door.y <= room.y + room.h
                 )
+                // Stage 7b (#51): a vertical transition (the Undercroft shaft)
+                // anchors both ends in the same world column — the shaft mouth in
+                // the upper room, the landing below — so the pair stays aligned
+                // on the map's x axis. Level corridor doors keep the same exact
+                // spot, which the same-column rule also covers.
                 assertTrue(
-                    "The door back from " + door.toRoomId + " must exist at the same spot",
-                    target!!.doors.any { it.toRoomId == room.id && it.x == door.x && it.y == door.y }
+                    "The door back from " + door.toRoomId + " must align in the same world column",
+                    target!!.doors.any { it.toRoomId == room.id && it.x == door.x }
                 )
             }
         }
@@ -136,6 +169,10 @@ class RoomGraphTest {
         assertEquals("crucible_labs", engine.roomGraph.roomAt(2500f, 300f)!!.id)
         assertEquals("cultist_tower", engine.roomGraph.roomAt(3000f, 300f)!!.id)
         assertEquals("grand_sanctum", engine.roomGraph.roomAt(5750f, 300f)!!.id)
+        // Stage 7b (#51): the Undercroft band charts below the corridor.
+        assertEquals("sunken_descent", engine.roomGraph.roomAt(3300f, 900f)!!.id)
+        assertEquals("undercroft_halls", engine.roomGraph.roomAt(3700f, 800f)!!.id)
+        assertEquals("reliquary_vault", engine.roomGraph.roomAt(4200f, 700f)!!.id)
         assertEquals("Outside the world there is no room", null, engine.roomGraph.roomAt(-10f, 100f))
         assertEquals(null, engine.roomGraph.roomAt(6300f, 100f))
     }
@@ -166,6 +203,6 @@ class RoomGraphTest {
             setOf("bastion_entry"), engine.visitedRooms.toSet()
         )
         assertEquals("bastion_entry", engine.currentRoom!!.id)
-        assertEquals("The room graph itself survives restarts", 9, engine.roomGraph.rooms.size)
+        assertEquals("The room graph itself survives restarts", 12, engine.roomGraph.rooms.size)
     }
 }
