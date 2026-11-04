@@ -63,7 +63,7 @@ class WorldDimensionsTest {
         assertEquals(100, engine.levelGrid.rows)
         assertTrue(
             "Geometry at the custom world's far corner must rasterize into the resized grid",
-            engine.levelGrid.rectTouchesCollision(width - 6f, height - 6f, 2f, 2f)
+            engine.levelGrid.rectTouchesCollision(1494f, 994f, 2f, 2f)
         )
     }
 
