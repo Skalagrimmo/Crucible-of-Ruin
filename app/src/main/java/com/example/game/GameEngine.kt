@@ -37,8 +37,11 @@ class Camera2D(val viewW: Float = 960f, val viewH: Float = 540f) {
         x += (desiredX - x) * (1f - exp(-6f * dt))
         y += (desiredY - y) * (1f - exp(-4f * dt))
 
-        x = x.coerceIn(0f, maxW - viewW)
-        y = y.coerceIn(0f, maxH - viewH)
+        // Stage 7a (#51): a layout may be smaller than the viewport on an axis
+        // (a test world, a tiny district) — clamp to a valid range instead of
+        // crashing on an inverted coerceIn.
+        x = x.coerceIn(0f, maxOf(0f, maxW - viewW))
+        y = y.coerceIn(0f, maxOf(0f, maxH - viewH))
 
         // Time-based shake decay: at dt = 1/60 s this equals the legacy 0.9-per-frame
         // factor, so the 60 FPS cap keeps its tuned feel while the 30 FPS cap no
@@ -395,13 +398,19 @@ class GameEngine(
     val pickups = PickupPool(24)
     val damageNumbers = DamageNumberPool(36)
 
-    val levelWidth = 6200f
-    val levelHeight = 540f
+    // Stage 7a (#51): world bounds travel with the level layout. The stock
+    // corridor stays 6200x540, but a layout may stack districts below it; the
+    // tile grid, camera clamp, and pit/out-of-bounds thresholds all read these.
+    var levelWidth = 6200f
+        private set
+    var levelHeight = 540f
+        private set
 
     // Stage 6b (#38): the tile grid mirrors the platform/hazard lists for O(1)
     // collision lookups. It is rebuilt on every initLevel, kept in sync when the
     // boss gates seal or reopen, and tests that mutate the lists call rebuildLevelGrid().
-    internal val levelGrid = LevelGrid(levelWidth, levelHeight)
+    internal var levelGrid = LevelGrid(levelWidth, levelHeight)
+        private set
 
     // Stage 6c (#38): absolute clock driving the moving platforms' ping-pong
     // motion. It advances only with the fixed simulation tick, so platform
@@ -496,7 +505,15 @@ class GameEngine(
         timeDebt = 0f
     }
 
-    fun initLevel() {
+    fun initLevel() = initLevel(GameLevelFactory.create())
+
+    /**
+     * Stage 7a (#51): installs any layout, not only the factory's stock one.
+     * World bounds are adopted from the layout and the tile grid is rebuilt at
+     * the layout's dimensions, so a district may extend below the corridor
+     * without the engine, camera, or pit thresholds hard-coding its size.
+     */
+    internal fun initLevel(layout: GameLevelLayout) {
         // Clear the previous runtime instances before loading a fresh level layout.
         // Stage 6c (#38): the motion clock restarts with every fresh layout, so
         // restarts and replays begin every ride from the same phase.
@@ -508,7 +525,12 @@ class GameEngine(
         enemies.clear()
         projectiles.clear()
 
-        val layout = GameLevelFactory.create()
+        // Stage 7a (#51): adopt the layout's world bounds first so the fresh
+        // grid is sized for the layout that is about to be rasterized into it.
+        levelWidth = layout.width
+        levelHeight = layout.height
+        levelGrid = LevelGrid(levelWidth, levelHeight)
+
         platforms.addAll(layout.platforms)
         hazards.addAll(layout.hazards)
         breakables.addAll(layout.breakables)

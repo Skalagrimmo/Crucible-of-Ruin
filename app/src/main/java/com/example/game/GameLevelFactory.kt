@@ -19,7 +19,12 @@ internal data class GameLevelLayout(
     // Stage 6d (#38): the room/door graph for the world map. A single TMX
     // section carries no rooms yet — the default keeps the loader
     // source-compatible.
-    val rooms: List<LevelRoom> = emptyList()
+    val rooms: List<LevelRoom> = emptyList(),
+    // Stage 7a (#51): world bounds travel with the layout, so a district can
+    // stack below the corridor without the engine hard-coding its size. The
+    // defaults keep the stock 6200x540 corridor and loader callers compatible.
+    val width: Float = 6200f,
+    val height: Float = 540f
 )
 
 /**
@@ -223,7 +228,9 @@ internal object GameLevelFactory {
             breakables = breakables,
             enemies = enemies,
             boss = createBoss(),
-            rooms = buildRooms()
+            rooms = buildRooms(),
+            width = 6200f,
+            height = 540f
         )
     }
 }
