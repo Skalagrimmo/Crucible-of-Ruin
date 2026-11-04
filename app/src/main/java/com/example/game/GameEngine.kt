@@ -37,8 +37,11 @@ class Camera2D(val viewW: Float = 960f, val viewH: Float = 540f) {
         x += (desiredX - x) * (1f - exp(-6f * dt))
         y += (desiredY - y) * (1f - exp(-4f * dt))
 
-        x = x.coerceIn(0f, maxW - viewW)
-        y = y.coerceIn(0f, maxH - viewH)
+        // Stage 7a (#51): a layout may be smaller than the viewport on an axis
+        // (a test world, a tiny district) — clamp to a valid range instead of
+        // crashing on an inverted coerceIn.
+        x = x.coerceIn(0f, maxOf(0f, maxW - viewW))
+        y = y.coerceIn(0f, maxOf(0f, maxH - viewH))
 
         // Time-based shake decay: at dt = 1/60 s this equals the legacy 0.9-per-frame
         // factor, so the 60 FPS cap keeps its tuned feel while the 30 FPS cap no
