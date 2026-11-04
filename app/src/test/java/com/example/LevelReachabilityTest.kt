@@ -133,4 +133,27 @@ class LevelReachabilityTest {
             )
         }
     }
+
+    /**
+     * Stage 7b (#51): the Undercroft's way home. The shaft lift's top stop must
+     * let a rider step back onto the split gallery floor with base stats — a
+     * rise within the jump apex and a gap within the base-jump reach.
+     */
+    @Test
+    fun undercroftLiftTopStopStepsBackOntoTheGalleryFloor() {
+        val engine = GameEngine()
+        val lift = engine.platforms.first { it.motion != null && it.motion.dy < 0f && it.y > 900f }
+        val galleryFloor = engine.platforms.first { it.x == 3450f && it.y == 430f }
+
+        val topStopTop = lift.y + lift.motion!!.dy
+        assertEquals("The lift's top stop is pinned to the design position", 460f, topStopTop, 0.01f)
+        assertTrue(
+            "The step up to the gallery floor must fit under the jump apex",
+            topStopTop - galleryFloor.y in 0f..PhysicsTuning.JUMP_HEIGHT
+        )
+        assertTrue(
+            "The step-off gap onto the gallery floor must fit the base jump reach",
+            galleryFloor.x - (lift.x + lift.w) in 0f..PhysicsTuning.JUMP_REACH
+        )
+    }
 }

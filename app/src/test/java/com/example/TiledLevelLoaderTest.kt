@@ -71,9 +71,11 @@ class TiledLevelLoaderTest {
         assertTrue(fullLayout.platforms.contains(section.platforms.first()))
         assertTrue(fullLayout.hazards.contains(section.hazards.first()))
         // Stage 6c (#38): the two moving platforms (the bastion elevator and the
-        // laboratory ferry) join the 28 static ones in the factory layout.
-        assertEquals(30, fullLayout.platforms.size)
-        assertEquals(6, fullLayout.hazards.size)
+        // laboratory ferry) join the 28 static corridor ones.
+        // Stage 7b (#51): the gallery floor splits around the shaft and the
+        // Undercroft adds three floors, the shaft lift, the climb, and a perch.
+        assertEquals(40, fullLayout.platforms.size)
+        assertEquals(9, fullLayout.hazards.size)
     }
 
     @Test
