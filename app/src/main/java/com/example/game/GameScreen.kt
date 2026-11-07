@@ -662,11 +662,16 @@ fun GameScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
+                    // Stage 7 (#27): the badge mapping lives in ComboIndicator so the
+                    // confirmed semantics — the label names the NEXT AVAILABLE attack,
+                    // not the swing just completed — stay pinned by unit tests
+                    // instead of living inline in the UI.
                     val comboStep = remember(frameTick) { engine.player.comboIndex }
                     val comboTimer = remember(frameTick) { engine.player.comboResetTimer }
-                    val isFinisherReady = comboStep == 2
+                    val comboBadge = remember(frameTick) { ComboIndicator.badgeFor(comboStep, comboTimer) }
+                    val isFinisherReady = comboBadge.isFinisherReady
 
-                    if (comboTimer > 0f) {
+                    if (comboBadge.visible) {
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(3.dp),
                             verticalAlignment = Alignment.CenterVertically,
@@ -681,7 +686,7 @@ fun GameScreen(
                                 .testTag("combo_meter_badge")
                         ) {
                             Text(
-                                text = if (isFinisherReady) "FINISHER!" else "COMBO x${comboStep + 1}",
+                                text = comboBadge.label,
                                 color = if (isFinisherReady) Color(0xFFFF453A) else Color(0xFFFFD700),
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.ExtraBold,
@@ -690,7 +695,7 @@ fun GameScreen(
                             // 3 Combo Pips
                             Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                                 for (i in 0..2) {
-                                    val isHit = i < comboStep + 1
+                                    val isHit = i < comboBadge.filledPips
                                     Box(
                                         modifier = Modifier
                                             .size(5.dp)
