@@ -436,7 +436,10 @@ class GameEngine(
         Checkpoint(2, 4400f, 340f, "Section 3: Sanctum Approach", false),
         // Stage 7b (#51): the Undercroft checkpoint — on the Halls floor, right
         // past the shaft landing and at the foot of the girder climb.
-        Checkpoint(3, 3560f, 956f, "Section 4: The Undercroft", false)
+        Checkpoint(3, 3560f, 956f, "Section 4: The Undercroft", false),
+        // Stage 8b (#56): the Iron Garrison checkpoint — on the district
+        // street at the keep's doorstep, just past the sealed gate.
+        Checkpoint(4, 5850f, 956f, "Section 5: The Iron Garrison", false)
     )
     var activeCheckpoint: Checkpoint = checkpoints[0]
 

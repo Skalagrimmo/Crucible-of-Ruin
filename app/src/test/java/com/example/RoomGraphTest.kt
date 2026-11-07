@@ -173,6 +173,10 @@ class RoomGraphTest {
         assertEquals("sunken_descent", engine.roomGraph.roomAt(3300f, 900f)!!.id)
         assertEquals("undercroft_halls", engine.roomGraph.roomAt(3700f, 800f)!!.id)
         assertEquals("reliquary_vault", engine.roomGraph.roomAt(4200f, 700f)!!.id)
+        // Stage 8b (#56): the Iron Garrison band charts below the approach.
+        assertEquals("garrison_descent", engine.roomGraph.roomAt(4500f, 900f)!!.id)
+        assertEquals("garrison_street", engine.roomGraph.roomAt(5000f, 900f)!!.id)
+        assertEquals("garrison_keep", engine.roomGraph.roomAt(5850f, 700f)!!.id)
         assertEquals("Outside the world there is no room", null, engine.roomGraph.roomAt(-10f, 100f))
         assertEquals(null, engine.roomGraph.roomAt(6300f, 100f))
     }
@@ -203,6 +207,6 @@ class RoomGraphTest {
             setOf("bastion_entry"), engine.visitedRooms.toSet()
         )
         assertEquals("bastion_entry", engine.currentRoom!!.id)
-        assertEquals("The room graph itself survives restarts", 12, engine.roomGraph.rooms.size)
+        assertEquals("The room graph itself survives restarts", 15, engine.roomGraph.rooms.size)
     }
 }

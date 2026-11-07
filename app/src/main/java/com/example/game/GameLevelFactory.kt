@@ -108,6 +108,9 @@ internal object GameLevelFactory {
             x = 4360f, y = 0f, w = 910f, h = 540f,
             doors = listOf(
                 RoomDoor(x = 4360f, y = 420f, toRoomId = "vitriol_pools"),
+                // Stage 8b (#56): the shaft mouth — the way down into the
+                // Iron Garrison district.
+                RoomDoor(x = 4490f, y = 420f, toRoomId = "garrison_descent"),
                 RoomDoor(x = 5270f, y = 450f, toRoomId = "grand_sanctum")
             )
         ),
@@ -141,7 +144,42 @@ internal object GameLevelFactory {
             id = "reliquary_vault", name = "The Reliquary Vault",
             x = 4000f, y = 540f, w = 360f, h = 540f,
             doors = listOf(
-                RoomDoor(x = 4000f, y = 1000f, toRoomId = "undercroft_halls")
+                RoomDoor(x = 4000f, y = 1000f, toRoomId = "undercroft_halls"),
+                // Stage 8b (#56): the vault's right wall opens onto the
+                // Iron Garrison street.
+                RoomDoor(x = 4360f, y = 1000f, toRoomId = "garrison_descent")
+            )
+        ),
+        // Stage 8b (#56): the Iron Garrison — the district band continues
+        // below the Sanctum Approach and the Grand Sanctum, tiling the lower
+        // band all the way to the world's right edge. The shaft door pair
+        // anchors both ends in one column (mouth 4490 above, landing 4490
+        // below); the keep's elevated door anchors on the L2 girder that
+        // crosses the boundary.
+        LevelRoom(
+            id = "garrison_descent", name = "The Garrison Descent",
+            x = 4360f, y = 540f, w = 340f, h = 540f,
+            doors = listOf(
+                RoomDoor(x = 4490f, y = 1000f, toRoomId = "sanctum_approach"),
+                RoomDoor(x = 4360f, y = 1000f, toRoomId = "reliquary_vault"),
+                RoomDoor(x = 4700f, y = 1000f, toRoomId = "garrison_street")
+            )
+        ),
+        LevelRoom(
+            id = "garrison_street", name = "The Garrison Street",
+            x = 4700f, y = 540f, w = 1000f, h = 540f,
+            doors = listOf(
+                RoomDoor(x = 4700f, y = 1000f, toRoomId = "garrison_descent"),
+                RoomDoor(x = 5700f, y = 1000f, toRoomId = "garrison_keep"),
+                RoomDoor(x = 5700f, y = 590f, toRoomId = "garrison_keep")
+            )
+        ),
+        LevelRoom(
+            id = "garrison_keep", name = "The Garrison Keep",
+            x = 5700f, y = 540f, w = 500f, h = 540f,
+            doors = listOf(
+                RoomDoor(x = 5700f, y = 1000f, toRoomId = "garrison_street"),
+                RoomDoor(x = 5700f, y = 590f, toRoomId = "garrison_street")
             )
         )
     )
@@ -232,7 +270,11 @@ internal object GameLevelFactory {
         enemies.add(EnemyEntity(4140f, 360f, EnemyArchetype.CULTIST, 0f))
 
         // --- SECTION 3: THE SANCTUM APPROACH (x: 4300 - 5100) ---
-        platforms.add(Platform(4360f, 420f, 320f, 120f, PlatformStyle.STONE))
+        // Stage 8b (#56): the approach floor splits around the Iron Garrison
+        // shaft (x 4500-4600) — the hole drops the player into the district
+        // street, and the stair return is the way back up.
+        platforms.add(Platform(4360f, 420f, 140f, 120f, PlatformStyle.STONE))
+        platforms.add(Platform(4600f, 420f, 80f, 120f, PlatformStyle.STONE))
 
         platforms.add(Platform(4740f, 360f, 110f, 20f, PlatformStyle.STONE_LEDGE, PlatformCollision.ONE_WAY))
         hazards.add(Hazard(4680f, 510f, 260f, 30f, HazardType.ACID))
@@ -307,6 +349,74 @@ internal object GameLevelFactory {
         breakables.add(BreakableUrn(4180f, 866f, dropType = "flask"))
         breakables.add(BreakableUrn(4290f, 976f, dropType = "health"))
 
+
+        // --- SECTION 5: THE IRON GARRISON (x: 4360 - 6200, y: 540 - 1080) ---
+        // Stage 8b (#56): the fortress district below the Sanctum Approach,
+        // reached through the shaft in the approach floor. Every rise stays
+        // under the 119 px base-jump apex and every gap under the base-jump
+        // reach, so the whole district climbs with base stats. The street runs
+        // the district's full width at the Undercroft's floor level; the
+        // fortress blocks wall it into roofless pockets; the rooftops are the
+        // way across, and the stair return climbs back to the corridor
+        // through the same shaft the player dropped through.
+
+        // The district street: bridges the Reliquary Vault's floor (same top,
+        // 1000) all the way to the world's right edge.
+        platforms.add(Platform(4360f, 1000f, 1840f, 80f, PlatformStyle.STONE))
+
+        // The stair return: a one-way climb under the shaft. The top step g5
+        // sits exactly in the shaft column, one base jump short of the
+        // corridor floor's top (apex 119 vs the needed 100).
+        platforms.add(Platform(4560f, 890f, 110f, 20f, PlatformStyle.STONE_LEDGE, PlatformCollision.ONE_WAY))
+        platforms.add(Platform(4620f, 800f, 110f, 20f, PlatformStyle.STONE_LEDGE, PlatformCollision.ONE_WAY))
+        platforms.add(Platform(4560f, 710f, 110f, 20f, PlatformStyle.STONE_LEDGE, PlatformCollision.ONE_WAY))
+        platforms.add(Platform(4620f, 620f, 110f, 20f, PlatformStyle.STONE_LEDGE, PlatformCollision.ONE_WAY))
+        platforms.add(Platform(4500f, 520f, 100f, 20f, PlatformStyle.STONE_LEDGE, PlatformCollision.ONE_WAY))
+
+        // The fortress blocks: solid walls that break the street into
+        // roofless pockets and carry the rooftop route across the district.
+        platforms.add(Platform(4780f, 890f, 160f, 110f, PlatformStyle.STONE))
+        platforms.add(Platform(5040f, 820f, 140f, 180f, PlatformStyle.STONE))
+        platforms.add(Platform(5300f, 740f, 160f, 260f, PlatformStyle.STONE))
+        platforms.add(Platform(5900f, 820f, 140f, 180f, PlatformStyle.STONE))
+
+        // The sealed keep gate: solid bars between the street pockets until
+        // the elevated route's trigger unlocks them (Stage 8a seams).
+        platforms.add(
+            Platform(
+                x = 5700f, y = 880f, w = 30f, h = 120f,
+                style = PlatformStyle.IRON_GATE, collision = PlatformCollision.SOLID,
+                gateId = "garrison_gate"
+            )
+        )
+
+        // The elevated route over the rooftops: L2 crosses the gate's
+        // column, and landing on L3 fires the trigger that unseals the gate.
+        platforms.add(Platform(5500f, 670f, 120f, 20f, PlatformStyle.STONE_LEDGE, PlatformCollision.ONE_WAY))
+        platforms.add(Platform(5660f, 590f, 120f, 20f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY))
+        platforms.add(Platform(5800f, 670f, 120f, 20f, PlatformStyle.STONE_LEDGE, PlatformCollision.ONE_WAY))
+
+        // Street hazards: acid pools and spike teeth between the blocks.
+        hazards.add(Hazard(4950f, 980f, 80f, 20f, HazardType.ACID))
+        hazards.add(Hazard(5210f, 980f, 60f, 20f, HazardType.SPIKES))
+        hazards.add(Hazard(5470f, 980f, 70f, 20f, HazardType.ACID))
+        hazards.add(Hazard(6160f, 980f, 40f, 20f, HazardType.SPIKES))
+
+        // The garrison watch: a lurker by the stair's doorstep, cherubs
+        // haunting the rooftops, a cultist holding the gate's street, and a
+        // golem in the pocket past the keep block.
+        enemies.add(EnemyEntity(4420f, 964f, EnemyArchetype.LURKER, 80f))
+        enemies.add(EnemyEntity(5150f, 760f, EnemyArchetype.CHERUB, 110f))
+        enemies.add(EnemyEntity(5390f, 680f, EnemyArchetype.CHERUB, 120f))
+        enemies.add(EnemyEntity(5600f, 958f, EnemyArchetype.CULTIST, 0f))
+        enemies.add(EnemyEntity(6080f, 946f, EnemyArchetype.GOLEM, 30f))
+
+        breakables.add(BreakableUrn(4430f, 976f, dropType = "health"))
+        breakables.add(BreakableUrn(4830f, 866f, dropType = "flask"))
+        breakables.add(BreakableUrn(5350f, 716f, dropType = "health"))
+        breakables.add(BreakableUrn(5940f, 796f, dropType = "flask"))
+        breakables.add(BreakableUrn(6110f, 976f, dropType = "flask"))
+
         return GameLevelLayout(
             platforms = platforms,
             hazards = hazards,
@@ -317,7 +427,12 @@ internal object GameLevelFactory {
             // Stage 7b (#51): the Undercroft stacks below the corridor — the
             // world grows one corridor height downward.
             width = 6200f,
-            height = 1080f
+            height = 1080f,
+            // Stage 8b (#56): crossing the elevated route's far landing
+            // unlocks the sealed keep gate — the #11 shortcut semantics.
+            gateTriggers = listOf(
+                GateTrigger(gateId = "garrison_gate", x = 5800f, y = 540f, w = 80f, h = 140f)
+            )
         )
     }
 }
