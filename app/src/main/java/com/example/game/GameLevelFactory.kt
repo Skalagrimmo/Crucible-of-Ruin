@@ -24,7 +24,9 @@ internal data class GameLevelLayout(
     // stack below the corridor without the engine hard-coding its size. The
     // defaults keep the stock 6200x540 corridor and loader callers compatible.
     val width: Float = 6200f,
-    val height: Float = 540f
+    val height: Float = 540f,
+    // Stage 8a (#56): rectangles that unlock the district's sealed shortcut gates.
+    val gateTriggers: List<GateTrigger> = emptyList()
 )
 
 /**

@@ -28,6 +28,10 @@ object GameRenderer {
     private val COLOR_BOSS_GATE = Color(0xFF241A2E)
     private val COLOR_BOSS_GATE_INNER = Color(0xFF7A3090)
 
+    // Stage 8a (#56): the sealed street gate of a fortress district.
+    private val COLOR_GATE_BASE = Color(0xFF262033)
+    private val COLOR_GATE_BAR = Color(0xFF8F77AA)
+
     private val COLOR_ACID_BASE = Color(0xFF0F4422)
     private val COLOR_ACID_SURFACE = Color(0xFF2FF078)
     private val COLOR_ACID_BUBBLE = Color(0xFF80FFA8)
@@ -108,6 +112,24 @@ object GameRenderer {
                             drawRect(COLOR_BOSS_GATE_INNER, topLeft = Offset(dx + 6f, dy), size = Size(p.w - 12f, p.h))
                         } else {
                             drawRect(COLOR_BOSS_GATE_INNER.copy(alpha = 0.22f), topLeft = Offset(dx + 10f, dy), size = Size(p.w - 20f, p.h))
+                        }
+                    }
+                    PlatformStyle.IRON_GATE -> {
+                        // Stage 8a (#56): a portcullis — the bars draw only while the
+                        // gate still blocks the way; unlocked, it fades to an archway.
+                        if (p.collision == PlatformCollision.SOLID) {
+                            drawRect(COLOR_GATE_BASE, topLeft = Offset(dx, dy), size = Size(p.w, p.h))
+                            var barY = dy + 6f
+                            while (barY < dy + p.h - 7f) {
+                                drawRect(COLOR_GATE_BAR, topLeft = Offset(dx + 6f, barY), size = Size(p.w - 12f, 5f))
+                                barY += 14f
+                            }
+                        } else {
+                            drawRect(
+                                COLOR_GATE_BAR.copy(alpha = 0.22f),
+                                topLeft = Offset(dx + 6f, dy),
+                                size = Size(p.w - 12f, p.h)
+                            )
                         }
                     }
                     else -> {

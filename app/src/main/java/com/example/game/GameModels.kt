@@ -20,7 +20,10 @@ enum class PlatformStyle {
     STONE,
     IRON_GIRDER,
     STONE_LEDGE,
-    BOSS_GATE
+    BOSS_GATE,
+    // Stage 8a (#56): the sealed street gate of a fortress district — solid
+    // until its layout trigger unlocks it.
+    IRON_GATE
 }
 
 /**
@@ -48,7 +51,7 @@ enum class HazardType {
 val PlatformStyle.defaultCollision: PlatformCollision
     get() = when (this) {
         PlatformStyle.STONE_LEDGE, PlatformStyle.IRON_GIRDER -> PlatformCollision.ONE_WAY
-        PlatformStyle.STONE, PlatformStyle.BOSS_GATE -> PlatformCollision.SOLID
+        PlatformStyle.STONE, PlatformStyle.BOSS_GATE, PlatformStyle.IRON_GATE -> PlatformCollision.SOLID
     }
 
 /** True when the platform only catches descending actors (Stage 3, #35). */
@@ -94,7 +97,23 @@ data class Platform(
     val h: Float,
     val style: PlatformStyle,
     val collision: PlatformCollision = style.defaultCollision,
-    val motion: PlatformMotion? = null
+    val motion: PlatformMotion? = null,
+    // Stage 8a (#56): identifies which layout trigger unlocks this gate.
+    // Null on every non-gate platform.
+    val gateId: String? = null
+)
+
+/**
+ * Stage 8a (#56): a layout-owned rectangle that unlocks the shortcut gates
+ * carrying [gateId] when the player crosses it — the closed prototype #11's
+ * "the shortcut opens once the far side is reached" as engine-backed data.
+ */
+data class GateTrigger(
+    val gateId: String,
+    val x: Float,
+    val y: Float,
+    val w: Float,
+    val h: Float
 )
 
 data class Hazard(
