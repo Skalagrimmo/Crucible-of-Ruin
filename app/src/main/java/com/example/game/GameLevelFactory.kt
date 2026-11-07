@@ -364,14 +364,20 @@ internal object GameLevelFactory {
         // 1000) all the way to the world's right edge.
         platforms.add(Platform(4360f, 1000f, 1840f, 80f, PlatformStyle.STONE))
 
-        // The stair return: a one-way climb under the shaft. The top step g5
-        // sits exactly in the shaft column, one base jump short of the
-        // corridor floor's top (apex 119 vs the needed 100).
+        // The stair return: a stacked one-way climb under the shaft — the
+        // same pass-through pattern as the Undercroft's girder climb. The top
+        // step g5 hugs the shaft's left wall and g4 stacks under the shaft's
+        // right half, so a drop through the mouth lands on one of them and
+        // never traps the player: walking off g5's right edge steps down onto
+        // g4, and walking off g4's left edge falls the open column straight to
+        // the district street. Climbing back is a chain of base jumps — g5
+        // sits 100 px below the corridor floor's top, and the 119 px apex
+        // clears it with room to drift over the ledge.
         platforms.add(Platform(4560f, 890f, 110f, 20f, PlatformStyle.STONE_LEDGE, PlatformCollision.ONE_WAY))
         platforms.add(Platform(4620f, 800f, 110f, 20f, PlatformStyle.STONE_LEDGE, PlatformCollision.ONE_WAY))
         platforms.add(Platform(4560f, 710f, 110f, 20f, PlatformStyle.STONE_LEDGE, PlatformCollision.ONE_WAY))
-        platforms.add(Platform(4620f, 620f, 110f, 20f, PlatformStyle.STONE_LEDGE, PlatformCollision.ONE_WAY))
-        platforms.add(Platform(4500f, 520f, 100f, 20f, PlatformStyle.STONE_LEDGE, PlatformCollision.ONE_WAY))
+        platforms.add(Platform(4560f, 620f, 110f, 20f, PlatformStyle.STONE_LEDGE, PlatformCollision.ONE_WAY))
+        platforms.add(Platform(4500f, 520f, 70f, 20f, PlatformStyle.STONE_LEDGE, PlatformCollision.ONE_WAY))
 
         // The fortress blocks: solid walls that break the street into
         // roofless pockets and carry the rooftop route across the district.

@@ -18,8 +18,8 @@ import org.robolectric.annotation.Config
  * Sanctum Approach.
  *
  * These tests pin the district's structure and loop semantics: the shaft in
- * the approach floor is the way down, the stair under it is the way back up
- * (one base jump short of the corridor floor), the street bridges the
+ * the approach floor is the way down, the stacked stair under it is the way
+ * back up (one base jump up to the corridor floor), the street bridges the
  * Undercroft's vault into the district, the fortress blocks wall the street
  * into roofless pockets, and the sealed keep gate opens only from the
  * elevated rooftop route — the #11 shortcut semantics.
@@ -64,8 +64,9 @@ class IronGarrisonTest {
         val engine = GameEngine()
         engine.enemies.forEach { it.dead = true }
 
-        // Fall through the shaft from the corridor band.
-        engine.player.x = 4550f
+        // Fall through the shaft from the corridor band — the left half of
+        // the mouth lands on the stair's top step g5.
+        engine.player.x = 4510f
         engine.player.y = 380f
         engine.player.vx = 0f
         engine.player.vy = 0f
@@ -73,16 +74,40 @@ class IronGarrisonTest {
         tick(engine, 60)
 
         assertTrue("The drop must land on the stair return's top step", engine.player.grounded)
-        assertEquals("The top step sits one jump below the corridor floor", 476f, engine.player.y, 0.5f)
+        assertEquals("The top step sits one base jump below the corridor floor", 476f, engine.player.y, 0.5f)
 
-        // Walk off the stair's left edge and continue down to the district
-        // street — the column beside g5 is clear all the way to the floor.
+        // Step off g5's right edge: the stacked g4 tier catches the drop
+        // one stair step lower, so the shaft never traps the player.
+        engine.player.x = 4560f
+        engine.player.y = 476f
+        engine.player.vx = 0f
+        engine.player.vy = 0f
+        engine.player.grounded = true
+        engine.inputRight = true
+        tick(engine, 7)
+        engine.inputRight = false
+        tick(engine, 35)
+
+        assertTrue("The g5 walk-off must land on the g4 tier", engine.player.grounded)
+        assertEquals("The g4 tier sits one stair rise below the top step", 576f, engine.player.y, 0.5f)
+        assertTrue("The landing must stay on the g4 tier", engine.player.x > 4534f && engine.player.x < 4665f)
+
+        // Walk off g4's left edge — the column beside the stair is clear all
+        // the way down to the district street.
+        engine.player.x = 4540f
+        engine.player.y = 576f
+        engine.player.vx = 0f
+        engine.player.vy = 0f
+        engine.player.grounded = true
         engine.inputLeft = true
-        tick(engine, 240)
+        tick(engine, 7)
+        engine.inputLeft = false
+        tick(engine, 60)
 
-        assertTrue("The stair walk-off must land on the street", engine.player.grounded)
+        assertTrue("The stair walk-off must land on the district street", engine.player.grounded)
         assertEquals(956f, engine.player.y, 0.5f)
-        assertTrue("The walk-off must leave the stair column", engine.player.x < 4450f)
+        assertTrue("The walk-off lands west of the stair column", engine.player.x > 4360f && engine.player.x < 4560f)
+        assertEquals("The descent must stay safe", 100f, engine.player.hp, 0.001f)
     }
 
     @Test
