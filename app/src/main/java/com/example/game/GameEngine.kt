@@ -468,6 +468,13 @@ class GameEngine(
     var onResourceCollected: ((com.example.game.alchemy.ResourceType) -> Unit)? = null
     var onCheckpointActivated: ((Int) -> Unit)? = null
 
+    // Stage 8a (#56): layout-driven shortcut gates. Triggers come from the level
+    // layout; crossing one unlocks its gates for the rest of the run, and a
+    // fresh layout re-seals them.
+    internal var gateTriggers: List<GateTrigger> = emptyList()
+        private set
+    private val openedGateIds = mutableSetOf<String>()
+
     init {
         initLevel()
     }
@@ -548,6 +555,9 @@ class GameEngine(
         roomGraph = RoomGraph(layout.rooms)
         currentRoom = null
         visitedRooms.clear()
+        // Stage 8a (#56): a fresh layout re-seals every shortcut gate.
+        gateTriggers = layout.gateTriggers
+        openedGateIds.clear()
         damageNumbers.clear()
     }
 
@@ -571,6 +581,25 @@ class GameEngine(
             if (platform.style == PlatformStyle.BOSS_GATE && platform.collision != collision) {
                 platforms[index] = platform.copy(collision = collision)
                 // Stage 6b (#38): keep the tile grid in sync with the swapped entry.
+                levelGrid.syncPlatform(platforms[index], index)
+            }
+        }
+    }
+
+    /**
+     * Stage 8a (#56): swaps every iron gate carrying [gateId] to its open,
+     * non-colliding state. Platform is immutable, so entries are replaced through
+     * [copy] and the tile grid is synced in place — the same swap the boss-gate
+     * sealing uses.
+     */
+    private fun unlockGates(gateId: String) {
+        for (index in platforms.indices) {
+            val platform = platforms[index]
+            if (platform.style == PlatformStyle.IRON_GATE &&
+                platform.gateId == gateId &&
+                platform.collision != PlatformCollision.OPEN
+            ) {
+                platforms[index] = platform.copy(collision = PlatformCollision.OPEN)
                 levelGrid.syncPlatform(platforms[index], index)
             }
         }
@@ -786,11 +815,36 @@ class GameEngine(
         }
 
         // Boss trigger: seals the arena gates behind the player (AoS room-door pattern).
-        if (!boss.active && player.x > 5340f) {
+        // Stage 8a (#56): the fight may only begin inside the corridor band (y < 540) —
+        // a player standing in the lower districts beyond this x must not seal
+        // the arena from below.
+        if (!boss.active && player.x > 5340f && player.y < 540f) {
             boss.active = true
             setBossGatesCollision(PlatformCollision.SOLID)
             audio.play("boss_roar")
             camera.shake(12f)
+        }
+
+        // Stage 8a (#56): crossing a layout trigger unlocks its shortcut gates for
+        // the rest of the run — the #11 semantics ("the shortcut opens once the
+        // far side is reached via the elevated route") as engine-backed data.
+        if (!player.dead) {
+            for (trigger in gateTriggers) {
+                if (trigger.gateId in openedGateIds) continue
+                if (aabbIntersects(
+                        player.x, player.y, player.w, player.h,
+                        trigger.x, trigger.y, trigger.w, trigger.h)
+                ) {
+                    openedGateIds.add(trigger.gateId)
+                    unlockGates(trigger.gateId)
+                    audio.play("checkpoint")
+                    camera.shake(6f)
+                    particles.spawn(
+                        trigger.x + trigger.w / 2f, trigger.y + trigger.h / 2f,
+                        Color(0xFFFFD700), 24, 150f, 0.7f, 4f
+                    )
+                }
+            }
         }
 
         updateMovingPlatforms(dt)
