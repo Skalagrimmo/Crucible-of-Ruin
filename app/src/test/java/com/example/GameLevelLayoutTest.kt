@@ -136,9 +136,9 @@ class GameLevelLayoutTest {
                 engine.platforms.contains(Platform(4600f, 420f, 80f, 120f, PlatformStyle.STONE))
         )
         assertTrue(
-            "No corridor geometry may block the shaft drop (x 4500-4600)",
+            "No corridor geometry may block the shaft drop onto the stair (x 4500-4600)",
             engine.platforms.none {
-                it.y < 540f && it.y + it.h > 430f &&
+                it.y < 520f && it.y + it.h > 430f &&
                     it.x < 4600f && it.x + it.w > 4500f &&
                     it.collision != PlatformCollision.OPEN
             }

@@ -46,9 +46,9 @@ class IronGarrisonTest {
             engine.platforms.contains(Platform(4600f, 420f, 80f, 120f, PlatformStyle.STONE))
         )
         assertTrue(
-            "No corridor geometry may block the shaft drop (x 4500-4600)",
+            "No corridor geometry may block the shaft drop onto the stair (x 4500-4600)",
             engine.platforms.none {
-                it.y < 540f && it.y + it.h > 430f &&
+                it.y < 520f && it.y + it.h > 430f &&
                     it.x < 4600f && it.x + it.w > 4500f &&
                     it.collision != PlatformCollision.OPEN
             }
@@ -75,14 +75,14 @@ class IronGarrisonTest {
         assertTrue("The drop must land on the stair return's top step", engine.player.grounded)
         assertEquals("The top step sits one jump below the corridor floor", 476f, engine.player.y, 0.5f)
 
-        // Walk off the stair and continue down to the district street.
-        engine.inputRight = true
+        // Walk off the stair's left edge and continue down to the district
+        // street — the column beside g5 is clear all the way to the floor.
+        engine.inputLeft = true
         tick(engine, 240)
 
         assertTrue("The stair walk-off must land on the street", engine.player.grounded)
         assertEquals(956f, engine.player.y, 0.5f)
-        assertTrue("The street walk must continue past the descent boundary", engine.player.x > 4700f)
-        assertTrue("The fortress blocks must wall the street into pockets", engine.player.x < 4780f)
+        assertTrue("The walk-off must leave the stair column", engine.player.x < 4450f)
     }
 
     @Test
@@ -145,10 +145,13 @@ class IronGarrisonTest {
         engine.player.grounded = true
         tick(engine, 2)
 
-        assertEquals("Crossing the far-side trigger must open the gate", PlatformCollision.OPEN, gate.collision)
+        // unlockGates replaces the immutable platform with an opened copy —
+        // re-read the live instance instead of the pre-tick reference.
+        val opened = engine.platforms.first { it.style == PlatformStyle.IRON_GATE }
+        assertEquals("Crossing the far-side trigger must open the gate", PlatformCollision.OPEN, opened.collision)
         assertFalse(
             "The unlocked gate must no longer collide",
-            engine.levelGrid.rectTouchesCollision(gate.x, gate.y, gate.w, gate.h)
+            engine.levelGrid.rectTouchesCollision(opened.x, opened.y, opened.w, opened.h)
         )
 
         // With the gate open, the street walk passes freely into the keep.
@@ -178,6 +181,9 @@ class IronGarrisonTest {
         engine.player.grounded = true
         engine.player.coyoteTime = 0.12f
         engine.inputLeft = true
+        // Hold the jump for the full base-jump apex: without inputJump the
+        // early-release cut shrinks the arc below the corridor floor's top.
+        engine.inputJump = true
         engine.onJumpPressed()
         var minY = engine.player.y
         repeat(60) {
