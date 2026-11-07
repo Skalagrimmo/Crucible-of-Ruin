@@ -120,8 +120,10 @@ class LevelReachabilityTest {
     fun arenaGirdersSitWithinBaseJumpHeightOfTheArenaFloor() {
         val engine = GameEngine()
         val arenaFloorTop = 450f
+        // Stage 8b (#56): the Iron Garrison's rooftop girder also lives past
+        // x 5270 — the arena check stays scoped to the corridor band.
         val girders = engine.platforms.filter {
-            it.style == PlatformStyle.IRON_GIRDER && it.x > 5270f
+            it.style == PlatformStyle.IRON_GIRDER && it.x > 5270f && it.y < 540f
         }
 
         assertEquals("The arena should contain exactly two girders", 2, girders.size)

@@ -74,8 +74,11 @@ class TiledLevelLoaderTest {
         // laboratory ferry) join the 28 static corridor ones.
         // Stage 7b (#51): the gallery floor splits around the shaft and the
         // Undercroft adds three floors, the shaft lift, the climb, and a perch.
-        assertEquals(40, fullLayout.platforms.size)
-        assertEquals(9, fullLayout.hazards.size)
+        // Stage 8b (#56): the Iron Garrison adds the district street, the
+        // stair return, four fortress blocks, three rooftops, the sealed
+        // gate, and four street hazards.
+        assertEquals(55, fullLayout.platforms.size)
+        assertEquals(13, fullLayout.hazards.size)
     }
 
     @Test

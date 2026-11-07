@@ -41,8 +41,9 @@ class GameLevelLayoutTest {
             engine.platforms.contains(Platform(1920f, 420f, 380f, 120f, PlatformStyle.STONE))
         )
         assertTrue(
-            "Section three should remain present",
-            engine.platforms.contains(Platform(4360f, 420f, 320f, 120f, PlatformStyle.STONE))
+            "Section three should keep its split approach floor (Stage 8b, #56)",
+            engine.platforms.contains(Platform(4360f, 420f, 140f, 120f, PlatformStyle.STONE)) &&
+                engine.platforms.contains(Platform(4600f, 420f, 80f, 120f, PlatformStyle.STONE))
         )
         assertTrue(
             "Boss arena gates should remain part of the level geometry, open before the fight",
@@ -71,13 +72,13 @@ class GameLevelLayoutTest {
         // Stage 7b (#51): the gallery floor splits in two around the shaft, and
         // the Undercroft adds three floors, the shaft lift, a four-surface
         // girder climb, and a vault perch.
-        assertEquals("Unexpected number of platforms", 40, engine.platforms.size)
-        assertEquals("Unexpected number of hazards", 9, engine.hazards.size)
-        assertEquals("Unexpected number of enemies", 16, engine.enemies.size)
-        assertEquals("Unexpected number of breakable urns", 8, engine.breakables.size)
-        // Stage 6d (#38) + Stage 7b (#51): nine corridor rooms plus three
-        // Undercroft rooms stacked below.
-        assertEquals("Unexpected number of rooms", 12, engine.roomGraph.rooms.size)
+        assertEquals("Unexpected number of platforms", 55, engine.platforms.size)
+        assertEquals("Unexpected number of hazards", 13, engine.hazards.size)
+        assertEquals("Unexpected number of enemies", 21, engine.enemies.size)
+        assertEquals("Unexpected number of breakable urns", 13, engine.breakables.size)
+        // Stage 6d (#38) + Stage 7b (#51) + Stage 8b (#56): nine corridor
+        // rooms plus three Undercroft rooms plus three Iron Garrison rooms.
+        assertEquals("Unexpected number of rooms", 15, engine.roomGraph.rooms.size)
     }
 
     /**
@@ -117,6 +118,46 @@ class GameLevelLayoutTest {
         assertTrue(
             "Checkpoint 4 must stand on the Undercroft Halls floor",
             engine.checkpoints.any { it.id == 3 && it.x == 3560f && it.y == 956f }
+        )
+    }
+
+    /**
+     * Stage 8b (#56): the Iron Garrison — the fortress district below the
+     * Sanctum Approach, reached through a shaft in the approach floor and
+     * sealed behind an iron keep gate that only the elevated route opens.
+     */
+    @Test
+    fun theIronGarrisonHangsBelowTheApproach() {
+        val engine = GameEngine()
+
+        assertTrue(
+            "The approach floor must split around the garrison shaft",
+            engine.platforms.contains(Platform(4360f, 420f, 140f, 120f, PlatformStyle.STONE)) &&
+                engine.platforms.contains(Platform(4600f, 420f, 80f, 120f, PlatformStyle.STONE))
+        )
+        assertTrue(
+            "No corridor geometry may block the shaft drop onto the stair (x 4500-4600)",
+            engine.platforms.none {
+                it.y < 520f && it.y + it.h > 430f &&
+                    it.x < 4600f && it.x + it.w > 4500f &&
+                    it.collision != PlatformCollision.OPEN
+            }
+        )
+        assertTrue(
+            "The district street must bridge the vault into the keep",
+            engine.platforms.contains(Platform(4360f, 1000f, 1840f, 80f, PlatformStyle.STONE))
+        )
+        assertTrue(
+            "The keep gate must start sealed",
+            engine.platforms.any {
+                it.style == PlatformStyle.IRON_GATE &&
+                    it.gateId == "garrison_gate" &&
+                    it.collision == PlatformCollision.SOLID
+            }
+        )
+        assertTrue(
+            "Checkpoint 5 must stand on the keep's doorstep",
+            engine.checkpoints.any { it.id == 4 && it.x == 5850f && it.y == 956f }
         )
     }
 }
