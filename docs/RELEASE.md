@@ -84,10 +84,10 @@ the starting rules for the day minification is enabled.
 
 ## 5. Pre-publish decisions (tracked in #6)
 
-- **Namespace/package**: code still lives under the `com.example` Java package with
-  namespace `com.example`, while the published application ID is
-  `com.skalagrimmo.crucibleofruin`. This is cosmetic for publishing, but renaming is a
-  good hygiene step before the first public release.
+- **Namespace/package**: the source tree, Gradle namespace, manifest, and the
+  published application ID all live under `com.skalagrimmo.crucibleofruin` now —
+  the placeholder `com.example` package was retired before the first public
+  release (#6).
 - **App metadata**: store listing text, icons, content rating, and the privacy policy link
   are set in Play Console, not in the repository.
 - The rest of #6 (Firebase account checks, device gameplay verification, backup behavior

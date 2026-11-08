@@ -1,0 +1,1158 @@
+package com.skalagrimmo.crucibleofruin.game
+
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
+import com.skalagrimmo.crucibleofruin.game.alchemy.AlchemyWorkbench
+import com.skalagrimmo.crucibleofruin.game.codex.GrimoireCodexDialog
+import com.skalagrimmo.crucibleofruin.game.alchemy.PermanentBuffType
+import com.skalagrimmo.crucibleofruin.game.alchemy.ResourceType
+import com.skalagrimmo.crucibleofruin.game.boss.BossState
+import com.skalagrimmo.crucibleofruin.game.boss.GothicBossHealthBar
+import com.skalagrimmo.crucibleofruin.game.data.AuthRepository
+import com.skalagrimmo.crucibleofruin.game.data.UserSave
+import com.skalagrimmo.crucibleofruin.game.status.ActiveCombatStatus
+import com.skalagrimmo.crucibleofruin.game.status.CombatStatusType
+import com.skalagrimmo.crucibleofruin.game.data.UserSaveRepository
+import kotlinx.coroutines.launch
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import kotlin.math.min
+
+@Composable
+fun GameScreen(
+    startCheckpoint: Int = 0,
+    initialTargetFps: Int = 30,
+    initialHapticsEnabled: Boolean = true,
+    onReturnToMainMenu: () -> Unit = {},
+    modifier: Modifier = Modifier
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val authRepo = remember { com.skalagrimmo.crucibleofruin.game.data.AuthRepository(context) }
+    androidx.compose.runtime.DisposableEffect(authRepo) {
+        onDispose { authRepo.dispose() }
+    }
+    val saveRepo = remember { com.skalagrimmo.crucibleofruin.game.data.UserSaveRepository(context) }
+    val user by authRepo.currentUser.collectAsState()
+
+    val alchemyViewModel: com.skalagrimmo.crucibleofruin.game.alchemy.AlchemyViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    val pouch by alchemyViewModel.pouch.collectAsState()
+    val activeBuffs by alchemyViewModel.activeEffects.collectAsState()
+    val craftingNotice by alchemyViewModel.craftingNotice.collectAsState()
+
+    var hapticsEnabledState by remember { mutableStateOf(initialHapticsEnabled) }
+    val haptics = remember { GameHaptics(context).apply { isEnabled = initialHapticsEnabled } }
+    var showCraftingDialog by remember { mutableStateOf(false) }
+    var showGrimoireDialog by remember { mutableStateOf(false) }
+    // Stage 6d (#38): world map overlay state. The map pauses a running game;
+    // closing it resumes only when the map itself did the pausing.
+    var showMapOverlay by remember { mutableStateOf(false) }
+    var mapAutoPaused by remember { mutableStateOf(false) }
+    var userSaveState by remember { mutableStateOf(saveRepo.getLocalUserSave()) }
+    // Track run counters already persisted at checkpoints to avoid counting the same events twice.
+    var enemiesCountedThroughLastSave by remember { mutableIntStateOf(0) }
+    var dodgesCountedThroughLastSave by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(hapticsEnabledState) {
+        haptics.isEnabled = hapticsEnabledState
+    }
+
+    LaunchedEffect(craftingNotice) {
+        if (craftingNotice != null) {
+            kotlinx.coroutines.delay(2400)
+            alchemyViewModel.clearCraftingNotice()
+        }
+    }
+
+    val engine = remember {
+        GameEngine().apply {
+            setStartCheckpoint(startCheckpoint)
+            this.haptics = haptics
+            this.onResourceCollected = { res ->
+                alchemyViewModel.collectResource(res)
+            }
+        }
+    }
+    val inputController = remember(engine) { GameInputController(engine) }
+    androidx.compose.runtime.DisposableEffect(inputController) {
+        onDispose { inputController.cancelHeldInputs() }
+    }
+
+    LaunchedEffect(user) {
+        val currentUid = user?.uid ?: ""
+        val save = saveRepo.getUserSave(currentUid)
+        userSaveState = save
+        alchemyViewModel.loadFromUserSave(save)
+        engine.player.maxHp = 100f + alchemyViewModel.getPermanentBonusMaxHp()
+        engine.player.hp = minOf(engine.player.hp, engine.player.maxHp)
+        engine.player.maxFlasks = 3 + alchemyViewModel.getPermanentBonusMaxFlasks()
+        engine.player.flasks = minOf(engine.player.flasks, engine.player.maxFlasks)
+        engine.damageMultiplier = alchemyViewModel.getTotalDamageMultiplier()
+        engine.defenseMultiplier = alchemyViewModel.getTotalDefenseMultiplier()
+        engine.speedMultiplier = alchemyViewModel.getTotalSpeedMultiplier()
+    }
+
+    // Auto-save checkpoint progress to local storage and Firestore
+    engine.onCheckpointActivated = { cpId ->
+        val currentUid = user?.uid ?: ""
+        val enemiesNow = engine.enemiesDefeated
+        val dodgesNow = engine.perfectDodgesCount
+        val enemiesDelta = pendingCounterDelta(enemiesNow, enemiesCountedThroughLastSave)
+        val dodgesDelta = pendingCounterDelta(dodgesNow, dodgesCountedThroughLastSave)
+        enemiesCountedThroughLastSave = enemiesNow
+        dodgesCountedThroughLastSave = dodgesNow
+
+        scope.launch {
+            val current = saveRepo.getUserSave(currentUid)
+            val updated = current.copy(
+                lastCheckpoint = maxOf(current.lastCheckpoint, cpId),
+                foesSlain = current.foesSlain + enemiesDelta,
+                perfectDodges = current.perfectDodges + dodgesDelta,
+                permanentVitality = alchemyViewModel.getPermanentRank(PermanentBuffType.VITALITY_CORE),
+                permanentDamage = alchemyViewModel.getPermanentRank(PermanentBuffType.IGNIS_FERVOR),
+                permanentSpeed = alchemyViewModel.getPermanentRank(PermanentBuffType.QUICKSILVER_STRIDE),
+                permanentFlasks = alchemyViewModel.getPermanentRank(PermanentBuffType.CRUCIBLE_VESSEL),
+                permanentDefense = alchemyViewModel.getPermanentRank(PermanentBuffType.AEGIS_INFUSION),
+                permanentVitriol = alchemyViewModel.getPermanentRank(PermanentBuffType.VITRIOLIC_TOUCH),
+                savedSulfur = alchemyViewModel.getResourceCount(ResourceType.SULFUR_ASH),
+                savedMercury = alchemyViewModel.getResourceCount(ResourceType.QUICKSILVER),
+                savedVitriol = alchemyViewModel.getResourceCount(ResourceType.VITRIOL_CRYSTAL)
+            )
+            saveRepo.saveUserSave(updated)
+            userSaveState = saveRepo.getLocalUserSave(currentUid)
+        }
+    }
+
+    // Auto-save victory stats
+    LaunchedEffect(engine.state) {
+        if (engine.state == "victory") {
+            val currentUid = user?.uid ?: ""
+            val enemiesNow = engine.enemiesDefeated
+            val dodgesNow = engine.perfectDodgesCount
+            val enemiesDelta = pendingCounterDelta(enemiesNow, enemiesCountedThroughLastSave)
+            val dodgesDelta = pendingCounterDelta(dodgesNow, dodgesCountedThroughLastSave)
+            enemiesCountedThroughLastSave = enemiesNow
+            dodgesCountedThroughLastSave = dodgesNow
+
+            scope.launch {
+                val current = saveRepo.getUserSave(currentUid)
+                val bestTime = if (current.bestTimeSeconds <= 0f) engine.timeElapsed else minOf(current.bestTimeSeconds, engine.timeElapsed)
+                val updated = current.copy(
+                    bestTimeSeconds = bestTime,
+                    foesSlain = current.foesSlain + enemiesDelta,
+                    highScore = maxOf(current.highScore, (engine.enemiesDefeated * 100 + engine.player.hp.toInt() * 10)),
+                    perfectDodges = current.perfectDodges + dodgesDelta
+                )
+                saveRepo.saveUserSave(updated)
+                userSaveState = saveRepo.getLocalUserSave(currentUid)
+            }
+        }
+    }
+
+    // Recomposition ticker triggered only on frame ticks
+    var frameTick by remember { mutableIntStateOf(0) }
+
+    // Target frame rate cap (default: 30 FPS for low-end hardware optimization)
+    var targetFps by remember { mutableIntStateOf(initialTargetFps) }
+
+    // Forced Frame Rate Capped Game Loop using withFrameNanos (zero GC allocation)
+    LaunchedEffect(targetFps) {
+        val targetFrameNanos = 1_000_000_000L / targetFps
+        var lastFrameTimeNanos = 0L
+
+        while (true) {
+            withFrameNanos { nowNanos ->
+                if (lastFrameTimeNanos == 0L) {
+                    lastFrameTimeNanos = nowNanos
+                    return@withFrameNanos
+                }
+
+                val elapsedNanos = nowNanos - lastFrameTimeNanos
+                // 1.5ms phase tolerance for stable frame pacing across 60/90/120Hz displays
+                if (elapsedNanos >= targetFrameNanos - 1_500_000L) {
+                    var dt = elapsedNanos / 1_000_000_000f
+                    lastFrameTimeNanos = nowNanos
+
+                    // Clamp delta time to 0.05s max to preserve physics stability
+                    if (dt > 0.05f) dt = 0.05f
+
+                    // Update active combat buffs from AlchemyViewModel
+                    alchemyViewModel.update(dt)
+                    engine.damageMultiplier = alchemyViewModel.getDamageMultiplier()
+                    engine.defenseMultiplier = alchemyViewModel.getDefenseMultiplier()
+                    engine.speedMultiplier = alchemyViewModel.getSpeedMultiplier()
+
+                    engine.update(dt)
+                    frameTick++
+                }
+            }
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color(0xFF0B0811))
+    ) {
+        // Main Game Canvas
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            // Read frameTick to trigger redraw
+            val tick = frameTick
+            if (tick >= 0) {
+                GameRenderer.render(this, engine)
+            }
+        }
+
+        // Screen-wide Status Effect Vignette Overlay (fiery red/orange for Alchemy-Burn, caustic green for Corrosion)
+        val hasBurn = engine.player.statusController.hasEffect(CombatStatusType.ALCHEMY_BURN)
+        val hasCorrosion = engine.player.statusController.hasEffect(CombatStatusType.CORROSION)
+        if (hasBurn || hasCorrosion) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val tick = frameTick // Reacts to frame updates
+                if (tick >= 0) {
+                    if (hasBurn) {
+                        val pulse = (kotlin.math.sin(System.currentTimeMillis() / 140.0) * 0.15f + 0.35f).toFloat()
+                        drawRect(
+                            brush = Brush.radialGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color(0xFFFF3D00).copy(alpha = pulse * 0.40f)
+                                ),
+                                radius = size.maxDimension * 0.72f
+                            )
+                        )
+                    }
+                    if (hasCorrosion) {
+                        val pulse = (kotlin.math.sin(System.currentTimeMillis() / 170.0) * 0.12f + 0.28f).toFloat()
+                        drawRect(
+                            brush = Brush.radialGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color(0xFF76FF03).copy(alpha = pulse * 0.35f)
+                                ),
+                                radius = size.maxDimension * 0.68f
+                            )
+                        )
+                    }
+                }
+            }
+        }
+
+        // Top Left: HUD (Vitae & Flasks)
+        Column(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(16.dp)
+        ) {
+            // Health Bar
+            Box(
+                modifier = Modifier
+                    .width(180.dp)
+                    .height(20.dp)
+                    .background(Color(0xD0100A1A), RoundedCornerShape(4.dp))
+                    .border(1.5.dp, Color(0xFF8F77AA), RoundedCornerShape(4.dp))
+            ) {
+                val hpRatio = (engine.player.hp / engine.player.maxHp).coerceIn(0f, 1f)
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize(fraction = hpRatio)
+                        .background(if (hpRatio > 0.35f) Color(0xFFE63946) else Color(0xFFD90429))
+                )
+                Text(
+                    text = "VITAE: ${engine.player.hp.toInt()} / 100",
+                    color = Color.White,
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Reagent Flasks
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                for (i in 0 until engine.player.maxFlasks) {
+                    val hasFlask = i < engine.player.flasks
+                    Box(
+                        modifier = Modifier
+                            .size(16.dp)
+                            .background(
+                                if (hasFlask) Color(0xFFB040F0) else Color(0xFF33203E),
+                                RoundedCornerShape(3.dp)
+                            )
+                            .border(1.dp, Color(0xFFB050D0), RoundedCornerShape(3.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (hasFlask) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .background(Color(0xFF40FFD0), CircleShape)
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = engine.activeCheckpoint.name,
+                color = Color(0xB3E5DBF7),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium
+            )
+
+            // Active Alchemical Combat Buffs
+            if (activeBuffs.isNotEmpty()) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.padding(top = 4.dp)
+                ) {
+                    for (buff in activeBuffs) {
+                        Box(
+                            modifier = Modifier
+                                .background(Color(0xD9170E28), RoundedCornerShape(6.dp))
+                                .border(1.dp, buff.color, RoundedCornerShape(6.dp))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(buff.iconSymbol, fontSize = 11.sp)
+                                Text(
+                                    text = "${buff.remainingSeconds.toInt()}s",
+                                    color = buff.color,
+                                    fontSize = 10.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Active Combat Status Debuffs (Alchemy-Burn, Corrosion)
+            val playerDebuffs = remember(frameTick) {
+                engine.player.statusController.getActiveEffects().toList()
+            }
+            if (playerDebuffs.isNotEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .padding(top = 6.dp)
+                        .testTag("player_debuffs_list"),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    for (debuff in playerDebuffs) {
+                        Box(
+                            modifier = Modifier
+                                .background(
+                                    if (debuff.type == CombatStatusType.ALCHEMY_BURN) Color(0xEE2A0A10) else Color(0xEE0E240D),
+                                    RoundedCornerShape(6.dp)
+                                )
+                                .border(1.dp, debuff.type.primaryColor, RoundedCornerShape(6.dp))
+                                .padding(horizontal = 6.dp, vertical = 3.dp)
+                                .testTag("debuff_${debuff.type.id}")
+                        ) {
+                            Column {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(debuff.type.iconSymbol, fontSize = 11.sp)
+                                    Text(
+                                        text = debuff.type.displayName.uppercase() + (if (debuff.stacks > 1) " x${debuff.stacks}" else ""),
+                                        color = debuff.type.primaryColor,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 0.5.sp
+                                    )
+                                    Text(
+                                        text = "${String.format("%.1f", debuff.remaining)}s",
+                                        color = Color(0xFFF0E6FF),
+                                        fontSize = 9.sp,
+                                        fontFamily = FontFamily.Monospace,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    if (debuff.type == CombatStatusType.CORROSION) {
+                                        Text(
+                                            text = "(+${30 * debuff.stacks}% DMG / -${20 * debuff.stacks}% SPD)",
+                                            color = Color(0xFFFFD54F),
+                                            fontSize = 8.sp,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    } else if (debuff.type == CombatStatusType.ALCHEMY_BURN) {
+                                        Text(
+                                            text = "(DoT)",
+                                            color = Color(0xFFFF8A65),
+                                            fontSize = 8.sp,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .width(90.dp)
+                                        .height(3.dp)
+                                        .background(Color(0x88231238), RoundedCornerShape(1.5.dp))
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxHeight()
+                                            .fillMaxWidth(fraction = debuff.progress)
+                                            .background(debuff.type.primaryColor, RoundedCornerShape(1.5.dp))
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Top Right: Controls (Alchemize, FPS Cap, Sound & Pause)
+        Row(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Alchemical Crafting Button
+            Button(
+                onClick = {
+                    showCraftingDialog = true
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xCC2A183D)),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .height(38.dp)
+                    .border(1.dp, Color(0xFFFFB039), RoundedCornerShape(12.dp))
+                    .testTag("btn_alchemize")
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Text("⚗️", fontSize = 14.sp)
+                    Text(
+                        text = "🜍${pouch[com.skalagrimmo.crucibleofruin.game.alchemy.ResourceType.SULFUR_ASH] ?: 0} ☿${pouch[com.skalagrimmo.crucibleofruin.game.alchemy.ResourceType.QUICKSILVER] ?: 0} 🜊${pouch[com.skalagrimmo.crucibleofruin.game.alchemy.ResourceType.VITRIOL_CRYSTAL] ?: 0}",
+                        color = Color(0xFFFFD700),
+                        fontSize = 11.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            // Grimoire Codex Button
+            Button(
+                onClick = {
+                    showGrimoireDialog = true
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xCC24143D)),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .height(38.dp)
+                    .border(1.dp, Color(0xFFC0A8DC), RoundedCornerShape(12.dp))
+                    .testTag("btn_grimoire_codex")
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("📖", fontSize = 13.sp)
+                    Text("Codex", color = Color(0xFFE5DBF7), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
+            // Frame Rate Cap Toggle Button (30 FPS Power Saver / 60 FPS)
+            Button(
+                onClick = {
+                    targetFps = if (targetFps == 30) 60 else 30
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (targetFps == 30) Color(0xCC1E3A27) else Color(0x99181124)
+                ),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .height(38.dp)
+                    .border(
+                        1.dp,
+                        if (targetFps == 30) Color(0xFF40FF80) else Color(0x55FFFFFF),
+                        RoundedCornerShape(12.dp)
+                    )
+                    .testTag("fps_cap_button")
+            ) {
+                Text(
+                    text = "${targetFps} FPS",
+                    color = if (targetFps == 30) Color(0xFF80FFA8) else Color.White,
+                    fontSize = 11.sp,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            // Stage 6d (#38): World Map toggle — charting pauses the run.
+            IconButton(
+                onClick = {
+                    mapAutoPaused = engine.state == "playing"
+                    if (mapAutoPaused) {
+                        inputController.cancelHeldInputs()
+                        engine.state = "paused"
+                    }
+                    showMapOverlay = true
+                },
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(Color(0x99181124), CircleShape)
+                    .border(1.dp, Color(0x55FFFFFF), CircleShape)
+                    .testTag("map_button")
+            ) {
+                Text(text = "🗺", fontSize = 16.sp)
+            }
+
+            var isMuted by remember { mutableStateOf(false) }
+            IconButton(
+                onClick = {
+                    isMuted = !isMuted
+                    engine.audio.isMuted = isMuted
+                },
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(Color(0x99181124), CircleShape)
+                    .border(1.dp, Color(0x55FFFFFF), CircleShape)
+                    .testTag("mute_button")
+            ) {
+                Text(text = if (isMuted) "🔇" else "🔊", fontSize = 16.sp)
+            }
+
+            IconButton(
+                onClick = {
+                    if (engine.state == "paused") {
+                        engine.state = "playing"
+                    } else {
+                        inputController.cancelHeldInputs()
+                        engine.state = "paused"
+                    }
+                },
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(Color(0x99181124), CircleShape)
+                    .border(1.dp, Color(0x55FFFFFF), CircleShape)
+                    .testTag("pause_button")
+            ) {
+                Text(text = if (engine.state == "paused") "▶" else "⏸", fontSize = 16.sp, color = Color.White)
+            }
+        }
+
+        // Gothic Boss Health Bar & Encounter HUD (Top center during boss encounters)
+        GothicBossHealthBar(
+            boss = engine.boss,
+            frameTick = frameTick,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 8.dp)
+        )
+
+        // On-Screen Touch Controls (Multi-touch with detectTapGestures & pointer inputs)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter)
+                .padding(horizontal = 24.dp, vertical = 14.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Bottom
+        ) {
+            // Directional Buttons (Left / Right)
+            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                TouchHoldButton(
+                    symbol = "◀",
+                    label = "Left",
+                    onHoldChange = { isPressed -> inputController.setLeftHeld(isPressed) },
+                    enabled = engine.state == "playing",
+                    modifier = Modifier.testTag("btn_left")
+                )
+                TouchHoldButton(
+                    symbol = "▶",
+                    label = "Right",
+                    onHoldChange = { isPressed -> inputController.setRightHeld(isPressed) },
+                    enabled = engine.state == "playing",
+                    modifier = Modifier.testTag("btn_right")
+                )
+            }
+
+            // Action Buttons (Sub, Dash, Attack, Jump)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                verticalAlignment = Alignment.Bottom
+            ) {
+                // Flask Sub-Weapon
+                TouchTapButton(
+                    symbol = "🧪",
+                    label = "Flask",
+                    size = 56,
+                    color = Color(0x9945193C),
+                    borderColor = Color(0xFFB050D0),
+                    onTap = { inputController.tapFlask() },
+                    enabled = engine.state == "playing",
+                    modifier = Modifier
+                        .padding(bottom = 16.dp)
+                        .testTag("btn_flask")
+                )
+
+                // Shadow Dash Button
+                val isDashReady = engine.player.dashCooldown <= 0f
+                TouchTapButton(
+                    symbol = "💨",
+                    label = if (isDashReady) "Dash" else "${String.format("%.1f", engine.player.dashCooldown)}s",
+                    size = 56,
+                    color = if (isDashReady) Color(0x99182E48) else Color(0x66101624),
+                    borderColor = if (isDashReady) Color(0xFF00E5FF) else Color(0x44406888),
+                    onTap = { inputController.tapDash() },
+                    enabled = engine.state == "playing",
+                    modifier = Modifier
+                        .padding(bottom = 16.dp)
+                        .testTag("btn_dash")
+                )
+
+                // Melee Slash Attack with 3-Hit Combo Meter Overlay
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    // Stage 7 (#27): the badge mapping lives in ComboIndicator so the
+                    // confirmed semantics — the label names the NEXT AVAILABLE attack,
+                    // not the swing just completed — stay pinned by unit tests
+                    // instead of living inline in the UI.
+                    val comboStep = remember(frameTick) { engine.player.comboIndex }
+                    val comboTimer = remember(frameTick) { engine.player.comboResetTimer }
+                    val comboBadge = remember(frameTick) { ComboIndicator.badgeFor(comboStep, comboTimer) }
+                    val isFinisherReady = comboBadge.isFinisherReady
+
+                    if (comboBadge.visible) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(3.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .background(Color(0xD9160B24), RoundedCornerShape(4.dp))
+                                .border(
+                                    1.dp,
+                                    if (isFinisherReady) Color(0xFFFF2040) else Color(0xFFFFB300),
+                                    RoundedCornerShape(4.dp)
+                                )
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                .testTag("combo_meter_badge")
+                        ) {
+                            Text(
+                                text = comboBadge.label,
+                                color = if (isFinisherReady) Color(0xFFFF453A) else Color(0xFFFFD700),
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontFamily = FontFamily.Monospace
+                            )
+                            // 3 Combo Pips
+                            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                for (i in 0..2) {
+                                    val isHit = i < comboBadge.filledPips
+                                    Box(
+                                        modifier = Modifier
+                                            .size(5.dp)
+                                            .background(
+                                                when {
+                                                    !isHit -> Color(0x55555555)
+                                                    i == 2 -> Color(0xFFFF2040)
+                                                    i == 1 -> Color(0xFFFFB300)
+                                                    else -> Color(0xFF00E5FF)
+                                                },
+                                                CircleShape
+                                            )
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    TouchTapButton(
+                        symbol = "⚔️",
+                        label = if (comboTimer > 0f && isFinisherReady) "Finisher" else "Attack",
+                        size = 68,
+                        color = if (comboTimer > 0f && isFinisherReady) Color(0xCC4A0E18) else Color(0x992E1B46),
+                        borderColor = if (comboTimer > 0f && isFinisherReady) Color(0xFFFF2040) else if (comboTimer > 0f) Color(0xFFFFB300) else Color(0xFF8F77AA),
+                        onTap = { inputController.tapAttack() },
+                        enabled = engine.state == "playing",
+                        modifier = Modifier.testTag("btn_attack")
+                    )
+                }
+
+                // Jump Button (supports hold for full trajectory)
+                TouchHoldButton(
+                    symbol = "▲",
+                    label = "Jump",
+                    size = 68,
+                    color = Color(0x99261C3D),
+                    borderColor = Color(0xFFB096DA),
+                    onHoldChange = { isHeld -> inputController.setJumpHeld(isHeld) },
+                    enabled = engine.state == "playing",
+                    modifier = Modifier.testTag("btn_jump")
+                )
+            }
+        }
+
+        // Stage 6d (#38): World Map overlay (rooms charted so far).
+        if (showMapOverlay) {
+            RoomMapOverlay(
+                engine = engine,
+                onClose = {
+                    showMapOverlay = false
+                    if (mapAutoPaused) engine.state = "playing"
+                }
+            )
+        }
+
+        // Pause Menu Dialog
+        if (engine.state == "paused") {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xD908050E)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(24.dp)
+                ) {
+                    Text(
+                        text = "GAME PAUSED",
+                        color = Color(0xFFF0D890),
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Crucible of Ruin - Native Android Edition",
+                        color = Color(0xB3E5DBF7),
+                        fontSize = 14.sp
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Button(
+                        onClick = { engine.state = "playing" },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF594475)),
+                        modifier = Modifier.testTag("resume_button")
+                    ) {
+                        Text("Resume Game", color = Color.White)
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Button(
+                        onClick = {
+                            val updatedFps = nextTargetFps(targetFps)
+                            targetFps = updatedFps
+                            saveRepo.saveLocalUserSave(
+                                saveRepo.getLocalUserSave(user?.uid ?: "").copy(targetFps = updatedFps)
+                            )
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF37274E)),
+                        modifier = Modifier.testTag("toggle_fps_pause_menu")
+                    ) {
+                        Text(
+                            text = if (targetFps == 30) "Frame Rate: 30 FPS (Power Saver Active)" else "Frame Rate: 60 FPS (Full Rate)",
+                            color = if (targetFps == 30) Color(0xFF80FFA8) else Color.White,
+                            fontSize = 13.sp
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Button(
+                        onClick = {
+                            hapticsEnabledState = !hapticsEnabledState
+                            haptics.isEnabled = hapticsEnabledState
+                            saveRepo.saveLocalUserSave(saveRepo.getLocalUserSave(user?.uid ?: "").copy(hapticsEnabled = hapticsEnabledState))
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF37274E)),
+                        modifier = Modifier.testTag("toggle_haptics_pause_menu")
+                    ) {
+                        Text(
+                            text = if (hapticsEnabledState) "Tactile Haptics: Enabled" else "Tactile Haptics: Disabled",
+                            color = if (hapticsEnabledState) Color(0xFF80FFA8) else Color(0xFFFFA0A0),
+                            fontSize = 13.sp
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Button(
+                        onClick = { showGrimoireDialog = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2C1944)),
+                        modifier = Modifier.testTag("pause_grimoire_button")
+                    ) {
+                        Text("📖 Grimoire Codex & Bestiary", color = Color(0xFFFFD700))
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Button(
+                        onClick = {
+                            mapAutoPaused = false
+                            showMapOverlay = true
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2C1944)),
+                        modifier = Modifier.testTag("pause_map_button")
+                    ) {
+                        Text("🗺 World Map", color = Color(0xFFFFD700))
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Button(
+                        onClick = { engine.restart() },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E204A)),
+                        modifier = Modifier.testTag("restart_button")
+                    ) {
+                        Text("Restart Stage", color = Color.White)
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Button(
+                        onClick = { onReturnToMainMenu() },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1B112B)),
+                        modifier = Modifier.testTag("pause_main_menu_button")
+                    ) {
+                        Text("Return to Main Menu", color = Color(0xFFDCCFF5))
+                    }
+                }
+            }
+        }
+
+        // Temporary Floating Crafting Notice Toast
+        if (craftingNotice != null) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 62.dp)
+                    .background(Color(0xF01E1130), RoundedCornerShape(20.dp))
+                    .border(1.5.dp, Color(0xFFFFD700), RoundedCornerShape(20.dp))
+                    .padding(horizontal = 20.dp, vertical = 8.dp)
+            ) {
+                Text(
+                    text = "✦ $craftingNotice ✦",
+                    color = Color(0xFFFFD700),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        // Floating Perfect Riposte Banner Overlay
+        if (engine.player.perfectRiposteTimer > 0f) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 96.dp)
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(Color(0xE6261545), Color(0xF00D2845), Color(0xE6261545))
+                        ),
+                        RoundedCornerShape(20.dp)
+                    )
+                    .border(1.5.dp, Color(0xFFFFD700), RoundedCornerShape(20.dp))
+                    .padding(horizontal = 22.dp, vertical = 8.dp)
+                    .testTag("perfect_riposte_banner")
+            ) {
+                Text(
+                    text = engine.player.riposteNotice,
+                    color = Color(0xFFFFD700),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 0.5.sp
+                )
+            }
+        }
+
+        // Alchemical Crafting & Permanent Transmutation Workbench
+        if (showCraftingDialog) {
+            AlchemyWorkbench(
+                alchemyViewModel = alchemyViewModel,
+                audio = engine.audio,
+                haptics = haptics,
+                onClose = { showCraftingDialog = false },
+                onBuffTransmuted = { buffType ->
+                    engine.player.maxHp = 100f + alchemyViewModel.getPermanentBonusMaxHp()
+                    engine.player.hp = minOf(engine.player.hp, engine.player.maxHp)
+                    engine.player.maxFlasks = 3 + alchemyViewModel.getPermanentBonusMaxFlasks()
+                    engine.player.flasks = minOf(engine.player.flasks, engine.player.maxFlasks)
+                    engine.damageMultiplier = alchemyViewModel.getTotalDamageMultiplier()
+                    engine.defenseMultiplier = alchemyViewModel.getTotalDefenseMultiplier()
+                    engine.speedMultiplier = alchemyViewModel.getTotalSpeedMultiplier()
+
+                    scope.launch {
+                        val currentSave = saveRepo.getUserSave(user?.uid ?: "")
+                        val updatedSave = currentSave.copy(
+                            permanentVitality = alchemyViewModel.getPermanentRank(PermanentBuffType.VITALITY_CORE),
+                            permanentDamage = alchemyViewModel.getPermanentRank(PermanentBuffType.IGNIS_FERVOR),
+                            permanentSpeed = alchemyViewModel.getPermanentRank(PermanentBuffType.QUICKSILVER_STRIDE),
+                            permanentFlasks = alchemyViewModel.getPermanentRank(PermanentBuffType.CRUCIBLE_VESSEL),
+                            permanentDefense = alchemyViewModel.getPermanentRank(PermanentBuffType.AEGIS_INFUSION),
+                            permanentVitriol = alchemyViewModel.getPermanentRank(PermanentBuffType.VITRIOLIC_TOUCH),
+                            savedSulfur = alchemyViewModel.getResourceCount(ResourceType.SULFUR_ASH),
+                            savedMercury = alchemyViewModel.getResourceCount(ResourceType.QUICKSILVER),
+                            savedVitriol = alchemyViewModel.getResourceCount(ResourceType.VITRIOL_CRYSTAL)
+                        )
+                        saveRepo.saveUserSave(updatedSave)
+                    }
+                }
+            )
+        }
+
+        // Grimoire & Bestiary Codex Dialog
+        if (showGrimoireDialog) {
+            GrimoireCodexDialog(
+                userSave = userSaveState,
+                alchemyViewModel = alchemyViewModel,
+                onDismiss = { showGrimoireDialog = false }
+            )
+        }
+
+        // Perished Overlay
+        if (engine.player.dead) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xB3100614)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "YOU HAVE PERISHED",
+                        color = Color(0xFFE63946),
+                        fontSize = 34.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Respawning at altar shrine...",
+                        color = Color(0xFFD8D0E5),
+                        fontSize = 14.sp
+                    )
+                }
+            }
+        }
+
+        // Victory Stage Clear Screen
+        if (engine.state == "victory") {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xE608050E)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(24.dp)
+                ) {
+                    Text(
+                        text = "STAGE CLEAR",
+                        color = Color(0xFFFFD700),
+                        fontSize = 38.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "The Crucible Chimera Has Been Purged",
+                        color = Color(0xFF90FFC0),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.height(18.dp))
+                    val mins = (engine.timeElapsed / 60).toInt()
+                    val secs = (engine.timeElapsed % 60).toInt()
+                    Text(
+                        text = "Time Elapsed: ${mins}m ${secs}s\nFoes Slain: ${engine.enemiesDefeated}\nVitae Preserved: ${engine.player.hp.toInt()}%",
+                        color = Color(0xFFE5DBF7),
+                        fontSize = 15.sp,
+                        fontFamily = FontFamily.Monospace,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Button(
+                            onClick = { engine.restart() },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B5CF6)),
+                            modifier = Modifier.testTag("play_again_button")
+                        ) {
+                            Text("Play Again", color = Color.White, fontWeight = FontWeight.Bold)
+                        }
+                        Button(
+                            onClick = { onReturnToMainMenu() },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E1C48)),
+                            modifier = Modifier.testTag("victory_main_menu_button")
+                        ) {
+                            Text("Main Menu", color = Color(0xFFFFD700), fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TouchHoldButton(
+    symbol: String,
+    label: String,
+    size: Int = 64,
+    color: Color = Color(0x991A1426),
+    borderColor: Color = Color(0x73B096DA),
+    onHoldChange: (Boolean) -> Unit,
+    enabled: Boolean = true,
+    modifier: Modifier = Modifier
+) {
+    var isPressed by remember { mutableStateOf(false) }
+
+    Box(
+        modifier = modifier
+            .size(size.dp)
+            .background(
+                if (isPressed) Color(0xCC7846B4) else color,
+                RoundedCornerShape((size / 3).dp)
+            )
+            .border(
+                2.dp,
+                if (isPressed) Color(0xFFF0C050) else borderColor,
+                RoundedCornerShape((size / 3).dp)
+            )
+            .pointerInput(enabled) {
+                if (enabled) {
+                    detectTapGestures(
+                        onPress = {
+                            isPressed = true
+                            onHoldChange(true)
+                            try {
+                                tryAwaitRelease()
+                            } finally {
+                                // Release held input and visual state even when gameplay disables the gesture.
+                                isPressed = false
+                                onHoldChange(false)
+                            }
+                        }
+                    )
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = symbol,
+                color = if (isPressed) Color.White else Color(0xFFE5DBF7),
+                fontSize = (size * 0.36f).sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = label,
+                color = Color(0xB3E5DBF7),
+                fontSize = 8.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+    }
+}
+
+@Composable
+fun TouchTapButton(
+    symbol: String,
+    label: String,
+    size: Int = 64,
+    color: Color = Color(0x991A1426),
+    borderColor: Color = Color(0x73B096DA),
+    onTap: () -> Unit,
+    enabled: Boolean = true,
+    modifier: Modifier = Modifier
+) {
+    var isPressed by remember { mutableStateOf(false) }
+
+    Box(
+        modifier = modifier
+            .size(size.dp)
+            .background(
+                if (isPressed) Color(0xCC7846B4) else color,
+                CircleShape
+            )
+            .border(
+                2.dp,
+                if (isPressed) Color(0xFFF0C050) else borderColor,
+                CircleShape
+            )
+            .pointerInput(enabled) {
+                if (enabled) {
+                    detectTapGestures(
+                        onPress = {
+                            isPressed = true
+                            try {
+                                onTap()
+                                tryAwaitRelease()
+                            } finally {
+                                isPressed = false
+                            }
+                        }
+                    )
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = symbol,
+                color = if (isPressed) Color.White else Color(0xFFE5DBF7),
+                fontSize = (size * 0.32f).sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = label,
+                color = Color(0xB3E5DBF7),
+                fontSize = 8.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+    }
+}
+
+
+/** Toggle between the supported low-power and full-rate settings. */
+internal fun nextTargetFps(current: Int): Int = if (current == 30) 60 else 30
+
+/** Returns only counters that have not yet been included in a persisted snapshot. */
+internal fun pendingCounterDelta(current: Int, previouslySaved: Int): Int =
+    if (current >= previouslySaved) current - previouslySaved else current.coerceAtLeast(0)

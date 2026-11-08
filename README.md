@@ -23,7 +23,7 @@ Melee-combat focused side-scroller built natively with Kotlin and Jetpack Compos
 ## Project structure
 
 ```
-app/src/main/java/com/example/
+app/src/main/java/com/skalagrimmo/crucibleofruin/
 ├── MainActivity.kt          # Screen routing, edge-to-edge setup
 ├── game/
 │   ├── GameEngine.kt        # Simulation coordinator, combat, enemy AI, events and camera

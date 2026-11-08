@@ -19,7 +19,7 @@ val keystoreProperties = Properties().apply {
 }
 
 android {
-    namespace = "com.example"
+    namespace = "com.skalagrimmo.crucibleofruin"
     compileSdk = 36
 
     defaultConfig {
