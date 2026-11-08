@@ -24,19 +24,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,10 +47,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.skalagrimmo.crucibleofruin.game.codex.GrimoireCodexDialog
-import com.skalagrimmo.crucibleofruin.game.data.AuthRepository
 import com.skalagrimmo.crucibleofruin.game.data.UserSave
+import com.skalagrimmo.crucibleofruin.game.data.SaveFileCodec
 import com.skalagrimmo.crucibleofruin.game.data.UserSaveRepository
-import kotlinx.coroutines.launch
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import kotlin.random.Random
 
 @Composable
@@ -63,21 +60,57 @@ fun MainMenuScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val authRepo = remember { AuthRepository(context) }
-    androidx.compose.runtime.DisposableEffect(authRepo) {
-        onDispose { authRepo.dispose() }
-    }
     val saveRepo = remember { UserSaveRepository(context) }
-
-    val user by authRepo.currentUser.collectAsState()
-    val isAuthLoading by authRepo.isLoading.collectAsState()
-    val authError by authRepo.errorMessage.collectAsState()
 
     var userSave by remember { mutableStateOf(saveRepo.getLocalUserSave()) }
     var targetFps by remember { mutableIntStateOf(userSave.targetFps) }
     var soundMuted by remember { mutableStateOf(userSave.soundMuted) }
     var hapticsEnabled by remember { mutableStateOf(userSave.hapticsEnabled) }
+    var importExportNotice by remember { mutableStateOf<String?>(null) }
+
+    // Manual save backup: JSON export/import through the system file picker.
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        importExportNotice = if (uri != null) {
+            try {
+                context.contentResolver.openOutputStream(uri)?.use { out ->
+                    out.write(SaveFileCodec.encode(userSave).toByteArray())
+                }
+                "Save exported."
+            } catch (e: Exception) {
+                "Export failed: ${e.message}"
+            }
+        } else {
+            "Export cancelled."
+        }
+    }
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        importExportNotice = if (uri != null) {
+            try {
+                val imported = context.contentResolver.openInputStream(uri)?.use { input ->
+                    input.readBytes().decodeToString()
+                }?.let(SaveFileCodec::decode)
+                if (imported != null) {
+                    val stored = saveRepo.saveLocalUserSave(imported)
+                    userSave = stored
+                    targetFps = stored.targetFps
+                    soundMuted = stored.soundMuted
+                    hapticsEnabled = stored.hapticsEnabled
+                    AssetCache.isMuted = soundMuted
+                    "Save imported."
+                } else {
+                    "Import failed: not a Crucible of Ruin save file."
+                }
+            } catch (e: Exception) {
+                "Import failed: ${e.message}"
+            }
+        } else {
+            "Import cancelled."
+        }
+    }
 
     // Dialog toggles
     var showSettingsDialog by remember { mutableStateOf(false) }
@@ -85,10 +118,9 @@ fun MainMenuScreen(
     var showControlsDialog by remember { mutableStateOf(false) }
     var showGrimoireDialog by remember { mutableStateOf(false) }
 
-    // Load user cloud save whenever user logs in or app launches
-    LaunchedEffect(user) {
-        val uid = user?.uid ?: ""
-        val save = saveRepo.getUserSave(uid)
+    // Load the device-local save on launch.
+    LaunchedEffect(Unit) {
+        val save = saveRepo.getUserSave()
         userSave = save
         targetFps = save.targetFps
         soundMuted = save.soundMuted
@@ -163,69 +195,20 @@ fun MainMenuScreen(
                 }
             }
 
-            // Google Sign-In / Account status
-            if (isAuthLoading) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier
-                        .background(Color(0xB3181124), RoundedCornerShape(20.dp))
-                        .padding(horizontal = 14.dp, vertical = 6.dp)
-                ) {
-                    CircularProgressIndicator(color = Color(0xFFFFD700), modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                    Text("Authenticating...", color = Color.White, fontSize = 11.sp)
-                }
-            } else if (user != null) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier
-                        .background(Color(0xCC1E1530), RoundedCornerShape(20.dp))
-                        .border(1.dp, Color(0xFF8F77AA), RoundedCornerShape(20.dp))
-                        .padding(horizontal = 12.dp, vertical = 5.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .background(Color(0xFF8B5CF6), CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = (user?.displayName ?: "A").take(1).uppercase(),
-                            color = Color.White,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    Text(
-                        text = user?.displayName ?: "Alchemist",
-                        color = Color(0xFFFFD700),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = "Sign Out",
-                        color = Color(0xFFFFA0A0),
-                        fontSize = 10.sp,
-                        modifier = Modifier
-                            .clickable { scope.launch { authRepo.signOut() } }
-                            .padding(horizontal = 4.dp)
-                            .testTag("sign_out_button")
-                    )
-                }
-            } else {
-                Button(
-                    onClick = {
-                        scope.launch { authRepo.signInWithGoogle() }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E1C44)),
-                    shape = RoundedCornerShape(20.dp),
-                    modifier = Modifier
-                        .border(1.dp, Color(0xFFFFD700), RoundedCornerShape(20.dp))
-                        .testTag("google_sign_in_button")
-                ) {
-                    Text("Sign in with Google", color = Color(0xFFFFD700), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                }
+            // Device-local save indicator (no accounts, no cloud)
+            Box(
+                modifier = Modifier
+                    .background(Color(0xCC1E1530), RoundedCornerShape(20.dp))
+                    .border(1.dp, Color(0xFF8F77AA), RoundedCornerShape(20.dp))
+                    .padding(horizontal = 12.dp, vertical = 5.dp)
+            ) {
+                Text(
+                    text = "SAVES ON THIS DEVICE",
+                    color = Color(0xFF80FFA8),
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
 
@@ -398,10 +381,9 @@ fun MainMenuScreen(
                 .align(Alignment.BottomCenter)
                 .padding(bottom = if (compactLayout) 4.dp else 12.dp)
         ) {
-            val status = if (user != null) "Cloud Sync Active • Firebase Connected" else "Guest Mode • Sign in to save progress to the cloud"
             Text(
-                text = status,
-                color = if (user != null) Color(0xFF80FFA8) else Color(0x80D5CBEC),
+                text = "Local Alchemy • Saves Stored On Device",
+                color = Color(0xFF80FFA8),
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace
             )
@@ -450,8 +432,7 @@ fun MainMenuScreen(
                             onClick = {
                                 targetFps = if (targetFps == 30) 60 else 30
                                 val updatedSave = userSave.copy(
-                                    targetFps = targetFps,
-                                    userId = user?.uid ?: ""
+                                    targetFps = targetFps
                                 )
                                 userSave = updatedSave
                                 saveRepo.saveLocalUserSave(updatedSave)
@@ -485,8 +466,7 @@ fun MainMenuScreen(
                                 soundMuted = !isEnabled
                                 AssetCache.isMuted = soundMuted
                                 val updatedSave = userSave.copy(
-                                    soundMuted = soundMuted,
-                                    userId = user?.uid ?: ""
+                                    soundMuted = soundMuted
                                 )
                                 userSave = updatedSave
                                 saveRepo.saveLocalUserSave(updatedSave)
@@ -516,14 +496,54 @@ fun MainMenuScreen(
                             onCheckedChange = { isEnabled ->
                                 hapticsEnabled = isEnabled
                                 val updatedSave = userSave.copy(
-                                    hapticsEnabled = hapticsEnabled,
-                                    userId = user?.uid ?: ""
+                                    hapticsEnabled = hapticsEnabled
                                 )
                                 userSave = updatedSave
                                 saveRepo.saveLocalUserSave(updatedSave)
                             },
                             colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFFFFD700)),
                             modifier = Modifier.testTag("dialog_toggle_haptics")
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Save Backup: manual JSON export / import (device-local saves)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                importExportNotice = null
+                                exportLauncher.launch("crucible-of-ruin-save.json")
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E3A27)),
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("dialog_export_save")
+                        ) {
+                            Text("📤 EXPORT", color = Color(0xFF80FFA8), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Button(
+                            onClick = {
+                                importExportNotice = null
+                                importLauncher.launch(arrayOf("application/json"))
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF37274E)),
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("dialog_import_save")
+                        ) {
+                            Text("📥 IMPORT", color = Color(0xFFE5DBF7), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    if (importExportNotice != null) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = importExportNotice ?: "",
+                            color = Color(0xFF80FFA8),
+                            fontSize = 11.sp
                         )
                     }
 
@@ -571,13 +591,13 @@ fun MainMenuScreen(
                     val secs = (userSave.bestTimeSeconds % 60).toInt()
 
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("• Player: ${user?.displayName ?: "Guest Alchemist"}", color = Color.White, fontSize = 13.sp)
+                        Text("• Player: ${userSave.displayName}", color = Color.White, fontSize = 13.sp)
                         Text("• Highest Checkpoint: Section ${userSave.lastCheckpoint + 1}", color = Color(0xFFDCCFF5), fontSize = 13.sp)
                         Text("• Best Stage Clear Time: ${mins}m ${secs}s", color = Color(0xFFDCCFF5), fontSize = 13.sp)
                         Text("• Foes Vanquished: ${userSave.foesSlain}", color = Color(0xFFDCCFF5), fontSize = 13.sp)
                         Text(
-                            text = if (user != null) "• Cloud Storage: Synced with Firestore" else "• Cloud Storage: Not connected (Sign in with Google)",
-                            color = if (user != null) Color(0xFF80FFA8) else Color(0xFFFFB080),
+                            text = "• Save Storage: Device-local (export from Options)",
+                            color = Color(0xFF80FFA8),
                             fontSize = 13.sp
                         )
                     }
