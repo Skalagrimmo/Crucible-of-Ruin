@@ -9,16 +9,16 @@ Melee-combat focused side-scroller built natively with Kotlin and Jetpack Compos
 - **Combat**: 3-hit melee combo with finisher, shadow dash with i-frames, perfect riposte counter (slow-mo rupture), poise/stagger system on enemies
 - **Boss encounter**: 3-phase Crucible Chimera with weak-point staggers and telegraphed attacks
 - **Alchemy**: reagent gathering (Sulfur Ash / Quicksilver / Vitriol), combat buffs, permanent transmutations, status effects (burn DoT, corrosion)
-- **Persistence**: local-first saves with cloud sync (Firebase Firestore) and Google Sign-In; best stats merge across devices
+- **Persistence**: device-local saves with manual JSON export/import; progress is included in Android's OS-level backup and device transfers
 - **Feel**: object-pooled particles/projectiles/damage numbers (zero-alloc game loop), haptics, frame-rate cap (30/60 FPS), camera look-ahead & shake, coyote time + jump buffering
 
 ## Tech stack
 
 - Kotlin 2.2, Jetpack Compose (custom Canvas 2D renderer)
-- Firebase Auth (Credential Manager / Google ID) + Firestore
+- No cloud services: the game is fully offline and stores saves on the device
 - JUnit + Robolectric for unit tests of combat, boss and save systems
 
-**Android application ID:** `com.skalagrimmo.crucibleofruin`. Register an Android app with this exact package name in Firebase Console, then place its `google-services.json` under `app/` for real Google Sign-In and cloud saves. The CI placeholder is only for compilation/tests and does not enable real authentication or cloud synchronization.
+**Android application ID:** `com.skalagrimmo.crucibleofruin`. The game is fully offline: no accounts, no cloud services.
 
 ## Project structure
 
@@ -33,13 +33,13 @@ app/src/main/java/com/skalagrimmo/crucibleofruin/
 │   ├── GameRenderer.kt      # Canvas rendering
 │   ├── GameScreen.kt        # HUD, touch controls, game loop host
 │   ├── GameInputController.kt # Testable adapter from touch controls to engine inputs
-│   ├── MainMenuScreen.kt    # Menu, settings, cloud sign-in
+│   ├── MainMenuScreen.kt    # Menu, settings, save export/import
 │   ├── AssetCache.kt        # Sound/texture preloading
 │   ├── boss/                # Boss AI, models, health bar
 │   ├── alchemy/             # Crafting workbench, buffs, reagents
 │   ├── status/              # Combat status effects (burn, corrosion)
 │   ├── codex/               # Grimoire bestiary UI
-│   └── data/                # Auth + save repositories (local & Firestore)
+│   └── data/                # Device-local save repository + JSON export codec
 └── ui/theme/
 
 app/src/main/assets/levels/ruined_bastion.tmx  # First editable Tiled section
@@ -53,11 +53,11 @@ Requires JDK 21 and Android SDK 36.
 ./gradlew :app:assembleDebug
 ```
 
-> **Note:** the Gradle wrapper is committed. Before building locally, place your `google-services.json` (Firebase console → Project settings → Android app) under `app/`. CI uses a placeholder file for compilation because unit tests do not touch live Firebase.
+> **Note:** the Gradle wrapper is committed. No accounts or secrets are needed — the game is fully offline.
 
 ## CI debug APK
 
-Successful GitHub Actions runs upload `app-debug.apk` as the `crucible-of-ruin-debug-apk` artifact for 14 days. The CI APK uses a placeholder Firebase configuration when the real `google-services.json` is absent. It can be used for an offline/gameplay smoke test, but Google Sign-In and cloud saves require the real Firebase configuration.
+Successful GitHub Actions runs upload `app-debug.apk` as the `crucible-of-ruin-debug-apk` artifact for 14 days. The CI APK is a complete offline build suitable for gameplay smoke tests; its SHA-256 is published in the run summary and inside the artifact.
 
 ## Level editing (Tiled prototype)
 
@@ -75,6 +75,11 @@ This is deliberately a prototype, not yet the live level source: `GameEngine` st
 
 ## Save and backup behavior
 
-- Without Google Sign-In, progress is stored locally on the device.
-- Signing in enables Firebase cloud saves. On a first sign-in, guest progress is imported only when the signed-in account has no existing cloud save.
-- Android system backup and device-transfer rules intentionally exclude the app's local save preferences. A signed-in player should rely on the cloud save to restore progress after reinstalling or switching devices. Guest-only progress is not included in system backups and may be lost if app data is cleared, the app is uninstalled, or the device is replaced.
+- Progress lives in a single device-local save slot (SharedPreferences). There are no accounts and no cloud sync.
+- Android's OS-level backup (Auto Backup and device-to-device transfer) includes the app's save data, so progress survives reinstall and device migration subject to the OS backup policy.
+- For full control, the Options menu offers manual export/import: export writes a portable JSON save file, import restores it on any device.
+- Upgrading from an older cloud-sync build keeps device progress: the freshest previously stored snapshot is adopted automatically the first time the new build runs.
+
+## License
+
+Released under the [MIT License](LICENSE).
