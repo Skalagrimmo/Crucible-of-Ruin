@@ -51,7 +51,7 @@ class SaveFileCodecTest {
 
     @Test
     fun decodeForeignFormatReturnsNull() {
-        val foreign = """ + '"' + """{"format": "someone-elses-save", "version": 1}""" + '"' + """
+        val foreign = """{"format": "someone-elses-save", "version": 1}"""
         assertNull(SaveFileCodec.decode(foreign))
     }
 
@@ -64,7 +64,7 @@ class SaveFileCodecTest {
 
     @Test
     fun decodeAppliesDefaultsForMissingFields() {
-        val minimal = """ + '"' + """{"format": "crucible-of-ruin-save", "version": 1}""" + '"' + """
+        val minimal = """{"format": "crucible-of-ruin-save", "version": 1}"""
         val decoded = SaveFileCodec.decode(minimal)
 
         assertNotNull(decoded)
