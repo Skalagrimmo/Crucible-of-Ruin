@@ -5,7 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.skalagrimmo.crucibleofruin.game.data.UserSave
 import com.skalagrimmo.crucibleofruin.game.data.UserSaveRepository
 import org.junit.Assert.assertEquals
-import org.junit.Before
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -17,56 +17,81 @@ class UserSaveRepositoryLocalTest {
 
     private val context: Context = ApplicationProvider.getApplicationContext()
 
-    @Before
-    fun clearPreferences() {
-        listOf(
-            "crucible_save_prefs",
-            "crucible_save_prefs_guest",
-            "crucible_save_prefs_account-a",
-            "crucible_save_prefs_account-b"
-        ).forEach { name ->
-            context.getSharedPreferences(name, Context.MODE_PRIVATE).edit().clear().commit()
-        }
+    @Test
+    fun freshDeviceReturnsDefaultSave() {
+        val repository = UserSaveRepository(context)
+
+        val save = repository.getUserSave()
+
+        assertEquals("Alchemist", save.displayName)
+        assertEquals(0, save.highScore)
+        assertEquals(0, save.lastCheckpoint)
+        assertEquals(3, save.savedSulfur)
+        assertEquals(2, save.savedMercury)
+        assertEquals(1, save.savedVitriol)
+        assertTrue(save.hapticsEnabled)
     }
 
     @Test
-    fun localSnapshotsAreIsolatedBetweenAccountsAndGuest() {
+    fun saveUserSaveAdvancesProgressTimestamp() {
         val repository = UserSaveRepository(context)
 
-        repository.saveLocalUserSave(
-            UserSave(userId = "account-a", savedSulfur = 1, savedMercury = 0, savedVitriol = 2)
-        )
-        repository.saveLocalUserSave(
-            UserSave(userId = "account-b", savedSulfur = 7, savedMercury = 6, savedVitriol = 5)
-        )
+        val persisted = repository.saveUserSave(UserSave(savedAt = 123L, foesSlain = 9))
 
-        assertEquals(1, repository.getLocalUserSave("account-a").savedSulfur)
-        assertEquals(0, repository.getLocalUserSave("account-a").savedMercury)
-        assertEquals(7, repository.getLocalUserSave("account-b").savedSulfur)
-        assertEquals(6, repository.getLocalUserSave("account-b").savedMercury)
-
-        // A user without an account receives a fresh guest snapshot, not account A's data.
-        assertEquals(3, repository.getLocalUserSave("").savedSulfur)
-        assertEquals(2, repository.getLocalUserSave("").savedMercury)
+        assertTrue(persisted.savedAt > 123L)
+        assertEquals(9, repository.getUserSave().foesSlain)
+        assertEquals(persisted.savedAt, repository.getUserSave().savedAt)
     }
 
     @Test
-    fun localDeviceSettingSaveDoesNotAdvanceProgressTimestamp() {
+    fun saveLocalUserSavePreservesProgressTimestamp() {
         val repository = UserSaveRepository(context)
-        repository.saveLocalUserSave(
-            UserSave(
-                userId = "account-a",
-                savedAt = 123L,
-                savedSulfur = 1,
-                hapticsEnabled = true
-            )
-        )
+        repository.saveLocalUserSave(UserSave(savedAt = 123L, hapticsEnabled = true))
 
-        val local = repository.getLocalUserSave("account-a")
+        val local = repository.getLocalUserSave()
         val saved = repository.saveLocalUserSave(local.copy(hapticsEnabled = false))
 
         assertEquals(123L, saved.savedAt)
-        assertEquals(123L, repository.getLocalUserSave("account-a").savedAt)
-        assertEquals(false, repository.getLocalUserSave("account-a").hapticsEnabled)
+        assertEquals(123L, repository.getLocalUserSave().savedAt)
+        assertEquals(false, repository.getLocalUserSave().hapticsEnabled)
+    }
+
+    @Test
+    fun adoptsFreshestLegacySnapshotOnce() {
+        // Two Firebase-era snapshots survive on the device: an older guest save
+        // and a newer per-account save. The repository must adopt the freshest.
+        context.getSharedPreferences("crucible_save_prefs_guest", Context.MODE_PRIVATE)
+            .edit()
+            .putInt("foes_slain", 2)
+            .putLong("saved_at", 500L)
+            .commit()
+        context.getSharedPreferences("crucible_save_prefs_account-a", Context.MODE_PRIVATE)
+            .edit()
+            .putString("display_name", "Legacy Alchemist")
+            .putInt("foes_slain", 9)
+            .putLong("saved_at", 900L)
+            .commit()
+
+        val repository = UserSaveRepository(context)
+        val adopted = repository.getUserSave()
+
+        assertEquals("Legacy Alchemist", adopted.displayName)
+        assertEquals(9, adopted.foesSlain)
+        assertEquals(900L, adopted.savedAt)
+    }
+
+    @Test
+    fun secondSaveOverwritesAdoptedLegacySnapshot() {
+        context.getSharedPreferences("crucible_save_prefs", Context.MODE_PRIVATE)
+            .edit()
+            .putInt("foes_slain", 4)
+            .putLong("saved_at", 700L)
+            .commit()
+
+        val repository = UserSaveRepository(context)
+        assertEquals(4, repository.getUserSave().foesSlain)
+
+        repository.saveUserSave(UserSave(foesSlain = 12))
+        assertEquals(12, repository.getUserSave().foesSlain)
     }
 }
