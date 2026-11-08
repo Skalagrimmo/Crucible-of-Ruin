@@ -2,27 +2,25 @@ package com.skalagrimmo.crucibleofruin.game.data
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.skalagrimmo.crucibleofruin.R
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.SetOptions
-import kotlinx.coroutines.tasks.await
 
+/**
+ * Device-local save storage: one save slot held in SharedPreferences.
+ *
+ * Storage history this repository migrates from, in order:
+ * 1. The original single-file slot ("crucible_save_prefs").
+ * 2. The Firebase-era per-account slots ("crucible_save_prefs_<uid>" and
+ *    "crucible_save_prefs_guest") used while cloud sync existed.
+ * When the local slot is still empty, the freshest legacy snapshot (by
+ * saved_at) is adopted once, so upgrading past the removal of cloud saves
+ * never destroys device progress.
+ */
 class UserSaveRepository(private val context: Context) {
-    private val firestore: FirebaseFirestore by lazy {
-        FirebaseFirestore.getInstance(context.getString(R.string.firestore_database_id))
-    }
 
-    /**
-     * Each account has its own local snapshot. Guest progress lives in a separate file so
-     * signing into a second account cannot silently mix the two accounts' consumables.
-     */
-    fun getLocalUserSave(userId: String = ""): UserSave {
-        val normalizedUserId = userId.trim()
-        val prefs = preferencesFor(normalizedUserId)
-        migrateLegacyPreferencesIfNeeded(normalizedUserId, prefs)
+    fun getLocalUserSave(): UserSave {
+        val prefs = preferences()
+        migrateLegacySnapshotsIfNeeded(prefs)
 
         return UserSave(
-            userId = normalizedUserId,
             displayName = prefs.getString("display_name", "Alchemist") ?: "Alchemist",
             highScore = prefs.getInt("high_score", 0),
             bestTimeSeconds = prefs.getFloat("best_time", 0f),
@@ -46,21 +44,29 @@ class UserSaveRepository(private val context: Context) {
     }
 
     /**
-     * Saves a local snapshot without changing the progress timestamp.
-     * Device-only settings must not make an older offline progression snapshot look newer
-     * than the cloud save. Progress timestamps are advanced by saveUserSave().
+     * Saves a local snapshot without advancing the progress timestamp, for
+     * device-only settings (FPS cap, audio, haptics) that must not make an
+     * older progress snapshot look newer than it is.
      */
     fun saveLocalUserSave(save: UserSave): UserSave {
-        val normalized = save.copy(userId = save.userId.trim())
-        writeLocalSnapshot(normalized)
-        return normalized
+        writeLocalSnapshot(save)
+        return save
+    }
+
+    /** Reads the save. Kept as the progression entry point callers already use. */
+    fun getUserSave(): UserSave = getLocalUserSave()
+
+    /** Persists progress and advances the progress timestamp. */
+    fun saveUserSave(save: UserSave): UserSave {
+        val persisted = save.copy(savedAt = System.currentTimeMillis())
+        writeLocalSnapshot(persisted)
+        return persisted
     }
 
     private fun writeLocalSnapshot(save: UserSave) {
-        val prefs = preferencesFor(save.userId)
-        migrateLegacyPreferencesIfNeeded(save.userId, prefs)
+        val prefs = preferences()
+        migrateLegacySnapshotsIfNeeded(prefs)
         prefs.edit()
-            .putString("user_id", save.userId)
             .putString("display_name", save.displayName)
             .putInt("high_score", save.highScore)
             .putFloat("best_time", save.bestTimeSeconds)
@@ -84,174 +90,72 @@ class UserSaveRepository(private val context: Context) {
             .apply()
     }
 
-    private fun preferencesFor(userId: String): SharedPreferences {
-        val accountKey = userId.ifBlank { "guest" }
-        return context.getSharedPreferences("${PREFERENCES_PREFIX}$accountKey", Context.MODE_PRIVATE)
-    }
+    private fun preferences(): SharedPreferences =
+        context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
 
-    private fun hasStoredSave(userId: String): Boolean {
-        val prefs = preferencesFor(userId)
-        migrateLegacyPreferencesIfNeeded(userId, prefs)
-        return prefs.getBoolean(KEY_HAS_SAVE, false)
+    private fun hasStoredSave(prefs: SharedPreferences): Boolean =
+        prefs.getBoolean(KEY_HAS_SAVE, false)
+
+    private fun migrateLegacySnapshotsIfNeeded(target: SharedPreferences) {
+        if (target.getBoolean(KEY_MIGRATED, false)) return
+
+        if (!hasStoredSave(target)) {
+            val candidates = legacySnapshotCandidates()
+            val freshest = candidates.maxByOrNull { (_, values) ->
+                (values["saved_at"] as? Long) ?: 0L
+            }
+            if (freshest != null) {
+                val editor = target.edit()
+                freshest.second.forEach { (key, value) ->
+                    when (value) {
+                        is String -> editor.putString(key, value)
+                        is Int -> editor.putInt(key, value)
+                        is Long -> editor.putLong(key, value)
+                        is Float -> editor.putFloat(key, value)
+                        is Boolean -> editor.putBoolean(key, value)
+                        is Set<*> -> editor.putStringSet(
+                            key,
+                            value.filterIsInstance<String>().toMutableSet()
+                        )
+                    }
+                }
+                editor.putBoolean(KEY_HAS_SAVE, true).commit()
+            }
+        }
+        target.edit().putBoolean(KEY_MIGRATED, true).commit()
     }
 
     /**
-     * Migrate the former single SharedPreferences file only to the matching owner.
-     * Legacy guest data is never copied into a different signed-in account.
+     * Collects every legacy snapshot still present on the device: the original
+     * single file plus each Firebase-era per-account/guest file.
      */
-    private fun migrateLegacyPreferencesIfNeeded(userId: String, target: SharedPreferences) {
-        if (target.getBoolean(KEY_LEGACY_MIGRATED, false)) return
+    private fun legacySnapshotCandidates(): Map<String, Map<String, Any>> {
+        val candidates = mutableMapOf<String, Map<String, Any>>()
 
-        val legacy = context.getSharedPreferences(LEGACY_PREFERENCES, Context.MODE_PRIVATE)
-        val legacyValues = legacy.all
-        if (legacyValues.isEmpty()) {
-            target.edit().putBoolean(KEY_LEGACY_MIGRATED, true).apply()
-            return
-        }
+        val legacy = context.getSharedPreferences(LEGACY_PREFERENCES, Context.MODE_PRIVATE).all
+        if (legacy.isNotEmpty()) candidates[LEGACY_PREFERENCES] = legacy
 
-        val legacyOwner = legacy.getString("user_id", "")?.trim().orEmpty()
-        if (legacyOwner == userId) {
-            val editor = target.edit()
-            legacyValues.forEach { (key, value) ->
-                when (value) {
-                    is String -> editor.putString(key, value)
-                    is Int -> editor.putInt(key, value)
-                    is Long -> editor.putLong(key, value)
-                    is Float -> editor.putFloat(key, value)
-                    is Boolean -> editor.putBoolean(key, value)
-                    is Set<*> -> editor.putStringSet(
-                        key,
-                        value.filterIsInstance<String>().toMutableSet()
-                    )
-                }
+        val sharedPrefsDir = context.filesDir.parentFile?.resolve("shared_prefs")
+        sharedPrefsDir?.listFiles { file ->
+            file.isFile &&
+                file.name.startsWith(LEGACY_PREFIX) &&
+                file.name != PREFERENCES + ".xml"
+        }?.forEach { file ->
+            val name = file.name.removeSuffix(".xml")
+            if (name != PREFERENCES) {
+                val values = context.getSharedPreferences(name, Context.MODE_PRIVATE).all
+                if (values.isNotEmpty()) candidates[name] = values
             }
-            editor.putBoolean(KEY_HAS_SAVE, true)
-                .putBoolean(KEY_LEGACY_MIGRATED, true)
-                .apply()
-        } else {
-            // This account has checked the legacy file; do not import another owner's data.
-            target.edit().putBoolean(KEY_LEGACY_MIGRATED, true).apply()
         }
-    }
 
-    suspend fun getUserSave(userId: String): UserSave {
-        val normalizedUserId = userId.trim()
-        val local = getLocalUserSave(normalizedUserId)
-        val localHasSave = hasStoredSave(normalizedUserId)
-        if (normalizedUserId.isBlank()) return local
-
-        return try {
-            val snapshot = firestore.collection("users")
-                .document(normalizedUserId)
-                .get()
-                .await()
-            val cloud = if (snapshot.exists()) snapshot.toObject(UserSave::class.java) else null
-
-            if (cloud != null) {
-                val merged = mergeUserSaves(
-                    local = local,
-                    cloud = cloud,
-                    userId = normalizedUserId,
-                    localHasSave = localHasSave
-                )
-                val localProgressIsNewer = localHasSave && local.savedAt > cloud.savedAt
-                if (localProgressIsNewer) {
-                    // A newer offline snapshot wins and is pushed back to the cloud.
-                    saveUserSave(merged)
-                    getLocalUserSave(normalizedUserId)
-                } else {
-                    // Preserve the cloud snapshot timestamp; reading must not make stale local
-                    // progression look newer than the cloud on the next launch.
-                    writeLocalSnapshot(merged)
-                    merged
-                }
-            } else {
-                // First login: keep this account's local data. If it has none, import the
-                // separate guest save once; never merge guest data into an existing cloud save.
-                val seed = if (!localHasSave && hasStoredSave("")) {
-                    getLocalUserSave("")
-                } else {
-                    local
-                }
-                val initial = seed.copy(userId = normalizedUserId)
-                saveUserSave(initial)
-                getLocalUserSave(normalizedUserId)
-            }
-        } catch (_: Exception) {
-            // Local-first fallback remains usable when Firebase or the network is unavailable.
-            local
-        }
-    }
-
-    suspend fun saveUserSave(save: UserSave): Result<Unit> {
-        val normalizedUserId = save.userId.trim()
-        val persisted = save.copy(
-            userId = normalizedUserId,
-            savedAt = System.currentTimeMillis()
-        )
-        writeLocalSnapshot(persisted)
-        if (normalizedUserId.isBlank()) return Result.success(Unit)
-
-        return try {
-            firestore.collection("users")
-                .document(normalizedUserId)
-                .set(persisted, SetOptions.merge())
-                .await()
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        return candidates
     }
 
     private companion object {
         const val LEGACY_PREFERENCES = "crucible_save_prefs"
-        const val PREFERENCES_PREFIX = "crucible_save_prefs_"
+        const val LEGACY_PREFIX = "crucible_save_prefs_"
+        const val PREFERENCES = "crucible_save_prefs_local"
         const val KEY_HAS_SAVE = "_has_saved_snapshot"
-        const val KEY_LEGACY_MIGRATED = "_legacy_migrated"
+        const val KEY_MIGRATED = "_legacy_migrated"
     }
-}
-
-/**
- * Merge monotonic achievements independently, but take consumable reagent counts from one
- * timestamped snapshot. Using maxOf for consumables restores ingredients after crafting.
- */
-internal fun mergeUserSaves(
-    local: UserSave,
-    cloud: UserSave,
-    userId: String,
-    localHasSave: Boolean
-): UserSave {
-    val localIsNewer = localHasSave && local.savedAt > cloud.savedAt
-    val progress = if (localIsNewer) local else cloud
-    val deviceSettings = if (localHasSave) local else cloud
-
-    val localBest = local.bestTimeSeconds
-    val cloudBest = cloud.bestTimeSeconds
-    val bestTime = when {
-        localBest <= 0f -> cloudBest
-        cloudBest <= 0f -> localBest
-        else -> minOf(localBest, cloudBest)
-    }
-
-    return progress.copy(
-        userId = userId,
-        highScore = maxOf(local.highScore, cloud.highScore),
-        bestTimeSeconds = bestTime,
-        foesSlain = maxOf(local.foesSlain, cloud.foesSlain),
-        lastCheckpoint = maxOf(local.lastCheckpoint, cloud.lastCheckpoint),
-        savedAt = maxOf(local.savedAt, cloud.savedAt),
-        targetFps = deviceSettings.targetFps,
-        soundMuted = deviceSettings.soundMuted,
-        hapticsEnabled = deviceSettings.hapticsEnabled,
-        permanentVitality = maxOf(local.permanentVitality, cloud.permanentVitality),
-        permanentDamage = maxOf(local.permanentDamage, cloud.permanentDamage),
-        permanentSpeed = maxOf(local.permanentSpeed, cloud.permanentSpeed),
-        permanentFlasks = maxOf(local.permanentFlasks, cloud.permanentFlasks),
-        permanentDefense = maxOf(local.permanentDefense, cloud.permanentDefense),
-        permanentVitriol = maxOf(local.permanentVitriol, cloud.permanentVitriol),
-        savedSulfur = progress.savedSulfur,
-        savedMercury = progress.savedMercury,
-        savedVitriol = progress.savedVitriol,
-        perfectDodges = maxOf(local.perfectDodges, cloud.perfectDodges)
-    )
 }
