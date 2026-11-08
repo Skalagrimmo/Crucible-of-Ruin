@@ -106,7 +106,7 @@ class UserSaveRepository(private val context: Context) {
             }
             if (freshest != null) {
                 val editor = target.edit()
-                freshest.second.forEach { (key, value) ->
+                freshest.value.forEach { (key, value) ->
                     when (value) {
                         is String -> editor.putString(key, value)
                         is Int -> editor.putInt(key, value)
@@ -129,8 +129,8 @@ class UserSaveRepository(private val context: Context) {
      * Collects every legacy snapshot still present on the device: the original
      * single file plus each Firebase-era per-account/guest file.
      */
-    private fun legacySnapshotCandidates(): Map<String, Map<String, Any>> {
-        val candidates = mutableMapOf<String, Map<String, Any>>()
+    private fun legacySnapshotCandidates(): Map<String, Map<String, Any?>> {
+        val candidates = mutableMapOf<String, Map<String, Any?>>()
 
         val legacy = context.getSharedPreferences(LEGACY_PREFERENCES, Context.MODE_PRIVATE).all
         if (legacy.isNotEmpty()) candidates[LEGACY_PREFERENCES] = legacy
