@@ -43,8 +43,6 @@ import com.skalagrimmo.crucibleofruin.game.alchemy.PermanentBuffType
 import com.skalagrimmo.crucibleofruin.game.alchemy.ResourceType
 import com.skalagrimmo.crucibleofruin.game.boss.BossState
 import com.skalagrimmo.crucibleofruin.game.boss.GothicBossHealthBar
-import com.skalagrimmo.crucibleofruin.game.data.AuthRepository
-import com.skalagrimmo.crucibleofruin.game.data.UserSave
 import com.skalagrimmo.crucibleofruin.game.status.ActiveCombatStatus
 import com.skalagrimmo.crucibleofruin.game.status.CombatStatusType
 import com.skalagrimmo.crucibleofruin.game.data.UserSaveRepository
@@ -73,12 +71,7 @@ fun GameScreen(
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()
-    val authRepo = remember { com.skalagrimmo.crucibleofruin.game.data.AuthRepository(context) }
-    androidx.compose.runtime.DisposableEffect(authRepo) {
-        onDispose { authRepo.dispose() }
-    }
     val saveRepo = remember { com.skalagrimmo.crucibleofruin.game.data.UserSaveRepository(context) }
-    val user by authRepo.currentUser.collectAsState()
 
     val alchemyViewModel: com.skalagrimmo.crucibleofruin.game.alchemy.AlchemyViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
     val pouch by alchemyViewModel.pouch.collectAsState()
@@ -123,9 +116,8 @@ fun GameScreen(
         onDispose { inputController.cancelHeldInputs() }
     }
 
-    LaunchedEffect(user) {
-        val currentUid = user?.uid ?: ""
-        val save = saveRepo.getUserSave(currentUid)
+    LaunchedEffect(Unit) {
+        val save = saveRepo.getUserSave()
         userSaveState = save
         alchemyViewModel.loadFromUserSave(save)
         engine.player.maxHp = 100f + alchemyViewModel.getPermanentBonusMaxHp()
@@ -137,9 +129,8 @@ fun GameScreen(
         engine.speedMultiplier = alchemyViewModel.getTotalSpeedMultiplier()
     }
 
-    // Auto-save checkpoint progress to local storage and Firestore
+    // Auto-save checkpoint progress to the device-local store
     engine.onCheckpointActivated = { cpId ->
-        val currentUid = user?.uid ?: ""
         val enemiesNow = engine.enemiesDefeated
         val dodgesNow = engine.perfectDodgesCount
         val enemiesDelta = pendingCounterDelta(enemiesNow, enemiesCountedThroughLastSave)
@@ -148,7 +139,7 @@ fun GameScreen(
         dodgesCountedThroughLastSave = dodgesNow
 
         scope.launch {
-            val current = saveRepo.getUserSave(currentUid)
+            val current = saveRepo.getUserSave()
             val updated = current.copy(
                 lastCheckpoint = maxOf(current.lastCheckpoint, cpId),
                 foesSlain = current.foesSlain + enemiesDelta,
@@ -164,14 +155,13 @@ fun GameScreen(
                 savedVitriol = alchemyViewModel.getResourceCount(ResourceType.VITRIOL_CRYSTAL)
             )
             saveRepo.saveUserSave(updated)
-            userSaveState = saveRepo.getLocalUserSave(currentUid)
+            userSaveState = saveRepo.getLocalUserSave()
         }
     }
 
     // Auto-save victory stats
     LaunchedEffect(engine.state) {
         if (engine.state == "victory") {
-            val currentUid = user?.uid ?: ""
             val enemiesNow = engine.enemiesDefeated
             val dodgesNow = engine.perfectDodgesCount
             val enemiesDelta = pendingCounterDelta(enemiesNow, enemiesCountedThroughLastSave)
@@ -180,7 +170,7 @@ fun GameScreen(
             dodgesCountedThroughLastSave = dodgesNow
 
             scope.launch {
-                val current = saveRepo.getUserSave(currentUid)
+                val current = saveRepo.getUserSave()
                 val bestTime = if (current.bestTimeSeconds <= 0f) engine.timeElapsed else minOf(current.bestTimeSeconds, engine.timeElapsed)
                 val updated = current.copy(
                     bestTimeSeconds = bestTime,
@@ -189,7 +179,7 @@ fun GameScreen(
                     perfectDodges = current.perfectDodges + dodgesDelta
                 )
                 saveRepo.saveUserSave(updated)
-                userSaveState = saveRepo.getLocalUserSave(currentUid)
+                userSaveState = saveRepo.getLocalUserSave()
             }
         }
     }
@@ -789,7 +779,7 @@ fun GameScreen(
                             val updatedFps = nextTargetFps(targetFps)
                             targetFps = updatedFps
                             saveRepo.saveLocalUserSave(
-                                saveRepo.getLocalUserSave(user?.uid ?: "").copy(targetFps = updatedFps)
+                                saveRepo.getLocalUserSave().copy(targetFps = updatedFps)
                             )
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF37274E)),
@@ -806,7 +796,7 @@ fun GameScreen(
                         onClick = {
                             hapticsEnabledState = !hapticsEnabledState
                             haptics.isEnabled = hapticsEnabledState
-                            saveRepo.saveLocalUserSave(saveRepo.getLocalUserSave(user?.uid ?: "").copy(hapticsEnabled = hapticsEnabledState))
+                            saveRepo.saveLocalUserSave(saveRepo.getLocalUserSave().copy(hapticsEnabled = hapticsEnabledState))
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF37274E)),
                         modifier = Modifier.testTag("toggle_haptics_pause_menu")
@@ -919,7 +909,7 @@ fun GameScreen(
                     engine.speedMultiplier = alchemyViewModel.getTotalSpeedMultiplier()
 
                     scope.launch {
-                        val currentSave = saveRepo.getUserSave(user?.uid ?: "")
+                        val currentSave = saveRepo.getUserSave()
                         val updatedSave = currentSave.copy(
                             permanentVitality = alchemyViewModel.getPermanentRank(PermanentBuffType.VITALITY_CORE),
                             permanentDamage = alchemyViewModel.getPermanentRank(PermanentBuffType.IGNIS_FERVOR),
