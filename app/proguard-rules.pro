@@ -4,7 +4,7 @@
 
 # The game is small enough that keeping its classes whole costs a negligible amount of
 # APK size and removes every reflection risk (Firestore save models, Compose internals).
--keep class com.example.** { *; }
+-keep class com.skalagrimmo.crucibleofruin.** { *; }
 
 # Firebase Auth / Firestore ship their own consumer rules; nothing extra is required.
 
