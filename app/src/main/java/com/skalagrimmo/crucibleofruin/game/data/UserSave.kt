@@ -1,7 +1,11 @@
 package com.skalagrimmo.crucibleofruin.game.data
 
+/**
+ * Device-local player save. There are no accounts and no cloud sync; progress
+ * survives device transfers through Android's OS-level backup and the manual
+ * JSON export/import flow (see [SaveFileCodec]).
+ */
 data class UserSave(
-    val userId: String = "",
     val displayName: String = "Alchemist",
     val highScore: Int = 0,
     val bestTimeSeconds: Float = 0f,

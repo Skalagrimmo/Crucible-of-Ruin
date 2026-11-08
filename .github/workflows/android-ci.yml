@@ -25,49 +25,6 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      # Firebase credentials are intentionally not committed. This placeholder is only
-      # used to compile and run offline/unit tests; sign-in must use a real local config.
-      - name: Provide placeholder google-services.json for CI
-        if: hashFiles('app/google-services.json') == ''
-        shell: bash
-        run: |
-          cat > app/google-services.json <<'JSON'
-          {
-            "project_info": {
-              "project_number": "000000000000",
-              "project_id": "crucible-of-ruin-ci",
-              "storage_bucket": "crucible-of-ruin-ci.appspot.com"
-            },
-            "client": [
-              {
-                "client_info": {
-                  "mobilesdk_app_id": "1:000000000000:android:0000000000000000",
-                  "android_client_info": {
-                    "package_name": "com.skalagrimmo.crucibleofruin"
-                  }
-                },
-                "oauth_client": [
-                  {
-                    "client_id": "000000000000-placeholder0000000000000000000000000000.apps.googleusercontent.com",
-                    "client_type": 3
-                  }
-                ],
-                "api_key": [
-                  {
-                    "current_key": "AIzaSyCI-placeholder-key-for-compilation-0000000000"
-                  }
-                ],
-                "services": {
-                  "appinvite_service": {
-                    "other_platform_oauth_client": []
-                  }
-                }
-              }
-            ],
-            "configuration_version": "1"
-          }
-          JSON
-
       - name: Run unit tests
         shell: bash
         run: |
@@ -117,9 +74,8 @@ jobs:
           set -o pipefail
           ./gradlew :app:assembleDebug --stacktrace --no-daemon 2>&1 | tee -a build-output.log
 
-      # This APK is built with a placeholder Firebase config when the real config is absent.
-      # It is suitable for offline/gameplay smoke tests, but real Google Sign-In/cloud sync
-      # require the application's actual google-services.json.
+      # This APK is fully offline: the game keeps its saves on the device, so no cloud
+      # credentials are needed and the build is suitable for gameplay smoke tests.
       # Publishes the APK's SHA-256 in the run summary and inside the artifact, so a
       # downloaded file can be verified — a truncated download or an HTML login page
       # saved instead of the zip is the other common cause of "invalid checksum" errors.

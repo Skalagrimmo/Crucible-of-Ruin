@@ -1,33 +1,10 @@
 # Release runbook
 
 This is the repository-side companion to the manual release checklist in issue #6.
-CI proves compilation and unit tests; the steps here prepare a real Firebase
-configuration and a signed release artifact on your machine.
+CI proves compilation and unit tests; the steps here prepare a signed release
+artifact on your machine.
 
-## 1. Firebase configuration (one-time per app)
-
-1. In the [Firebase Console](https://console.firebase.google.com/) create (or pick) a project.
-2. Register an Android application with the exact package name `com.skalagrimmo.crucibleofruin`.
-3. Add the SHA-1 (and SHA-256) fingerprints of every key that will sign the app —
-   debug and release — under *Project settings → Your apps → App fingerprint*:
-
-   ```bash
-   # Debug keystore (the CI artifact is signed with the cached CI debug key)
-   keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
-
-   # Release keystore (created in step 2 below)
-   keytool -list -v -keystore keys/crucible-release.jks -alias crucible-release
-   ```
-
-4. Download the resulting `google-services.json` and place it at `app/google-services.json`.
-5. `app/google-services.json` is **.gitignored on purpose** — it is generated per project
-   and never committed. CI writes its own placeholder when the file is absent.
-
-Google Sign-In and cloud saves only work in a build whose `google-services.json` matches
-its signing certificate. An APK signed with a key whose SHA-1 is missing from the Firebase
-app record will fail sign-in.
-
-## 2. Release signing (outside the repository)
+## 1. Release signing (outside the repository)
 
 Create a keystore that never enters the repo:
 
@@ -52,7 +29,7 @@ keyPassword=<key password>
 file up automatically when it exists and wires it into the `release` build type;
 without it, `:app:assembleRelease` produces an unsigned APK as before.
 
-## 3. Building the artifact
+## 2. Building the artifact
 
 ```bash
 # Local smoke build
@@ -75,12 +52,23 @@ Release builds are currently **unminified** (`isMinifyEnabled = false`). The APK
 enough that R8 is not worth the reflection risk yet; `app/proguard-rules.pro` documents
 the starting rules for the day minification is enabled.
 
-## 4. Versioning
+## 3. Versioning
 
 - `versionCode` must increase with every artifact uploaded anywhere (Google Play requires
   strictly monotonic values per application).
 - `versionName` is the human-readable label (currently `1.0`).
 - Both live in `app/build.gradle.kts` → `defaultConfig`.
+
+## 4. Saves, backup and transfer verification
+
+The game is fully offline: progress lives in a single device-local save slot.
+
+- OS backup: Android Auto Backup and device-to-device transfer now include the app's
+  save preferences. Verify on a physical device that progress survives each path (#6).
+- Manual export/import: the Options menu exports the save as a portable JSON file and
+  re-imports it. Verify the round trip on a device (#6).
+- Legacy adoption: a device upgrading from the cloud-sync era keeps its freshest stored
+  snapshot automatically; `UserSaveRepositoryLocalTest` pins this behavior.
 
 ## 5. Pre-publish decisions (tracked in #6)
 
@@ -88,7 +76,9 @@ the starting rules for the day minification is enabled.
   published application ID all live under `com.skalagrimmo.crucibleofruin` now —
   the placeholder `com.example` package was retired before the first public
   release (#6).
+- **License**: the project is MIT-licensed (`LICENSE`); keep the copyright year in sync
+  with new releases.
 - **App metadata**: store listing text, icons, content rating, and the privacy policy link
   are set in Play Console, not in the repository.
-- The rest of #6 (Firebase account checks, device gameplay verification, backup behavior
-  on a physical device) is manual and cannot be replaced by CI.
+- The rest of #6 (on-device save, export/import and backup verification, and gameplay
+  checks on a physical device) is manual and cannot be replaced by CI.
