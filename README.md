@@ -27,7 +27,7 @@ app/src/main/java/com/skalagrimmo/crucibleofruin/
 ├── MainActivity.kt          # Screen routing, edge-to-edge setup
 ├── game/
 │   ├── GameEngine.kt        # Simulation coordinator, combat, enemy AI, events and camera
-│   ├── GamePhysics.kt       # Player velocity integration and platform collision resolution
+│   ├── ActorPhysics.kt      # Shared axis-separated physics resolver for all archetypes
 │   ├── GameLevelFactory.kt  # Current full level layout and encounter setup
 │   ├── TiledLevelLoader.kt  # TMX object-layer importer (prototype, not live yet)
 │   ├── GameRenderer.kt      # Canvas rendering

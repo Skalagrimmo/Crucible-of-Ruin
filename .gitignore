@@ -7,9 +7,6 @@ app/build/
 # Local configuration
 local.properties
 
-# Firebase real configuration — generated per project, never committed.
-# CI writes its own placeholder when this file is absent (see .github/workflows/android-ci.yml).
-app/google-services.json
 
 # IntelliJ / Android Studio
 .idea/
