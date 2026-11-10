@@ -79,6 +79,7 @@ val GothicFontFamily = FontFamily(
  * - Dynamic boss state banners (Staggered, Telegraphing, Phase Transition)
  * - Integrated gothic weak-point poise/stagger stability meter
  * - Gothic alchemical seals for active combat status effects (Corrosion, Alchemy-Burn)
+ * - Stage 9b: segmented component pips — one mini-bar per destructible part
  */
 @Composable
 fun GothicBossHealthBar(
@@ -314,6 +315,72 @@ fun GothicBossHealthBar(
                         hpRatio = hpRatio,
                         isHurt = boss.hurtTimer > 0f
                     )
+                }
+            }
+
+            // --- COMPONENT PIPS ROW (Stage 9b #62): one mini-bar per destructible part ---
+            if (boss.components.isNotEmpty()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 1.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    for (comp in boss.components) {
+                        val compRatio = (comp.hp / comp.maxHp).coerceIn(0f, 1f)
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(5.dp)
+                                    .clip(CutCornerShape(1.5.dp))
+                                    .background(Color(0xDD120A1E))
+                                    .border(
+                                        0.8.dp,
+                                        if (comp.destroyed) Color(0xFF4A3A58) else comp.accentColor,
+                                        CutCornerShape(1.5.dp)
+                                    )
+                                    .testTag("boss_component_\${comp.id}")
+                            ) {
+                                if (!comp.destroyed) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxHeight()
+                                            .fillMaxWidth(fraction = compRatio)
+                                            .background(
+                                                Brush.horizontalGradient(
+                                                    listOf(
+                                                        comp.accentColor.copy(alpha = 0.45f),
+                                                        comp.accentColor
+                                                    )
+                                                )
+                                            )
+                                    )
+                                    if (comp.hurtFlashTimer > 0f) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxHeight()
+                                                .fillMaxWidth(fraction = compRatio)
+                                                .background(Color(0x88FFFFFF))
+                                        )
+                                    }
+                                }
+                            }
+                            Text(
+                                text = if (comp.destroyed) "✝ \${comp.name.uppercase()}" else comp.name.uppercase(),
+                                color = if (comp.destroyed) Color(0xFF6A5578) else comp.accentColor,
+                                fontFamily = GothicFontFamily,
+                                fontSize = 7.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.5.sp,
+                                maxLines = 1
+                            )
+                        }
+                    }
                 }
             }
 
