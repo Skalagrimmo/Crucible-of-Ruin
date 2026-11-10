@@ -36,7 +36,9 @@ class BossComponentTest {
         weakPoint = WeakPoint(
             id = "core",
             name = "Test Core",
-            offsetX = 48f,
+            // Far from the arm zone: a 36px slash aimed mid-arm (x 510..540)
+            // must not reach the core even after the arm is destroyed.
+            offsetX = 90f,
             offsetY = 60f,
             width = 24f,
             height = 24f,
