@@ -276,7 +276,9 @@ class BossUnitTest {
     @Test
     fun testGothicBossHealthBarStateAndPoise() {
         val engine = GameEngine()
-        val boss = engine.boss
+        // Stage 9c (#62): the stock boss is now the Siege Golem — pin the
+        // Chimera's bar contracts on a direct instance.
+        val boss = CrucibleChimeraBoss(5750f, 360f)
         assertFalse("Health bar must not be visible when boss is inactive", boss.active && !boss.dead)
 
         // Activate boss encounter

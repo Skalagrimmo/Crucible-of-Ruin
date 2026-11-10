@@ -2,6 +2,7 @@ package com.skalagrimmo.crucibleofruin.game
 
 import com.skalagrimmo.crucibleofruin.game.boss.BaseBoss
 import com.skalagrimmo.crucibleofruin.game.boss.CrucibleChimeraBoss
+import com.skalagrimmo.crucibleofruin.game.boss.SiegeGolemBoss
 
 /**
  * Static level content used to populate the engine's mutable runtime collections.
@@ -26,7 +27,24 @@ internal data class GameLevelLayout(
     val width: Float = 6200f,
     val height: Float = 540f,
     // Stage 8a (#56): rectangles that unlock the district's sealed shortcut gates.
-    val gateTriggers: List<GateTrigger> = emptyList()
+    val gateTriggers: List<GateTrigger> = emptyList(),
+    // Stage 9c (#62): the active encounter's arming line, its fresh-instance
+    // factory, and the encounters queued behind it. The defaults keep the
+    // legacy single-Chimera corridor for every existing caller and test layout.
+    val bossTriggerX: Float = 5340f,
+    val bossTriggerMaxY: Float = 540f,
+    val bossFactory: () -> BaseBoss = { GameLevelFactory.createBoss() },
+    val laterEncounters: List<BossEncounter> = emptyList()
+)
+
+/**
+ * Stage 9c (#62): one boss fight in the encounter chain — a fresh-boss
+ * factory plus the trigger line whose crossing arms the fight.
+ */
+data class BossEncounter(
+    val createBoss: () -> BaseBoss,
+    val triggerX: Float,
+    val triggerMaxY: Float = 540f
 )
 
 /**
@@ -37,6 +55,12 @@ internal data class GameLevelLayout(
 internal object GameLevelFactory {
     /** Creates a fresh boss instance for the initial layout and encounter resets. */
     fun createBoss(): BaseBoss = CrucibleChimeraBoss(5750f, 360f)
+
+    /** Stage 9c (#62): fresh Chimera for the final Sanctum encounter. */
+    fun createChimeraBoss(): BaseBoss = CrucibleChimeraBoss(5750f, 360f)
+
+    /** Stage 9c (#62): fresh Siege Golem for the Foundry Yard mid-boss encounter. */
+    fun createSiegeGolemBoss(): BaseBoss = SiegeGolemBoss(3500f, 260f)
 
     /**
      * Stage 6d (#38): the room/door graph the world map charts. Stage 7b (#51):
@@ -256,13 +280,19 @@ internal object GameLevelFactory {
         // and the lift riding the shaft is the way back up.
         platforms.add(Platform(3100f, 430f, 260f, 110f, PlatformStyle.STONE))
         platforms.add(Platform(3450f, 430f, 300f, 110f, PlatformStyle.STONE))
-        enemies.add(EnemyEntity(3300f, 370f, EnemyArchetype.GOLEM, 150f))
-        enemies.add(EnemyEntity(3560f, 380f, EnemyArchetype.LURKER, 90f))
+        // Stage 9c (#62): the Foundry Yard between the floor halves is the
+        // Siege Golem's arena — the regular garrison here is gone, and a
+        // health urn waits just inside the entry gate.
+        breakables.add(BreakableUrn(3200f, 406f, dropType = "health"))
 
         platforms.add(Platform(3250f, 320f, 140f, 20f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY))
         platforms.add(Platform(3440f, 240f, 160f, 20f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY))
         breakables.add(BreakableUrn(3500f, 216f, dropType = "flask"))
-        enemies.add(EnemyEntity(3480f, 190f, EnemyArchetype.CHERUB, 100f))
+
+        // Stage 9c (#62): Foundry Yard arena gates — open for the approach,
+        // sealed by GameEngine when the Siege Golem encounter arms.
+        platforms.add(Platform(3110f, 80f, 30f, 350f, PlatformStyle.BOSS_GATE, PlatformCollision.OPEN))
+        platforms.add(Platform(3720f, 80f, 30f, 350f, PlatformStyle.BOSS_GATE, PlatformCollision.OPEN))
 
         platforms.add(Platform(3800f, 440f, 200f, 100f, PlatformStyle.STONE))
         hazards.add(Hazard(4000f, 500f, 80f, 40f, HazardType.ACID))
@@ -428,7 +458,14 @@ internal object GameLevelFactory {
             hazards = hazards,
             breakables = breakables,
             enemies = enemies,
-            boss = createBoss(),
+            // Stage 9c (#62): the run opens with the Siege Golem in the Foundry
+            // Yard; the Chimera waits as the final Sanctum encounter behind it.
+            boss = createSiegeGolemBoss(),
+            bossFactory = { createSiegeGolemBoss() },
+            bossTriggerX = 3200f,
+            laterEncounters = listOf(
+                BossEncounter(createBoss = { createChimeraBoss() }, triggerX = 5340f)
+            ),
             rooms = buildRooms(),
             // Stage 7b (#51): the Undercroft stacks below the corridor — the
             // world grows one corridor height downward.

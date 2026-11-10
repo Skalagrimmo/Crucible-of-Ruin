@@ -94,7 +94,9 @@ class EnvironmentBoundsTest {
     @Test
     fun groundSlamHorizontalSpeedIsCappedAtTunnelingSafeVelocity() {
         val engine = GameEngine()
-        val boss = engine.boss as CrucibleChimeraBoss
+        // Stage 9c (#62): the stock boss is now the Siege Golem — construct the
+        // Chimera directly; the slam cap lives in the shared BaseBoss flow.
+        val boss = CrucibleChimeraBoss(5750f, 360f)
         val slam = BossAttackPattern(
             id = "ground_slam",
             name = "Cataclysmic Leap Slam",

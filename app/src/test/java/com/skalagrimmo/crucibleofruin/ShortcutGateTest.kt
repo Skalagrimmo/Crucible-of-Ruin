@@ -73,8 +73,11 @@ class ShortcutGateTest {
     fun theBossStillActivatesInsideTheCorridorBand() {
         val engine = GameEngine()
         engine.enemies.forEach { it.dead = true }
-        engine.player.x = 5400f
+        // Stage 9c (#62): arming is crossing-based — walk into the trigger
+        // line instead of teleporting past it.
+        engine.player.x = 5300f
         engine.player.y = 400f
+        engine.inputRight = true
 
         var frames = 0
         while (!engine.boss.active && frames < 30) {

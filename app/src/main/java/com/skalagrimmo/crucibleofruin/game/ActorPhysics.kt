@@ -213,13 +213,11 @@ object ActorPhysics {
      * horizontal step per tick (~8.7 px) stays below one tile, so the list
      * resolver's sequential pushes converge to exactly the cell-edge extremes
      * this single-pass version computes; no actor ever overlaps more than one
-     * surface of a kind per tick. The one intentional divergence: OPEN
-     * platforms rasterize as empty cells, while a list pass with
-     * PlatformFilter.ALL would treat them as walls or floors. No enemy or boss
-     * ever overlaps a gate column while the gates are open (enemies live before
-     * the arena; the boss only moves while the gates are sealed), so the
-     * divergence is unreachable. The list overload stays as the reference
-     * implementation — LevelGridParityTest pins the two together.
+     * surface of a kind per tick. OPEN platforms rasterize as empty cells, and
+     * since Stage 9c (#62) the list reference skips them in every pass too —
+     * an unsealed arena gate collides with nothing and no one. The list
+     * overload stays as the reference implementation — LevelGridParityTest
+     * pins the two together.
      */
     internal fun moveAndResolve(actor: PhysicsActor, grid: LevelGrid, config: ActorPhysicsConfig, dt: Float) {
         if (config.gravity != 0f) {
@@ -476,9 +474,8 @@ object ActorPhysics {
     private fun matchesCell(cell: Int, filter: PlatformFilter): Boolean = when (filter) {
         PlatformFilter.SOLID_ONLY -> cell == 1
         PlatformFilter.NOT_OPEN -> cell != 0
-        // The legacy list pass with ALL also matches OPEN platforms; no enemy or
-        // boss ever overlaps an open gate, so the divergence is unreachable
-        // (documented on the grid overload above).
+        // OPEN never rasterizes (Stage 9c, #62): the list reference skips it
+        // in every pass too, so ALL and NOT_OPEN agree here.
         PlatformFilter.ALL -> cell != 0
     }
 
@@ -498,9 +495,16 @@ object ActorPhysics {
         actor.onLanded(platform)
     }
 
-    private fun matches(collision: PlatformCollision, filter: PlatformFilter): Boolean = when (filter) {
-        PlatformFilter.SOLID_ONLY -> collision == PlatformCollision.SOLID
-        PlatformFilter.NOT_OPEN -> collision != PlatformCollision.OPEN
-        PlatformFilter.ALL -> true
+    private fun matches(collision: PlatformCollision, filter: PlatformFilter): Boolean {
+        // Stage 9c (#62): an OPEN platform (an unsealed arena gate) collides with
+        // nothing and no one — every filter skips it. This mirrors the tile grid,
+        // which never rasterizes OPEN platforms, keeping the list reference and
+        // the grid resolver indistinguishable (Stage 6b, #38).
+        if (collision == PlatformCollision.OPEN) return false
+        return when (filter) {
+            PlatformFilter.SOLID_ONLY -> collision == PlatformCollision.SOLID
+            PlatformFilter.NOT_OPEN -> collision != PlatformCollision.OPEN
+            PlatformFilter.ALL -> true
+        }
     }
 }

@@ -396,7 +396,11 @@ class LevelGridParityTest {
     @Test
     fun syncPlatformSealsAndReopensGateCells() {
         val engine = GameEngine()
-        val gate = engine.platforms.indexOfFirst { it.style == PlatformStyle.BOSS_GATE }
+        // Stage 9c (#62): the first gates in the list are the Foundry Yard's —
+        // probe the Grand Sanctum gate this test's cells refer to.
+        val gate = engine.platforms.indexOfFirst {
+            it.style == PlatformStyle.BOSS_GATE && it.x == 5270f
+        }
         assertTrue(gate >= 0)
         assertEquals("Gates start open (empty cells)", 0, engine.levelGrid.collisionAt(5285f, 300f))
 
@@ -414,11 +418,13 @@ class LevelGridParityTest {
         val engine = GameEngine()
         assertEquals("Open gates are empty before the fight", 0, engine.levelGrid.collisionAt(5280f, 200f))
 
-        engine.player.x = 5500f
+        // Stage 9c (#62): arming is crossing-based — walk into the line.
+        engine.player.x = 5300f
         engine.player.y = 400f
         engine.player.vx = 0f
         engine.player.vy = 0f
-        engine.update(1f / 60f)
+        engine.inputRight = true
+        repeat(30) { engine.update(1f / 60f) }
 
         assertEquals("Crossing x = 5340 seals the gates into the grid", 1, engine.levelGrid.collisionAt(5280f, 200f))
         assertFalse("The player stays alive inside the arena", engine.player.dead)
