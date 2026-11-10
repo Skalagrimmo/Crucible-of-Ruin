@@ -43,7 +43,10 @@ class BossGateEncounterTest {
     fun arenaGatesStartOpenForEntry() {
         val engine = GameEngine()
 
-        assertTrue("The arena should have exactly two gates", arenaGates(engine).size == 2)
+        assertTrue(
+            "Two arenas (Foundry Yard + Grand Sanctum) give four gates",
+            arenaGates(engine).size == 4
+        )
         assertTrue(
             "Gates must start open so the arena is reachable",
             arenaGates(engine).all { it.collision == PlatformCollision.OPEN }

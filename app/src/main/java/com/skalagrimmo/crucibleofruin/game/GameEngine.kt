@@ -449,6 +449,19 @@ class GameEngine(
     val enemies = ArrayList<EnemyEntity>()
     var boss: BaseBoss = CrucibleChimeraBoss(5750f, 360f)
 
+    // Stage 9c (#62): sequential boss encounters. [boss] is the active fight;
+    // [laterEncounters] queues the encounters behind it. [bossTriggerX] and
+    // [bossTriggerMaxY] describe the active encounter's arming line,
+    // [currentBossFactory] rebuilds its boss on encounter resets, and
+    // [triggerPrevX] is the previous frame's player x for crossing-based
+    // arming (Float.MAX_VALUE until the first real update frame, so setup
+    // position jumps never count as crossings).
+    internal var bossTriggerX: Float = 5340f
+    internal var bossTriggerMaxY: Float = 540f
+    internal var currentBossFactory: (() -> BaseBoss)? = null
+    private val laterEncounters = ArrayDeque<BossEncounter>()
+    private var triggerPrevX: Float = Float.MAX_VALUE
+
     val player: PlayerEntity = PlayerEntity(activeCheckpoint.x, activeCheckpoint.y)
 
     var inputLeft: Boolean = false
@@ -491,6 +504,8 @@ class GameEngine(
         player.x = activeCheckpoint.x
         player.y = activeCheckpoint.y
         camera.x = (player.x - 300f).coerceAtLeast(0f)
+        // Stage 9c (#62): a checkpoint teleport is not a line crossing.
+        triggerPrevX = player.x
         // Stage 6d (#38): starting at a checkpoint charts its room immediately.
         markCurrentRoom()
     }
@@ -549,6 +564,16 @@ class GameEngine(
         breakables.addAll(layout.breakables)
         enemies.addAll(layout.enemies)
         boss = layout.boss
+        // Stage 9c (#62): install the encounter chain — the active fight's
+        // arming line and factory plus the queue of encounters behind it.
+        bossTriggerX = layout.bossTriggerX
+        bossTriggerMaxY = layout.bossTriggerMaxY
+        currentBossFactory = layout.bossFactory
+        laterEncounters.clear()
+        laterEncounters.addAll(layout.laterEncounters)
+        // No crossing may fire from the setup position itself: the first real
+        // frame of movement defines the first crossing.
+        triggerPrevX = Float.MAX_VALUE
         // Stage 6b (#38): rasterize the fresh layout into the tile grid so the
         // resolvers, ledge probes, and projectile checks all run against cells.
         levelGrid.buildFrom(platforms, hazards)
@@ -611,7 +636,18 @@ class GameEngine(
     /** Reopens the gates and recreates the boss so the fight starts from scratch. */
     private fun resetBossEncounter() {
         setBossGatesCollision(PlatformCollision.OPEN)
-        boss = GameLevelFactory.createBoss()
+        // Stage 9c (#62): rebuild the active encounter's own boss — a death
+        // during the golem fight must reset the golem, not spawn the Chimera.
+        boss = currentBossFactory?.invoke() ?: GameLevelFactory.createBoss()
+    }
+
+    /** Stage 9c (#62): advances to the next queued encounter on a fresh boss. */
+    private fun advanceBossEncounter() {
+        val next = laterEncounters.removeFirst()
+        currentBossFactory = next.createBoss
+        bossTriggerX = next.triggerX
+        bossTriggerMaxY = next.triggerMaxY
+        boss = next.createBoss()
     }
 
     fun onJumpPressed() {
@@ -818,15 +854,29 @@ class GameEngine(
         }
 
         // Boss trigger: seals the arena gates behind the player (AoS room-door pattern).
-        // Stage 8a (#56): the fight may only begin inside the corridor band (y < 540) —
-        // a player standing in the lower districts beyond this x must not seal
-        // the arena from below.
-        if (!boss.active && player.x > 5340f && player.y < 540f) {
+        // Stage 8a (#56): the fight may only begin inside the corridor band — a
+        // player standing in the lower districts beyond the trigger line must
+        // not seal the arena from below.
+        // Stage 9c (#62): crossing-based arming across the encounter chain. An
+        // encounter arms only on the frame the player CROSSES its trigger line
+        // (previous x at or before the line, current x past it), so a spawn,
+        // respawn, or checkpoint start beyond an already-passed line never
+        // arms a far-away boss. When several lines are crossed in one frame,
+        // the furthest crossed line wins and the encounters behind it are
+        // skipped (their arenas stay open).
+        val triggerLines = listOf(bossTriggerX) + laterEncounters.map { it.triggerX }
+        val crossedLines = triggerLines.filter { triggerPrevX <= it && player.x > it }
+        if (!boss.active && crossedLines.isNotEmpty() && player.y < bossTriggerMaxY) {
+            val crossedLine = crossedLines.max()
+            while (laterEncounters.isNotEmpty() && bossTriggerX < crossedLine) {
+                advanceBossEncounter()
+            }
             boss.active = true
             setBossGatesCollision(PlatformCollision.SOLID)
             audio.play("boss_roar")
             camera.shake(12f)
         }
+        triggerPrevX = player.x
 
         // Stage 8a (#56): crossing a layout trigger unlocks its shortcut gates for
         // the rest of the run — the #11 semantics ("the shortcut opens once the
@@ -1464,6 +1514,14 @@ class GameEngine(
 
     private fun updateBoss(dt: Float) {
         boss.update(dt, this)
+        // Stage 9c (#62): when a mid-boss falls and another encounter waits,
+        // reopen the arena and arm the next encounter on a fresh instance.
+        // The final encounter leaves the queue empty, so the legacy victory
+        // flow is untouched.
+        if (boss.dead && laterEncounters.isNotEmpty()) {
+            setBossGatesCollision(PlatformCollision.OPEN)
+            advanceBossEncounter()
+        }
     }
 
     private fun updateProjectiles(dt: Float) {
