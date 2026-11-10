@@ -74,6 +74,26 @@ abstract class BaseBoss(
     var staggerTimer: Float = 0f
     val staggerDuration: Float = 2.4f
 
+    // --- Multi-Component System (Stage 9a, #62) ---
+    /**
+     * Destructible sub-parts of this boss. Empty by default, so component-less
+     * bosses (e.g. CrucibleChimeraBoss) keep the exact single-entity behavior.
+     */
+    open val components: List<BossComponent> = emptyList()
+
+    /** Parts still attached to the boss structure. */
+    val aliveComponents: List<BossComponent>
+        get() = components.filter { it.isAlive }
+
+    fun componentById(id: String): BossComponent? = components.firstOrNull { it.id == id }
+
+    /**
+     * Stage 9a (#62): an attack is available when no destroyed component powers
+     * it. Subclasses call this from [selectNextAttack] to strip disabled attacks.
+     */
+    fun isAttackAvailable(attackId: String): Boolean =
+        components.none { it.destroyed && attackId in it.powersAttackIds }
+
     /**
      * Executes one game update tick for boss state, timers, physics, and attacks.
      */
@@ -81,6 +101,8 @@ abstract class BaseBoss(
         if (!active || dead) return
 
         weakPoint.update(dt)
+        // Stage 9a (#62): tick component hurt-flash timers.
+        for (component in components) component.update(dt)
 
         if (hurtTimer > 0f) {
             hurtTimer = (hurtTimer - dt).coerceAtLeast(0f)
@@ -313,8 +335,14 @@ abstract class BaseBoss(
         val slashW = 36f
         val slashH = player.h - 8f
 
+        // Stage 9a (#62): route the strike to a destructible component first,
+        // then fall back to the weak point / plain body hit.
+        val hitComponent = components.firstOrNull {
+            it.intersects(slashX, slashY, slashW, slashH, x, y, w, facing)
+        }
+
         // Check Weak Point collision
-        val isWeakPointHit = weakPoint.intersects(
+        val isWeakPointHit = hitComponent == null && weakPoint.intersects(
             slashX, slashY, slashW, slashH,
             x, y, w, facing
         )
@@ -322,12 +350,14 @@ abstract class BaseBoss(
         // Amplify damage if boss is afflicted with Corrosion
         val modifiedAmount = amount * statusController.getIncomingDamageMultiplier()
 
-        val finalDamage = if (isWeakPointHit) {
-            val critDamage = modifiedAmount * weakPoint.damageMultiplier
-            onWeakPointHit(critDamage, engine)
-            critDamage
-        } else {
-            modifiedAmount
+        val finalDamage = when {
+            isWeakPointHit -> {
+                val critDamage = modifiedAmount * weakPoint.damageMultiplier
+                onWeakPointHit(critDamage, engine)
+                critDamage
+            }
+            hitComponent != null -> modifiedAmount * hitComponent.damageMultiplier
+            else -> modifiedAmount
         }
 
         hp -= finalDamage
@@ -335,7 +365,23 @@ abstract class BaseBoss(
         engine.audio.play("hit")
         engine.camera.shake(if (isWeakPointHit) 8f else 5f)
 
-        if (isWeakPointHit) {
+        if (hitComponent != null) {
+            // Stage 9a (#62): component hits chip the part; destroying it fires
+            // the hook (explosion feedback + subclass behavior like attack stripping).
+            val cBounds = hitComponent.getWorldBounds(x, y, w, facing)
+            engine.particles.spawn(
+                cBounds[0] + cBounds[2] / 2f,
+                cBounds[1] + cBounds[3] / 2f,
+                Color(0xFFFF8020),
+                count = 10,
+                speed = 140f,
+                life = 0.4f,
+                size = 4f
+            )
+            if (hitComponent.applyDamage(finalDamage)) {
+                onComponentDestroyed(hitComponent, engine)
+            }
+        } else if (isWeakPointHit) {
             val wpBounds = weakPoint.getWorldBounds(x, y, w, facing)
             engine.particles.spawn(
                 wpBounds[0] + wpBounds[2] / 2f,
@@ -420,4 +466,21 @@ abstract class BaseBoss(
     open fun onPhaseTransition(fromPhase: BossPhase, toPhase: BossPhase, engine: GameEngine) {}
     open fun onStaggered(engine: GameEngine) {}
     open fun onRecoverFromStagger(engine: GameEngine) {}
+
+    /**
+     * Stage 9a (#62): a destructible component just broke off the boss.
+     * Default feedback: explosion, shake, haptics. Subclasses extend this to
+     * strip the attacks the part powered or force a phase transition.
+     */
+    open fun onComponentDestroyed(component: BossComponent, engine: GameEngine) {
+        engine.audio.play("explode")
+        engine.camera.shake(12f)
+        engine.haptics?.onBossHit()
+        val cBounds = component.getWorldBounds(x, y, w, facing)
+        engine.particles.spawnEnemyDeath(
+            cBounds[0] + cBounds[2] / 2f,
+            cBounds[1] + cBounds[3] / 2f,
+            Color(0xFFFF7010)
+        )
+    }
 }
