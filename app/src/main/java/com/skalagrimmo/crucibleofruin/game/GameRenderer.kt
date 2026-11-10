@@ -324,6 +324,55 @@ object GameRenderer {
                     drawImage(tex, topLeft = Offset(bx - 3f, by - 2f))
                 }
 
+                // Stage 9b (#62): destructible parts rendered over the body with
+                // their own accent colors; destroyed parts show as broken husks.
+                for (comp in boss.components) {
+                    val cb = comp.getWorldBounds(boss.x, boss.y, boss.w, boss.facing)
+                    val cx = cb[0] - camX
+                    val cy = cb[1] - camY
+                    if (comp.destroyed) {
+                        // Broken husk: darkened shell with cracks where the part was.
+                        drawRect(
+                            color = Color(0x99120A1E),
+                            topLeft = Offset(cx, cy),
+                            size = Size(cb[2], cb[3])
+                        )
+                        drawLine(
+                            color = Color(0xFF3A2E48),
+                            start = Offset(cx, cy),
+                            end = Offset(cx + cb[2] * 0.5f, cy + cb[3]),
+                            strokeWidth = 2f
+                        )
+                        drawLine(
+                            color = Color(0xFF3A2E48),
+                            start = Offset(cx + cb[2], cy),
+                            end = Offset(cx + cb[2] * 0.4f, cy + cb[3]),
+                            strokeWidth = 2f
+                        )
+                    } else {
+                        val ratio = (comp.hp / comp.maxHp).coerceIn(0f, 1f)
+                        val flash = comp.hurtFlashTimer > 0f
+                        val frameColor = if (flash) Color.White else comp.accentColor
+                        // Dark socket + accent frame + inner fill proportional to part HP.
+                        drawRect(
+                            color = Color(0xEE0D0614),
+                            topLeft = Offset(cx, cy),
+                            size = Size(cb[2], cb[3])
+                        )
+                        drawRect(
+                            color = comp.accentColor.copy(alpha = 0.30f),
+                            topLeft = Offset(cx + 3f, cy + 3f),
+                            size = Size((cb[2] - 6f) * ratio, cb[3] - 6f)
+                        )
+                        drawRect(
+                            color = frameColor,
+                            topLeft = Offset(cx, cy),
+                            size = Size(cb[2], cb[3]),
+                            style = Stroke(width = 2f)
+                        )
+                    }
+                }
+
                 // Weak Point Reticle & Core Indicator
                 if (boss.weakPoint.isExposed && boss.state != com.skalagrimmo.crucibleofruin.game.boss.BossState.DEAD) {
                     val wpBounds = boss.weakPoint.getWorldBounds(boss.x, boss.y, boss.w, boss.facing)
