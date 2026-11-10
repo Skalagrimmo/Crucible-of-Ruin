@@ -5,6 +5,7 @@ import com.skalagrimmo.crucibleofruin.game.GameEngine
 import com.skalagrimmo.crucibleofruin.game.boss.BaseBoss
 import com.skalagrimmo.crucibleofruin.game.boss.BossAttackPattern
 import com.skalagrimmo.crucibleofruin.game.boss.BossComponent
+import com.skalagrimmo.crucibleofruin.game.boss.CrucibleChimeraBoss
 import com.skalagrimmo.crucibleofruin.game.boss.TelegraphType
 import com.skalagrimmo.crucibleofruin.game.boss.WeakPoint
 import org.junit.Assert.assertEquals
@@ -195,7 +196,10 @@ class BossComponentTest {
     @Test
     fun testComponentlessBossKeepsSingleEntityBehavior() {
         val engine = GameEngine()
-        val boss = engine.boss // CrucibleChimeraBoss — no components
+        // Stage 9c (#62): the stock boss is now the multi-component Siege
+        // Golem — construct the Chimera directly; it stays the component-less
+        // single-entity reference.
+        val boss = CrucibleChimeraBoss(5750f, 360f)
 
         assertTrue("Chimera must remain component-less", boss.components.isEmpty())
         assertTrue(boss.aliveComponents.isEmpty())

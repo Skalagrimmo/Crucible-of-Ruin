@@ -77,7 +77,8 @@ class TiledLevelLoaderTest {
         // Stage 8b (#56): the Iron Garrison adds the district street, the
         // stair return, four fortress blocks, three rooftops, the sealed
         // gate, and four street hazards.
-        assertEquals(55, fullLayout.platforms.size)
+        // Stage 9c (#62): the Foundry Yard arena adds two boss gates.
+        assertEquals(57, fullLayout.platforms.size)
         assertEquals(13, fullLayout.hazards.size)
     }
 

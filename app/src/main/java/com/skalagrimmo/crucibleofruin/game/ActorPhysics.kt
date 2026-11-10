@@ -498,9 +498,16 @@ object ActorPhysics {
         actor.onLanded(platform)
     }
 
-    private fun matches(collision: PlatformCollision, filter: PlatformFilter): Boolean = when (filter) {
-        PlatformFilter.SOLID_ONLY -> collision == PlatformCollision.SOLID
-        PlatformFilter.NOT_OPEN -> collision != PlatformCollision.OPEN
-        PlatformFilter.ALL -> true
+    private fun matches(collision: PlatformCollision, filter: PlatformFilter): Boolean {
+        // Stage 9c (#62): an OPEN platform (an unsealed arena gate) collides with
+        // nothing and no one — every filter skips it. This mirrors the tile grid,
+        // which never rasterizes OPEN platforms, keeping the list reference and
+        // the grid resolver indistinguishable (Stage 6b, #38).
+        if (collision == PlatformCollision.OPEN) return false
+        return when (filter) {
+            PlatformFilter.SOLID_ONLY -> collision == PlatformCollision.SOLID
+            PlatformFilter.NOT_OPEN -> collision != PlatformCollision.OPEN
+            PlatformFilter.ALL -> true
+        }
     }
 }

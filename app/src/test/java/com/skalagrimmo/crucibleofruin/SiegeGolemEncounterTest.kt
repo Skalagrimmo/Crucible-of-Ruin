@@ -93,6 +93,10 @@ class SiegeGolemEncounterTest {
         val golem = engine.boss as SiegeGolemBoss
         golem.active = true
         golem.facing = -1
+        // Relocate the golem to hand-checked coordinates (the stock spawn sits
+        // in the Foundry Yard at x 3500).
+        golem.x = 500f
+        golem.y = 300f
 
         // Near cannon (world x 600..630 with facing -1): aim the slash mid-part.
         engine.player.x = 593f
