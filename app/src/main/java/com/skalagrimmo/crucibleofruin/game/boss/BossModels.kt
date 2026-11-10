@@ -158,3 +158,89 @@ class WeakPoint(
         isBroken = false
     }
 }
+
+/**
+ * Destructible sub-part of a multi-component boss (Stage 9a, #62).
+ * Inspired by Contra Hard Corps / Gunstar Heroes: a boss is a structure of
+ * independently targetable parts, each with its own HP; destroying a part
+ * changes the fight via [BaseBoss.onComponentDestroyed].
+ *
+ * Component hits damage BOTH the part and the boss body, so overall boss HP
+ * still governs death and HP-based phase progression. A boss with no
+ * components keeps the exact single-entity behavior.
+ */
+class BossComponent(
+    val id: String,
+    val name: String,
+    var offsetX: Float,
+    var offsetY: Float,
+    val width: Float,
+    val height: Float,
+    val maxHp: Float,
+    /** Damage taken multiplier when the strike lands on this part. */
+    val damageMultiplier: Float = 1.0f,
+    /** Attack pattern ids this part powers; destroy the part to strip them. */
+    val powersAttackIds: Set<String> = emptySet(),
+    /** Renderer accent for the part (Stage 9b draws it in local coordinates). */
+    val accentColor: Color = Color(0xFF8B2010)
+) {
+    var hp: Float = maxHp
+    var destroyed: Boolean = false
+    var hurtFlashTimer: Float = 0f
+
+    /** True while the part is attached and can absorb / route hits. */
+    val isAlive: Boolean
+        get() = !destroyed
+
+    fun update(dt: Float) {
+        if (hurtFlashTimer > 0f) {
+            hurtFlashTimer = (hurtFlashTimer - dt).coerceAtLeast(0f)
+        }
+    }
+
+    /**
+     * Checks if a world-space attack box intersects this attached part.
+     * Mirrors the boss width by facing exactly like [WeakPoint.intersects].
+     */
+    fun intersects(
+        boxX: Float, boxY: Float, boxW: Float, boxH: Float,
+        bossX: Float, bossY: Float, bossW: Float, bossFacing: Int
+    ): Boolean {
+        if (destroyed) return false
+        val (worldX, worldY) = worldOrigin(bossX, bossY, bossW, bossFacing)
+        return boxX < worldX + width &&
+                boxX + boxW > worldX &&
+                boxY < worldY + height &&
+                boxY + boxH > worldY
+    }
+
+    /** Absolute world-space bounding box: [x, y, width, height]. */
+    fun getWorldBounds(bossX: Float, bossY: Float, bossW: Float, bossFacing: Int): FloatArray {
+        val (worldX, worldY) = worldOrigin(bossX, bossY, bossW, bossFacing)
+        return floatArrayOf(worldX, worldY, width, height)
+    }
+
+    /**
+     * Applies damage to the part. Returns true when this hit destroyed it.
+     */
+    fun applyDamage(amount: Float): Boolean {
+        if (destroyed) return false
+        hp -= amount
+        hurtFlashTimer = 0.15f
+        if (hp <= 0f) {
+            hp = 0f
+            destroyed = true
+            return true
+        }
+        return false
+    }
+
+    private fun worldOrigin(bossX: Float, bossY: Float, bossW: Float, bossFacing: Int): Pair<Float, Float> {
+        val worldX = if (bossFacing > 0) {
+            bossX + offsetX
+        } else {
+            bossX + (bossW - offsetX - width)
+        }
+        return Pair(worldX, bossY + offsetY)
+    }
+}
