@@ -344,7 +344,7 @@ fun GothicBossHealthBar(
                                         if (comp.destroyed) Color(0xFF4A3A58) else comp.accentColor,
                                         CutCornerShape(1.5.dp)
                                     )
-                                    .testTag("boss_component_\${comp.id}")
+                                    .testTag("boss_component_${comp.id}")
                             ) {
                                 if (!comp.destroyed) {
                                     Box(
@@ -371,7 +371,7 @@ fun GothicBossHealthBar(
                                 }
                             }
                             Text(
-                                text = if (comp.destroyed) "✝ \${comp.name.uppercase()}" else comp.name.uppercase(),
+                                text = if (comp.destroyed) "✝ ${comp.name.uppercase()}" else comp.name.uppercase(),
                                 color = if (comp.destroyed) Color(0xFF6A5578) else comp.accentColor,
                                 fontFamily = GothicFontFamily,
                                 fontSize = 7.sp,
