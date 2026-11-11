@@ -18,6 +18,10 @@ import com.skalagrimmo.crucibleofruin.game.status.CombatStatusType
  * core into a berserk slam mode (PHASE_3 regardless of body HP). Component
  * hits still chip the body (Stage 9a routing), so overall HP governs death.
  *
+ * Rendering: GameRenderer draws the golem's body procedurally (a foundry
+ * walker with a glowing furnace chest around the core socket) until a
+ * dedicated sprite lands; the arm cannons ride the Stage 9b part frames.
+ *
  * A mid-boss: [onDefeated] does NOT end the run — GameEngine reopens the
  * arena and arms the next encounter in the chain.
  */
