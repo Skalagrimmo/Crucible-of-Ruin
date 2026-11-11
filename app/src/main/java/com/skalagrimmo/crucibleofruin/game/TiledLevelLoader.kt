@@ -11,8 +11,9 @@ import javax.xml.parsers.DocumentBuilderFactory
  * identity, explicit collision overrides, and map-level world bounds.
  * Stage 10b (#69) adds the meta layers — the room/door graph, the
  * shortcut-gate unlock rectangles, and the boss encounter chain.
- * GameLevelFactory remains the runtime source of truth until the Stage 10d
- * switch.
+ * Stage 10d (#69): LiveLevelLoader turns a loaded section into the
+ * GameLevelLayout the engine installs; GameLevelFactory is now only the
+ * test/fallback source.
  */
 internal data class TiledLevelSection(
     val platforms: List<Platform>,

@@ -5,6 +5,12 @@ import com.skalagrimmo.crucibleofruin.game.boss.CrucibleChimeraBoss
 import com.skalagrimmo.crucibleofruin.game.boss.SiegeGolemBoss
 
 /**
+ * Stage 10d (#69): the legacy/fallback level source. The engine's default
+ * path loads the live crucible_of_ruin.tmx asset through LiveLevelLoader;
+ * this factory remains for tests and for callers that install no level
+ * source. FullLevelTmxParityTest pins the TMX and this factory to identical
+ * content.
+ *
  * Static level content used to populate the engine's mutable runtime collections.
  *
  * Creating a new layout returns fresh enemies, breakables, and boss state so a restart

@@ -491,6 +491,13 @@ class GameEngine(
         private set
     private val openedGateIds = mutableSetOf<String>()
 
+    // Stage 10d (#69): where initLevel() pulls its layout from. GameScreen
+    // installs the live TMX asset loader before its explicit initLevel();
+    // callers without a source (tests, previews) fall back to the factory.
+    // An internal property, not a constructor parameter: a public constructor
+    // cannot expose the internal GameLevelLayout type.
+    internal var levelSource: (() -> GameLevelLayout)? = null
+
     init {
         initLevel()
     }
@@ -533,7 +540,12 @@ class GameEngine(
         timeDebt = 0f
     }
 
-    fun initLevel() = initLevel(GameLevelFactory.create())
+    /**
+     * Stage 10d (#69): the live crucible_of_ruin.tmx asset is the default
+     * level source; GameLevelFactory remains the fallback for callers that
+     * install no source.
+     */
+    fun initLevel() = initLevel(levelSource?.invoke() ?: GameLevelFactory.create())
 
     /**
      * Stage 7a (#51): installs any layout, not only the factory's stock one.

@@ -104,7 +104,14 @@ fun GameScreen(
     }
 
     val engine = remember {
+        // Stage 10d (#69): the engine loads the live full-world TMX asset
+        // through the Tiled pipeline instead of the static factory.
         GameEngine().apply {
+            // Stage 10d (#69): the engine loads the live full-world TMX asset
+            // through the Tiled pipeline. The source goes in before the explicit
+            // initLevel() — the engine's own init{} already ran on the fallback.
+            levelSource = { LiveLevelLoader.loadFromAssets(context.assets) }
+            initLevel()
             setStartCheckpoint(startCheckpoint)
             this.haptics = haptics
             this.onResourceCollected = { res ->
