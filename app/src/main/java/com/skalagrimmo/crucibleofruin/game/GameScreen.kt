@@ -1,5 +1,6 @@
 package com.skalagrimmo.crucibleofruin.game
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -114,6 +115,30 @@ fun GameScreen(
     val inputController = remember(engine) { GameInputController(engine) }
     androidx.compose.runtime.DisposableEffect(inputController) {
         onDispose { inputController.cancelHeldInputs() }
+    }
+
+    // UX polish: the system back button walks the overlay stack back instead
+    // of dumping the player straight into the main menu — the crafting bench,
+    // the grimoire, the world map, and the pause menu each close in turn, and
+    // a plain running game pauses. The Activity-level handler still catches
+    // the perished/victory screens, where back means "leave for the menu".
+    BackHandler(
+        enabled = showCraftingDialog || showGrimoireDialog || showMapOverlay ||
+            engine.state == "paused" || (engine.state == "playing" && !engine.player.dead)
+    ) {
+        when {
+            showCraftingDialog -> showCraftingDialog = false
+            showGrimoireDialog -> showGrimoireDialog = false
+            showMapOverlay -> {
+                showMapOverlay = false
+                if (mapAutoPaused) engine.state = "playing"
+            }
+            engine.state == "paused" -> engine.state = "playing"
+            else -> {
+                inputController.cancelHeldInputs()
+                engine.state = "paused"
+            }
+        }
     }
 
     LaunchedEffect(Unit) {
