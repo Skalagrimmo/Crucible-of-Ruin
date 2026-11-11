@@ -755,17 +755,6 @@ fun GameScreen(
             }
         }
 
-        // Stage 6d (#38): World Map overlay (rooms charted so far).
-        if (showMapOverlay) {
-            RoomMapOverlay(
-                engine = engine,
-                onClose = {
-                    showMapOverlay = false
-                    if (mapAutoPaused) engine.state = "playing"
-                }
-            )
-        }
-
         // Pause Menu Dialog
         if (engine.state == "paused") {
             Box(
@@ -776,7 +765,11 @@ fun GameScreen(
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(24.dp)
+                    // UX polish: the pause menu outgrew short landscape screens —
+                    // make it scrollable so the bottom buttons stay reachable.
+                    modifier = Modifier
+                        .verticalScroll(rememberScrollState())
+                        .padding(24.dp)
                 ) {
                     Text(
                         text = "GAME PAUSED",
@@ -870,6 +863,20 @@ fun GameScreen(
                     }
                 }
             }
+        }
+
+        // Stage 6d (#38): World Map overlay (rooms charted so far).
+        // UX polish: composed AFTER the pause menu, so opening the map from
+        // pause draws it on top — previously the pause dialog covered the map
+        // and only "Resume" revealed it.
+        if (showMapOverlay) {
+            RoomMapOverlay(
+                engine = engine,
+                onClose = {
+                    showMapOverlay = false
+                    if (mapAutoPaused) engine.state = "playing"
+                }
+            )
         }
 
         // Temporary Floating Crafting Notice Toast
