@@ -243,10 +243,23 @@ internal object GameLevelFactory {
 
         platforms.add(Platform(800f, 380f, 120f, 20f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY))
         platforms.add(Platform(1000f, 310f, 130f, 20f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY))
-        platforms.add(Platform(1200f, 420f, 350f, 120f, PlatformStyle.STONE))
+
+        // Stage 11a (#77): the ascent barrier — a solid wall that ends the
+        // ground run through the Bastion Ascent. The only way over is the
+        // girder ladder (800 -> 1000) and a jump from the top girder onto
+        // the wall cap, through the lurker and cherub holding the climb.
+        platforms.add(Platform(1140f, 240f, 40f, 220f, PlatformStyle.STONE))        platforms.add(Platform(1200f, 420f, 350f, 120f, PlatformStyle.STONE))
 
         platforms.add(Platform(1600f, 400f, 320f, 140f, PlatformStyle.STONE))
-        hazards.add(Hazard(1550f, 510f, 50f, 30f, HazardType.SPIKES))
+
+        // Stage 11a (#77): the ramparts barrier — the ground run into the
+        // laboratories ends at a solid wall; the one-way ledge ladder on
+        // its left face is the way over, a cherub haunts the climb, and
+        // the right-face ledge keeps the return trip open.
+        platforms.add(Platform(1690f, 330f, 100f, 20f, PlatformStyle.STONE_LEDGE, PlatformCollision.ONE_WAY))
+        platforms.add(Platform(1810f, 250f, 100f, 20f, PlatformStyle.STONE_LEDGE, PlatformCollision.ONE_WAY))
+        platforms.add(Platform(1880f, 180f, 40f, 220f, PlatformStyle.STONE))
+        platforms.add(Platform(1940f, 310f, 90f, 20f, PlatformStyle.STONE_LEDGE, PlatformCollision.ONE_WAY))        hazards.add(Hazard(1550f, 510f, 50f, 30f, HazardType.SPIKES))
 
         enemies.add(EnemyEntity(420f, 410f, EnemyArchetype.LURKER, 120f))
         enemies.add(EnemyEntity(920f, 410f, EnemyArchetype.LURKER, 140f))
@@ -254,9 +267,15 @@ internal object GameLevelFactory {
         enemies.add(EnemyEntity(1100f, 240f, EnemyArchetype.CHERUB, 120f))
         enemies.add(EnemyEntity(1420f, 370f, EnemyArchetype.LURKER, 100f))
 
+        // Stage 11a (#77): the ramparts climb's aerial guard.
+        enemies.add(EnemyEntity(1750f, 220f, EnemyArchetype.CHERUB, 110f))
         breakables.add(BreakableUrn(380f, 296f, dropType = "health"))
-        breakables.add(BreakableUrn(1240f, 396f, dropType = "flask"))
 
+        // Stage 11a (#77): the ascent wall cap's reward.
+        breakables.add(BreakableUrn(1150f, 216f, dropType = "flask"))        breakables.add(BreakableUrn(1240f, 396f, dropType = "flask"))
+
+        // Stage 11a (#77): the ramparts wall cap's reward.
+        breakables.add(BreakableUrn(1890f, 156f, dropType = "health"))
         // --- SECTION 2: THE CRUCIBLE LABORATORIES (x: 1900 - 4300) ---
         platforms.add(Platform(1920f, 420f, 380f, 120f, PlatformStyle.STONE))
 
@@ -295,16 +314,26 @@ internal object GameLevelFactory {
         platforms.add(Platform(3440f, 240f, 160f, 20f, PlatformStyle.IRON_GIRDER, PlatformCollision.ONE_WAY))
         breakables.add(BreakableUrn(3500f, 216f, dropType = "flask"))
 
+        // Stage 11a (#77): the vitriol wall cap's reward.
+        breakables.add(BreakableUrn(3970f, 216f, dropType = "flask"))
         // Stage 9c (#62): Foundry Yard arena gates — open for the approach,
         // sealed by GameEngine when the Siege Golem encounter arms.
         platforms.add(Platform(3110f, 80f, 30f, 350f, PlatformStyle.BOSS_GATE, PlatformCollision.OPEN))
         platforms.add(Platform(3720f, 80f, 30f, 350f, PlatformStyle.BOSS_GATE, PlatformCollision.OPEN))
 
         platforms.add(Platform(3800f, 440f, 200f, 100f, PlatformStyle.STONE))
-        hazards.add(Hazard(4000f, 500f, 80f, 40f, HazardType.ACID))
+
+        // Stage 11a (#77): the vitriol barrier — the acid crossing stops
+        // being a hop: the ledge and wall cap force a climb under the
+        // cherub's patrol before the jump over the acid to the far floor.
+        platforms.add(Platform(3840f, 350f, 100f, 20f, PlatformStyle.STONE_LEDGE, PlatformCollision.ONE_WAY))
+        platforms.add(Platform(3960f, 240f, 40f, 200f, PlatformStyle.STONE))
+        platforms.add(Platform(4020f, 330f, 60f, 20f, PlatformStyle.STONE_LEDGE, PlatformCollision.ONE_WAY))        hazards.add(Hazard(4000f, 500f, 80f, 40f, HazardType.ACID))
         platforms.add(Platform(4080f, 420f, 240f, 120f, PlatformStyle.STONE))
         enemies.add(EnemyEntity(4140f, 360f, EnemyArchetype.CULTIST, 0f))
 
+        // Stage 11a (#77): the vitriol climb's aerial guard.
+        enemies.add(EnemyEntity(3900f, 280f, EnemyArchetype.CHERUB, 110f))
         // --- SECTION 3: THE SANCTUM APPROACH (x: 4300 - 5100) ---
         // Stage 8b (#56): the approach floor splits around the Iron Garrison
         // shaft (x 4500-4600) — the hole drops the player into the district
