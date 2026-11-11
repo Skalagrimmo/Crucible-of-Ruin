@@ -93,7 +93,10 @@ class LiveLevelLoaderTest {
     @Test
     fun engineInstallsTheLiveTmxWorldThroughItsLevelSource() {
         val layout = loadLiveLayout()
-        val engine = GameEngine(levelSource = { layout })
+        val engine = GameEngine().apply {
+            levelSource = { layout }
+            initLevel()
+        }
         assertEquals(6200f, engine.levelWidth, 0f)
         assertEquals(1080f, engine.levelHeight, 0f)
         assertEquals(57, engine.platforms.size)

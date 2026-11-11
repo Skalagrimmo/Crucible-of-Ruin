@@ -320,13 +320,7 @@ typealias BossEntity = BaseBoss
 
 class GameEngine(
     /** Seed of the gameplay RNG (Stage 6a, #38): same seed = same drops, procs, and AI rolls. */
-    val rngSeed: Long = System.nanoTime(),
-    /**
-     * Stage 10d (#69): where initLevel() pulls its layout from. GameScreen
-     * installs the live TMX asset loader; callers without a source (tests,
-     * previews) fall back to GameLevelFactory.
-     */
-    val levelSource: (() -> GameLevelLayout)? = null
+    val rngSeed: Long = System.nanoTime()
 ) {
     companion object {
         /** Fixed simulation tick (Stage 1, #33): 1/60 s, immune to the frame-rate cap. */
@@ -496,6 +490,13 @@ class GameEngine(
     internal var gateTriggers: List<GateTrigger> = emptyList()
         private set
     private val openedGateIds = mutableSetOf<String>()
+
+    // Stage 10d (#69): where initLevel() pulls its layout from. GameScreen
+    // installs the live TMX asset loader before its explicit initLevel();
+    // callers without a source (tests, previews) fall back to the factory.
+    // An internal property, not a constructor parameter: a public constructor
+    // cannot expose the internal GameLevelLayout type.
+    internal var levelSource: (() -> GameLevelLayout)? = null
 
     init {
         initLevel()
