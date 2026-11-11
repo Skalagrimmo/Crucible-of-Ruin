@@ -74,10 +74,12 @@ class GameLevelLayoutTest {
         // girder climb, and a vault perch.
         // Stage 9c (#62): the Foundry Yard arena adds two boss gates and a
         // health urn, and clears the yard's regular garrison for the golem.
-        assertEquals("Unexpected number of platforms", 57, engine.platforms.size)
+        // Stage 11a (#77): three anti-skip barriers add 8 platforms (3 walls
+        // plus 5 ledges), 2 cherub guards, and 3 wall-cap urns.
+        assertEquals("Unexpected number of platforms", 65, engine.platforms.size)
         assertEquals("Unexpected number of hazards", 13, engine.hazards.size)
-        assertEquals("Unexpected number of enemies", 18, engine.enemies.size)
-        assertEquals("Unexpected number of breakable urns", 14, engine.breakables.size)
+        assertEquals("Unexpected number of enemies", 20, engine.enemies.size)
+        assertEquals("Unexpected number of breakable urns", 17, engine.breakables.size)
         // Stage 6d (#38) + Stage 7b (#51) + Stage 8b (#56): nine corridor
         // rooms plus three Undercroft rooms plus three Iron Garrison rooms.
         assertEquals("Unexpected number of rooms", 15, engine.roomGraph.rooms.size)

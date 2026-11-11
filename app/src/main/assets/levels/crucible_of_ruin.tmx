@@ -48,6 +48,11 @@
        <property name="style" type="string" value="IRON_GIRDER"/>
       </properties>
     </object>
+    <object id="153" name="platform_58" type="" x="1140" y="240" width="40" height="220">
+      <properties>
+       <property name="style" type="string" value="STONE"/>
+      </properties>
+    </object>
     <object id="9" name="platform_9" type="" x="1200" y="420" width="350" height="120">
       <properties>
        <property name="style" type="string" value="STONE"/>
@@ -56,6 +61,26 @@
     <object id="10" name="platform_10" type="" x="1600" y="400" width="320" height="140">
       <properties>
        <property name="style" type="string" value="STONE"/>
+      </properties>
+    </object>
+    <object id="154" name="platform_59" type="" x="1690" y="330" width="100" height="20">
+      <properties>
+       <property name="style" type="string" value="STONE_LEDGE"/>
+      </properties>
+    </object>
+    <object id="155" name="platform_60" type="" x="1810" y="250" width="100" height="20">
+      <properties>
+       <property name="style" type="string" value="STONE_LEDGE"/>
+      </properties>
+    </object>
+    <object id="156" name="platform_61" type="" x="1880" y="180" width="40" height="220">
+      <properties>
+       <property name="style" type="string" value="STONE"/>
+      </properties>
+    </object>
+    <object id="157" name="platform_62" type="" x="1940" y="310" width="90" height="20">
+      <properties>
+       <property name="style" type="string" value="STONE_LEDGE"/>
       </properties>
     </object>
     <object id="11" name="platform_11" type="" x="1920" y="420" width="380" height="120">
@@ -126,6 +151,21 @@
     <object id="23" name="platform_23" type="" x="3800" y="440" width="200" height="100">
       <properties>
        <property name="style" type="string" value="STONE"/>
+      </properties>
+    </object>
+    <object id="158" name="platform_63" type="" x="3840" y="350" width="100" height="20">
+      <properties>
+       <property name="style" type="string" value="STONE_LEDGE"/>
+      </properties>
+    </object>
+    <object id="159" name="platform_64" type="" x="3960" y="240" width="40" height="200">
+      <properties>
+       <property name="style" type="string" value="STONE"/>
+      </properties>
+    </object>
+    <object id="160" name="platform_65" type="" x="4020" y="330" width="60" height="20">
+      <properties>
+       <property name="style" type="string" value="STONE_LEDGE"/>
       </properties>
     </object>
     <object id="24" name="platform_24" type="" x="4080" y="420" width="240" height="120">
@@ -403,6 +443,12 @@
        <property name="patrolRange" type="string" value="100"/>
       </properties>
     </object>
+    <object id="161" name="enemy_19" type="" x="1750" y="220" width="0" height="0">
+      <properties>
+       <property name="archetype" type="string" value="CHERUB"/>
+       <property name="patrolRange" type="string" value="110"/>
+      </properties>
+    </object>
     <object id="76" name="enemy_6" type="" x="3000" y="210" width="0" height="0">
       <properties>
        <property name="archetype" type="string" value="CULTIST"/>
@@ -413,6 +459,12 @@
       <properties>
        <property name="archetype" type="string" value="CULTIST"/>
        <property name="patrolRange" type="string" value="0"/>
+      </properties>
+    </object>
+    <object id="162" name="enemy_20" type="" x="3900" y="280" width="0" height="0">
+      <properties>
+       <property name="archetype" type="string" value="CHERUB"/>
+       <property name="patrolRange" type="string" value="110"/>
       </properties>
     </object>
     <object id="78" name="enemy_8" type="" x="4820" y="220" width="0" height="0">
@@ -488,9 +540,19 @@
        <property name="dropType" type="string" value="health"/>
       </properties>
     </object>
+    <object id="163" name="urn_15" type="" x="1150" y="216" width="24" height="24">
+      <properties>
+       <property name="dropType" type="string" value="flask"/>
+      </properties>
+    </object>
     <object id="90" name="urn_2" type="" x="1240" y="396" width="24" height="24">
       <properties>
        <property name="dropType" type="string" value="flask"/>
+      </properties>
+    </object>
+    <object id="164" name="urn_16" type="" x="1890" y="156" width="24" height="24">
+      <properties>
+       <property name="dropType" type="string" value="health"/>
       </properties>
     </object>
     <object id="91" name="urn_3" type="" x="3200" y="406" width="24" height="24">
@@ -499,6 +561,11 @@
       </properties>
     </object>
     <object id="92" name="urn_4" type="" x="3500" y="216" width="24" height="24">
+      <properties>
+       <property name="dropType" type="string" value="flask"/>
+      </properties>
+    </object>
+    <object id="165" name="urn_17" type="" x="3970" y="216" width="24" height="24">
       <properties>
        <property name="dropType" type="string" value="flask"/>
       </properties>
