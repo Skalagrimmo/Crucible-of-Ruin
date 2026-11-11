@@ -1,0 +1,866 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="620" height="108" tilewidth="10" tileheight="10" infinite="0">
+  <properties>
+    <property name="levelWidth" type="string" value="6200"/>
+    <property name="levelHeight" type="string" value="1080"/>
+  </properties>
+  <objectgroup id="153" name="Platforms">
+    <object id="1" name="platform_1" type="" x="0" y="460" width="600" height="80">
+      <properties>
+       <property name="style" type="string" value="STONE"/>
+      </properties>
+    </object>
+    <object id="2" name="platform_2" type="" x="680" y="460" width="500" height="80">
+      <properties>
+       <property name="style" type="string" value="STONE"/>
+      </properties>
+    </object>
+    <object id="3" name="platform_3" type="" x="610" y="330" width="60" height="20">
+      <properties>
+       <property name="style" type="string" value="IRON_GIRDER"/>
+       <property name="motionDx" type="string" value="0"/>
+       <property name="motionDy" type="string" value="120"/>
+       <property name="motionSpeed" type="string" value="60"/>
+      </properties>
+    </object>
+    <object id="4" name="platform_4" type="" x="240" y="390" width="90" height="20">
+      <properties>
+       <property name="style" type="string" value="STONE_LEDGE"/>
+      </properties>
+    </object>
+    <object id="5" name="platform_5" type="" x="360" y="320" width="100" height="20">
+      <properties>
+       <property name="style" type="string" value="STONE_LEDGE"/>
+      </properties>
+    </object>
+    <object id="6" name="platform_6" type="" x="500" y="250" width="110" height="20">
+      <properties>
+       <property name="style" type="string" value="STONE_LEDGE"/>
+      </properties>
+    </object>
+    <object id="7" name="platform_7" type="" x="800" y="380" width="120" height="20">
+      <properties>
+       <property name="style" type="string" value="IRON_GIRDER"/>
+      </properties>
+    </object>
+    <object id="8" name="platform_8" type="" x="1000" y="310" width="130" height="20">
+      <properties>
+       <property name="style" type="string" value="IRON_GIRDER"/>
+      </properties>
+    </object>
+    <object id="9" name="platform_9" type="" x="1200" y="420" width="350" height="120">
+      <properties>
+       <property name="style" type="string" value="STONE"/>
+      </properties>
+    </object>
+    <object id="10" name="platform_10" type="" x="1600" y="400" width="320" height="140">
+      <properties>
+       <property name="style" type="string" value="STONE"/>
+      </properties>
+    </object>
+    <object id="11" name="platform_11" type="" x="1920" y="420" width="380" height="120">
+      <properties>
+       <property name="style" type="string" value="STONE"/>
+      </properties>
+    </object>
+    <object id="12" name="platform_12" type="" x="2360" y="460" width="120" height="80">
+      <properties>
+       <property name="style" type="string" value="STONE"/>
+      </properties>
+    </object>
+    <object id="13" name="platform_13" type="" x="2540" y="400" width="130" height="20">
+      <properties>
+       <property name="style" type="string" value="IRON_GIRDER"/>
+      </properties>
+    </object>
+    <object id="14" name="platform_14" type="" x="2730" y="340" width="140" height="20">
+      <properties>
+       <property name="style" type="string" value="IRON_GIRDER"/>
+      </properties>
+    </object>
+    <object id="15" name="platform_15" type="" x="2800" y="250" width="80" height="20">
+      <properties>
+       <property name="style" type="string" value="IRON_GIRDER"/>
+       <property name="motionDx" type="string" value="60"/>
+       <property name="motionDy" type="string" value="0"/>
+       <property name="motionSpeed" type="string" value="60"/>
+      </properties>
+    </object>
+    <object id="16" name="platform_16" type="" x="2940" y="260" width="160" height="280">
+      <properties>
+       <property name="style" type="string" value="STONE"/>
+      </properties>
+    </object>
+    <object id="17" name="platform_17" type="" x="3100" y="430" width="260" height="110">
+      <properties>
+       <property name="style" type="string" value="STONE"/>
+      </properties>
+    </object>
+    <object id="18" name="platform_18" type="" x="3450" y="430" width="300" height="110">
+      <properties>
+       <property name="style" type="string" value="STONE"/>
+      </properties>
+    </object>
+    <object id="19" name="platform_19" type="" x="3250" y="320" width="140" height="20">
+      <properties>
+       <property name="style" type="string" value="IRON_GIRDER"/>
+      </properties>
+    </object>
+    <object id="20" name="platform_20" type="" x="3440" y="240" width="160" height="20">
+      <properties>
+       <property name="style" type="string" value="IRON_GIRDER"/>
+      </properties>
+    </object>
+    <object id="21" name="platform_21" type="" x="3110" y="80" width="30" height="350">
+      <properties>
+       <property name="style" type="string" value="BOSS_GATE"/>
+       <property name="collision" type="string" value="OPEN"/>
+      </properties>
+    </object>
+    <object id="22" name="platform_22" type="" x="3720" y="80" width="30" height="350">
+      <properties>
+       <property name="style" type="string" value="BOSS_GATE"/>
+       <property name="collision" type="string" value="OPEN"/>
+      </properties>
+    </object>
+    <object id="23" name="platform_23" type="" x="3800" y="440" width="200" height="100">
+      <properties>
+       <property name="style" type="string" value="STONE"/>
+      </properties>
+    </object>
+    <object id="24" name="platform_24" type="" x="4080" y="420" width="240" height="120">
+      <properties>
+       <property name="style" type="string" value="STONE"/>
+      </properties>
+    </object>
+    <object id="25" name="platform_25" type="" x="4360" y="420" width="140" height="120">
+      <properties>
+       <property name="style" type="string" value="STONE"/>
+      </properties>
+    </object>
+    <object id="26" name="platform_26" type="" x="4600" y="420" width="80" height="120">
+      <properties>
+       <property name="style" type="string" value="STONE"/>
+      </properties>
+    </object>
+    <object id="27" name="platform_27" type="" x="4740" y="360" width="110" height="20">
+      <properties>
+       <property name="style" type="string" value="STONE_LEDGE"/>
+      </properties>
+    </object>
+    <object id="28" name="platform_28" type="" x="4900" y="300" width="120" height="20">
+      <properties>
+       <property name="style" type="string" value="STONE_LEDGE"/>
+      </properties>
+    </object>
+    <object id="29" name="platform_29" type="" x="5070" y="430" width="200" height="110">
+      <properties>
+       <property name="style" type="string" value="STONE"/>
+      </properties>
+    </object>
+    <object id="30" name="platform_30" type="" x="5270" y="450" width="930" height="90">
+      <properties>
+       <property name="style" type="string" value="STONE"/>
+      </properties>
+    </object>
+    <object id="31" name="platform_31" type="" x="5270" y="100" width="30" height="350">
+      <properties>
+       <property name="style" type="string" value="BOSS_GATE"/>
+       <property name="collision" type="string" value="OPEN"/>
+      </properties>
+    </object>
+    <object id="32" name="platform_32" type="" x="6170" y="100" width="30" height="350">
+      <properties>
+       <property name="style" type="string" value="BOSS_GATE"/>
+       <property name="collision" type="string" value="OPEN"/>
+      </properties>
+    </object>
+    <object id="33" name="platform_33" type="" x="5420" y="350" width="120" height="20">
+      <properties>
+       <property name="style" type="string" value="IRON_GIRDER"/>
+      </properties>
+    </object>
+    <object id="34" name="platform_34" type="" x="5880" y="350" width="120" height="20">
+      <properties>
+       <property name="style" type="string" value="IRON_GIRDER"/>
+      </properties>
+    </object>
+    <object id="35" name="platform_35" type="" x="3370" y="960" width="70" height="20">
+      <properties>
+       <property name="style" type="string" value="IRON_GIRDER"/>
+       <property name="motionDx" type="string" value="0"/>
+       <property name="motionDy" type="string" value="-500"/>
+       <property name="motionSpeed" type="string" value="110"/>
+      </properties>
+    </object>
+    <object id="36" name="platform_36" type="" x="3100" y="1000" width="400" height="80">
+      <properties>
+       <property name="style" type="string" value="STONE"/>
+      </properties>
+    </object>
+    <object id="37" name="platform_37" type="" x="3500" y="1000" width="500" height="80">
+      <properties>
+       <property name="style" type="string" value="STONE"/>
+      </properties>
+    </object>
+    <object id="38" name="platform_38" type="" x="3560" y="890" width="110" height="20">
+      <properties>
+       <property name="style" type="string" value="IRON_GIRDER"/>
+      </properties>
+    </object>
+    <object id="39" name="platform_39" type="" x="3720" y="780" width="110" height="20">
+      <properties>
+       <property name="style" type="string" value="IRON_GIRDER"/>
+      </properties>
+    </object>
+    <object id="40" name="platform_40" type="" x="3560" y="670" width="110" height="20">
+      <properties>
+       <property name="style" type="string" value="IRON_GIRDER"/>
+      </properties>
+    </object>
+    <object id="41" name="platform_41" type="" x="3780" y="600" width="120" height="20">
+      <properties>
+       <property name="style" type="string" value="STONE_LEDGE"/>
+      </properties>
+    </object>
+    <object id="42" name="platform_42" type="" x="4000" y="1000" width="360" height="80">
+      <properties>
+       <property name="style" type="string" value="STONE"/>
+      </properties>
+    </object>
+    <object id="43" name="platform_43" type="" x="4150" y="890" width="100" height="20">
+      <properties>
+       <property name="style" type="string" value="IRON_GIRDER"/>
+      </properties>
+    </object>
+    <object id="44" name="platform_44" type="" x="4360" y="1000" width="1840" height="80">
+      <properties>
+       <property name="style" type="string" value="STONE"/>
+      </properties>
+    </object>
+    <object id="45" name="platform_45" type="" x="4560" y="890" width="110" height="20">
+      <properties>
+       <property name="style" type="string" value="STONE_LEDGE"/>
+      </properties>
+    </object>
+    <object id="46" name="platform_46" type="" x="4620" y="800" width="110" height="20">
+      <properties>
+       <property name="style" type="string" value="STONE_LEDGE"/>
+      </properties>
+    </object>
+    <object id="47" name="platform_47" type="" x="4560" y="710" width="110" height="20">
+      <properties>
+       <property name="style" type="string" value="STONE_LEDGE"/>
+      </properties>
+    </object>
+    <object id="48" name="platform_48" type="" x="4560" y="620" width="110" height="20">
+      <properties>
+       <property name="style" type="string" value="STONE_LEDGE"/>
+      </properties>
+    </object>
+    <object id="49" name="platform_49" type="" x="4500" y="520" width="70" height="20">
+      <properties>
+       <property name="style" type="string" value="STONE_LEDGE"/>
+      </properties>
+    </object>
+    <object id="50" name="platform_50" type="" x="4780" y="890" width="160" height="110">
+      <properties>
+       <property name="style" type="string" value="STONE"/>
+      </properties>
+    </object>
+    <object id="51" name="platform_51" type="" x="5040" y="820" width="140" height="180">
+      <properties>
+       <property name="style" type="string" value="STONE"/>
+      </properties>
+    </object>
+    <object id="52" name="platform_52" type="" x="5300" y="740" width="160" height="260">
+      <properties>
+       <property name="style" type="string" value="STONE"/>
+      </properties>
+    </object>
+    <object id="53" name="platform_53" type="" x="5900" y="820" width="140" height="180">
+      <properties>
+       <property name="style" type="string" value="STONE"/>
+      </properties>
+    </object>
+    <object id="54" name="platform_54" type="" x="5700" y="880" width="30" height="120">
+      <properties>
+       <property name="style" type="string" value="IRON_GATE"/>
+       <property name="gateId" type="string" value="garrison_gate"/>
+      </properties>
+    </object>
+    <object id="55" name="platform_55" type="" x="5500" y="670" width="120" height="20">
+      <properties>
+       <property name="style" type="string" value="STONE_LEDGE"/>
+      </properties>
+    </object>
+    <object id="56" name="platform_56" type="" x="5660" y="590" width="120" height="20">
+      <properties>
+       <property name="style" type="string" value="IRON_GIRDER"/>
+      </properties>
+    </object>
+    <object id="57" name="platform_57" type="" x="5800" y="670" width="120" height="20">
+      <properties>
+       <property name="style" type="string" value="STONE_LEDGE"/>
+      </properties>
+    </object>
+  </objectgroup>
+  <objectgroup id="154" name="Hazards">
+    <object id="58" name="hazard_1" type="" x="600" y="500" width="80" height="40">
+      <properties>
+       <property name="type" type="string" value="ACID"/>
+      </properties>
+    </object>
+    <object id="59" name="hazard_2" type="" x="1550" y="510" width="50" height="30">
+      <properties>
+       <property name="type" type="string" value="SPIKES"/>
+      </properties>
+    </object>
+    <object id="60" name="hazard_3" type="" x="2300" y="500" width="60" height="40">
+      <properties>
+       <property name="type" type="string" value="ACID"/>
+      </properties>
+    </object>
+    <object id="61" name="hazard_4" type="" x="2480" y="510" width="350" height="30">
+      <properties>
+       <property name="type" type="string" value="ACID"/>
+      </properties>
+    </object>
+    <object id="62" name="hazard_5" type="" x="4000" y="500" width="80" height="40">
+      <properties>
+       <property name="type" type="string" value="ACID"/>
+      </properties>
+    </object>
+    <object id="63" name="hazard_6" type="" x="4680" y="510" width="260" height="30">
+      <properties>
+       <property name="type" type="string" value="ACID"/>
+      </properties>
+    </object>
+    <object id="64" name="hazard_7" type="" x="3120" y="980" width="60" height="20">
+      <properties>
+       <property name="type" type="string" value="SPIKES"/>
+      </properties>
+    </object>
+    <object id="65" name="hazard_8" type="" x="3900" y="970" width="80" height="30">
+      <properties>
+       <property name="type" type="string" value="ACID"/>
+      </properties>
+    </object>
+    <object id="66" name="hazard_9" type="" x="4040" y="980" width="60" height="20">
+      <properties>
+       <property name="type" type="string" value="SPIKES"/>
+      </properties>
+    </object>
+    <object id="67" name="hazard_10" type="" x="4950" y="980" width="80" height="20">
+      <properties>
+       <property name="type" type="string" value="ACID"/>
+      </properties>
+    </object>
+    <object id="68" name="hazard_11" type="" x="5210" y="980" width="60" height="20">
+      <properties>
+       <property name="type" type="string" value="SPIKES"/>
+      </properties>
+    </object>
+    <object id="69" name="hazard_12" type="" x="5470" y="980" width="70" height="20">
+      <properties>
+       <property name="type" type="string" value="ACID"/>
+      </properties>
+    </object>
+    <object id="70" name="hazard_13" type="" x="6160" y="980" width="40" height="20">
+      <properties>
+       <property name="type" type="string" value="SPIKES"/>
+      </properties>
+    </object>
+  </objectgroup>
+  <objectgroup id="155" name="Enemies">
+    <object id="71" name="enemy_1" type="" x="420" y="410" width="0" height="0">
+      <properties>
+       <property name="archetype" type="string" value="LURKER"/>
+       <property name="patrolRange" type="string" value="120"/>
+      </properties>
+    </object>
+    <object id="72" name="enemy_2" type="" x="920" y="410" width="0" height="0">
+      <properties>
+       <property name="archetype" type="string" value="LURKER"/>
+       <property name="patrolRange" type="string" value="140"/>
+      </properties>
+    </object>
+    <object id="73" name="enemy_3" type="" x="520" y="180" width="0" height="0">
+      <properties>
+       <property name="archetype" type="string" value="CHERUB"/>
+       <property name="patrolRange" type="string" value="110"/>
+      </properties>
+    </object>
+    <object id="74" name="enemy_4" type="" x="1100" y="240" width="0" height="0">
+      <properties>
+       <property name="archetype" type="string" value="CHERUB"/>
+       <property name="patrolRange" type="string" value="120"/>
+      </properties>
+    </object>
+    <object id="75" name="enemy_5" type="" x="1420" y="370" width="0" height="0">
+      <properties>
+       <property name="archetype" type="string" value="LURKER"/>
+       <property name="patrolRange" type="string" value="100"/>
+      </properties>
+    </object>
+    <object id="76" name="enemy_6" type="" x="3000" y="210" width="0" height="0">
+      <properties>
+       <property name="archetype" type="string" value="CULTIST"/>
+       <property name="patrolRange" type="string" value="0"/>
+      </properties>
+    </object>
+    <object id="77" name="enemy_7" type="" x="4140" y="360" width="0" height="0">
+      <properties>
+       <property name="archetype" type="string" value="CULTIST"/>
+       <property name="patrolRange" type="string" value="0"/>
+      </properties>
+    </object>
+    <object id="78" name="enemy_8" type="" x="4820" y="220" width="0" height="0">
+      <properties>
+       <property name="archetype" type="string" value="CHERUB"/>
+       <property name="patrolRange" type="string" value="130"/>
+      </properties>
+    </object>
+    <object id="79" name="enemy_9" type="" x="5120" y="370" width="0" height="0">
+      <properties>
+       <property name="archetype" type="string" value="GOLEM"/>
+       <property name="patrolRange" type="string" value="70"/>
+      </properties>
+    </object>
+    <object id="80" name="enemy_10" type="" x="3250" y="964" width="0" height="0">
+      <properties>
+       <property name="archetype" type="string" value="LURKER"/>
+       <property name="patrolRange" type="string" value="60"/>
+      </properties>
+    </object>
+    <object id="81" name="enemy_11" type="" x="3700" y="700" width="0" height="0">
+      <properties>
+       <property name="archetype" type="string" value="CHERUB"/>
+       <property name="patrolRange" type="string" value="120"/>
+      </properties>
+    </object>
+    <object id="82" name="enemy_12" type="" x="3860" y="958" width="0" height="0">
+      <properties>
+       <property name="archetype" type="string" value="CULTIST"/>
+       <property name="patrolRange" type="string" value="0"/>
+      </properties>
+    </object>
+    <object id="83" name="enemy_13" type="" x="4200" y="946" width="0" height="0">
+      <properties>
+       <property name="archetype" type="string" value="GOLEM"/>
+       <property name="patrolRange" type="string" value="90"/>
+      </properties>
+    </object>
+    <object id="84" name="enemy_14" type="" x="4420" y="964" width="0" height="0">
+      <properties>
+       <property name="archetype" type="string" value="LURKER"/>
+       <property name="patrolRange" type="string" value="80"/>
+      </properties>
+    </object>
+    <object id="85" name="enemy_15" type="" x="5150" y="760" width="0" height="0">
+      <properties>
+       <property name="archetype" type="string" value="CHERUB"/>
+       <property name="patrolRange" type="string" value="110"/>
+      </properties>
+    </object>
+    <object id="86" name="enemy_16" type="" x="5390" y="680" width="0" height="0">
+      <properties>
+       <property name="archetype" type="string" value="CHERUB"/>
+       <property name="patrolRange" type="string" value="120"/>
+      </properties>
+    </object>
+    <object id="87" name="enemy_17" type="" x="5600" y="958" width="0" height="0">
+      <properties>
+       <property name="archetype" type="string" value="CULTIST"/>
+       <property name="patrolRange" type="string" value="0"/>
+      </properties>
+    </object>
+    <object id="88" name="enemy_18" type="" x="6080" y="946" width="0" height="0">
+      <properties>
+       <property name="archetype" type="string" value="GOLEM"/>
+       <property name="patrolRange" type="string" value="30"/>
+      </properties>
+    </object>
+  </objectgroup>
+  <objectgroup id="156" name="Breakables">
+    <object id="89" name="urn_1" type="" x="380" y="296" width="24" height="24">
+      <properties>
+       <property name="dropType" type="string" value="health"/>
+      </properties>
+    </object>
+    <object id="90" name="urn_2" type="" x="1240" y="396" width="24" height="24">
+      <properties>
+       <property name="dropType" type="string" value="flask"/>
+      </properties>
+    </object>
+    <object id="91" name="urn_3" type="" x="3200" y="406" width="24" height="24">
+      <properties>
+       <property name="dropType" type="string" value="health"/>
+      </properties>
+    </object>
+    <object id="92" name="urn_4" type="" x="3500" y="216" width="24" height="24">
+      <properties>
+       <property name="dropType" type="string" value="flask"/>
+      </properties>
+    </object>
+    <object id="93" name="urn_5" type="" x="5180" y="406" width="24" height="24">
+      <properties>
+       <property name="dropType" type="string" value="health"/>
+      </properties>
+    </object>
+    <object id="94" name="urn_6" type="" x="3470" y="976" width="24" height="24">
+      <properties>
+       <property name="dropType" type="string" value="flask"/>
+      </properties>
+    </object>
+    <object id="95" name="urn_7" type="" x="3820" y="576" width="24" height="24">
+      <properties>
+       <property name="dropType" type="string" value="health"/>
+      </properties>
+    </object>
+    <object id="96" name="urn_8" type="" x="4180" y="866" width="24" height="24">
+      <properties>
+       <property name="dropType" type="string" value="flask"/>
+      </properties>
+    </object>
+    <object id="97" name="urn_9" type="" x="4290" y="976" width="24" height="24">
+      <properties>
+       <property name="dropType" type="string" value="health"/>
+      </properties>
+    </object>
+    <object id="98" name="urn_10" type="" x="4430" y="976" width="24" height="24">
+      <properties>
+       <property name="dropType" type="string" value="health"/>
+      </properties>
+    </object>
+    <object id="99" name="urn_11" type="" x="4830" y="866" width="24" height="24">
+      <properties>
+       <property name="dropType" type="string" value="flask"/>
+      </properties>
+    </object>
+    <object id="100" name="urn_12" type="" x="5350" y="716" width="24" height="24">
+      <properties>
+       <property name="dropType" type="string" value="health"/>
+      </properties>
+    </object>
+    <object id="101" name="urn_13" type="" x="5940" y="796" width="24" height="24">
+      <properties>
+       <property name="dropType" type="string" value="flask"/>
+      </properties>
+    </object>
+    <object id="102" name="urn_14" type="" x="6110" y="976" width="24" height="24">
+      <properties>
+       <property name="dropType" type="string" value="flask"/>
+      </properties>
+    </object>
+  </objectgroup>
+  <objectgroup id="157" name="Rooms">
+    <object id="103" name="bastion_entry" type="" x="0" y="0" width="600" height="540">
+      <properties>
+       <property name="roomId" type="string" value="bastion_entry"/>
+       <property name="roomName" type="string" value="Bastion Entry Hall"/>
+      </properties>
+    </object>
+    <object id="104" name="bastion_ascent" type="" x="600" y="0" width="600" height="540">
+      <properties>
+       <property name="roomId" type="string" value="bastion_ascent"/>
+       <property name="roomName" type="string" value="The Bastion Ascent"/>
+      </properties>
+    </object>
+    <object id="105" name="bastion_ramparts" type="" x="1200" y="0" width="720" height="540">
+      <properties>
+       <property name="roomId" type="string" value="bastion_ramparts"/>
+       <property name="roomName" type="string" value="The Bastion Ramparts"/>
+      </properties>
+    </object>
+    <object id="106" name="crucible_labs" type="" x="1920" y="0" width="1020" height="540">
+      <properties>
+       <property name="roomId" type="string" value="crucible_labs"/>
+       <property name="roomName" type="string" value="The Crucible Laboratories"/>
+      </properties>
+    </object>
+    <object id="107" name="cultist_tower" type="" x="2940" y="0" width="160" height="540">
+      <properties>
+       <property name="roomId" type="string" value="cultist_tower"/>
+       <property name="roomName" type="string" value="The Cultist Tower"/>
+      </properties>
+    </object>
+    <object id="108" name="golem_gallery" type="" x="3100" y="0" width="650" height="540">
+      <properties>
+       <property name="roomId" type="string" value="golem_gallery"/>
+       <property name="roomName" type="string" value="The Gallery of the Golem"/>
+      </properties>
+    </object>
+    <object id="109" name="vitriol_pools" type="" x="3750" y="0" width="610" height="540">
+      <properties>
+       <property name="roomId" type="string" value="vitriol_pools"/>
+       <property name="roomName" type="string" value="The Vitriol Pools"/>
+      </properties>
+    </object>
+    <object id="110" name="sanctum_approach" type="" x="4360" y="0" width="910" height="540">
+      <properties>
+       <property name="roomId" type="string" value="sanctum_approach"/>
+       <property name="roomName" type="string" value="The Sanctum Approach"/>
+      </properties>
+    </object>
+    <object id="111" name="grand_sanctum" type="" x="5270" y="0" width="930" height="540">
+      <properties>
+       <property name="roomId" type="string" value="grand_sanctum"/>
+       <property name="roomName" type="string" value="The Grand Sanctum"/>
+      </properties>
+    </object>
+    <object id="112" name="sunken_descent" type="" x="3100" y="540" width="400" height="540">
+      <properties>
+       <property name="roomId" type="string" value="sunken_descent"/>
+       <property name="roomName" type="string" value="The Sunken Descent"/>
+      </properties>
+    </object>
+    <object id="113" name="undercroft_halls" type="" x="3500" y="540" width="500" height="540">
+      <properties>
+       <property name="roomId" type="string" value="undercroft_halls"/>
+       <property name="roomName" type="string" value="The Undercroft Halls"/>
+      </properties>
+    </object>
+    <object id="114" name="reliquary_vault" type="" x="4000" y="540" width="360" height="540">
+      <properties>
+       <property name="roomId" type="string" value="reliquary_vault"/>
+       <property name="roomName" type="string" value="The Reliquary Vault"/>
+      </properties>
+    </object>
+    <object id="115" name="garrison_descent" type="" x="4360" y="540" width="340" height="540">
+      <properties>
+       <property name="roomId" type="string" value="garrison_descent"/>
+       <property name="roomName" type="string" value="The Garrison Descent"/>
+      </properties>
+    </object>
+    <object id="116" name="garrison_street" type="" x="4700" y="540" width="1000" height="540">
+      <properties>
+       <property name="roomId" type="string" value="garrison_street"/>
+       <property name="roomName" type="string" value="The Garrison Street"/>
+      </properties>
+    </object>
+    <object id="117" name="garrison_keep" type="" x="5700" y="540" width="500" height="540">
+      <properties>
+       <property name="roomId" type="string" value="garrison_keep"/>
+       <property name="roomName" type="string" value="The Garrison Keep"/>
+      </properties>
+    </object>
+  </objectgroup>
+  <objectgroup id="158" name="Doors">
+    <object id="118" name="door_bastion_entry_to_bastion_ascent" type="" x="600" y="460">
+      <properties>
+       <property name="fromRoomId" type="string" value="bastion_entry"/>
+       <property name="toRoomId" type="string" value="bastion_ascent"/>
+      </properties>
+    </object>
+    <object id="119" name="door_bastion_ascent_to_bastion_entry" type="" x="600" y="460">
+      <properties>
+       <property name="fromRoomId" type="string" value="bastion_ascent"/>
+       <property name="toRoomId" type="string" value="bastion_entry"/>
+      </properties>
+    </object>
+    <object id="120" name="door_bastion_ascent_to_bastion_ramparts" type="" x="1200" y="420">
+      <properties>
+       <property name="fromRoomId" type="string" value="bastion_ascent"/>
+       <property name="toRoomId" type="string" value="bastion_ramparts"/>
+      </properties>
+    </object>
+    <object id="121" name="door_bastion_ramparts_to_bastion_ascent" type="" x="1200" y="420">
+      <properties>
+       <property name="fromRoomId" type="string" value="bastion_ramparts"/>
+       <property name="toRoomId" type="string" value="bastion_ascent"/>
+      </properties>
+    </object>
+    <object id="122" name="door_bastion_ramparts_to_crucible_labs" type="" x="1920" y="420">
+      <properties>
+       <property name="fromRoomId" type="string" value="bastion_ramparts"/>
+       <property name="toRoomId" type="string" value="crucible_labs"/>
+      </properties>
+    </object>
+    <object id="123" name="door_crucible_labs_to_bastion_ramparts" type="" x="1920" y="420">
+      <properties>
+       <property name="fromRoomId" type="string" value="crucible_labs"/>
+       <property name="toRoomId" type="string" value="bastion_ramparts"/>
+      </properties>
+    </object>
+    <object id="124" name="door_crucible_labs_to_cultist_tower" type="" x="2940" y="260">
+      <properties>
+       <property name="fromRoomId" type="string" value="crucible_labs"/>
+       <property name="toRoomId" type="string" value="cultist_tower"/>
+      </properties>
+    </object>
+    <object id="125" name="door_cultist_tower_to_crucible_labs" type="" x="2940" y="260">
+      <properties>
+       <property name="fromRoomId" type="string" value="cultist_tower"/>
+       <property name="toRoomId" type="string" value="crucible_labs"/>
+      </properties>
+    </object>
+    <object id="126" name="door_cultist_tower_to_golem_gallery" type="" x="3100" y="430">
+      <properties>
+       <property name="fromRoomId" type="string" value="cultist_tower"/>
+       <property name="toRoomId" type="string" value="golem_gallery"/>
+      </properties>
+    </object>
+    <object id="127" name="door_golem_gallery_to_cultist_tower" type="" x="3100" y="430">
+      <properties>
+       <property name="fromRoomId" type="string" value="golem_gallery"/>
+       <property name="toRoomId" type="string" value="cultist_tower"/>
+      </properties>
+    </object>
+    <object id="128" name="door_golem_gallery_to_sunken_descent" type="" x="3355" y="430">
+      <properties>
+       <property name="fromRoomId" type="string" value="golem_gallery"/>
+       <property name="toRoomId" type="string" value="sunken_descent"/>
+      </properties>
+    </object>
+    <object id="129" name="door_golem_gallery_to_vitriol_pools" type="" x="3750" y="430">
+      <properties>
+       <property name="fromRoomId" type="string" value="golem_gallery"/>
+       <property name="toRoomId" type="string" value="vitriol_pools"/>
+      </properties>
+    </object>
+    <object id="130" name="door_vitriol_pools_to_golem_gallery" type="" x="3750" y="430">
+      <properties>
+       <property name="fromRoomId" type="string" value="vitriol_pools"/>
+       <property name="toRoomId" type="string" value="golem_gallery"/>
+      </properties>
+    </object>
+    <object id="131" name="door_vitriol_pools_to_sanctum_approach" type="" x="4360" y="420">
+      <properties>
+       <property name="fromRoomId" type="string" value="vitriol_pools"/>
+       <property name="toRoomId" type="string" value="sanctum_approach"/>
+      </properties>
+    </object>
+    <object id="132" name="door_sanctum_approach_to_vitriol_pools" type="" x="4360" y="420">
+      <properties>
+       <property name="fromRoomId" type="string" value="sanctum_approach"/>
+       <property name="toRoomId" type="string" value="vitriol_pools"/>
+      </properties>
+    </object>
+    <object id="133" name="door_sanctum_approach_to_garrison_descent" type="" x="4490" y="420">
+      <properties>
+       <property name="fromRoomId" type="string" value="sanctum_approach"/>
+       <property name="toRoomId" type="string" value="garrison_descent"/>
+      </properties>
+    </object>
+    <object id="134" name="door_sanctum_approach_to_grand_sanctum" type="" x="5270" y="450">
+      <properties>
+       <property name="fromRoomId" type="string" value="sanctum_approach"/>
+       <property name="toRoomId" type="string" value="grand_sanctum"/>
+      </properties>
+    </object>
+    <object id="135" name="door_grand_sanctum_to_sanctum_approach" type="" x="5270" y="450">
+      <properties>
+       <property name="fromRoomId" type="string" value="grand_sanctum"/>
+       <property name="toRoomId" type="string" value="sanctum_approach"/>
+      </properties>
+    </object>
+    <object id="136" name="door_sunken_descent_to_golem_gallery" type="" x="3355" y="1000">
+      <properties>
+       <property name="fromRoomId" type="string" value="sunken_descent"/>
+       <property name="toRoomId" type="string" value="golem_gallery"/>
+      </properties>
+    </object>
+    <object id="137" name="door_sunken_descent_to_undercroft_halls" type="" x="3500" y="1000">
+      <properties>
+       <property name="fromRoomId" type="string" value="sunken_descent"/>
+       <property name="toRoomId" type="string" value="undercroft_halls"/>
+      </properties>
+    </object>
+    <object id="138" name="door_undercroft_halls_to_sunken_descent" type="" x="3500" y="1000">
+      <properties>
+       <property name="fromRoomId" type="string" value="undercroft_halls"/>
+       <property name="toRoomId" type="string" value="sunken_descent"/>
+      </properties>
+    </object>
+    <object id="139" name="door_undercroft_halls_to_reliquary_vault" type="" x="4000" y="1000">
+      <properties>
+       <property name="fromRoomId" type="string" value="undercroft_halls"/>
+       <property name="toRoomId" type="string" value="reliquary_vault"/>
+      </properties>
+    </object>
+    <object id="140" name="door_reliquary_vault_to_undercroft_halls" type="" x="4000" y="1000">
+      <properties>
+       <property name="fromRoomId" type="string" value="reliquary_vault"/>
+       <property name="toRoomId" type="string" value="undercroft_halls"/>
+      </properties>
+    </object>
+    <object id="141" name="door_reliquary_vault_to_garrison_descent" type="" x="4360" y="1000">
+      <properties>
+       <property name="fromRoomId" type="string" value="reliquary_vault"/>
+       <property name="toRoomId" type="string" value="garrison_descent"/>
+      </properties>
+    </object>
+    <object id="142" name="door_garrison_descent_to_sanctum_approach" type="" x="4490" y="1000">
+      <properties>
+       <property name="fromRoomId" type="string" value="garrison_descent"/>
+       <property name="toRoomId" type="string" value="sanctum_approach"/>
+      </properties>
+    </object>
+    <object id="143" name="door_garrison_descent_to_reliquary_vault" type="" x="4360" y="1000">
+      <properties>
+       <property name="fromRoomId" type="string" value="garrison_descent"/>
+       <property name="toRoomId" type="string" value="reliquary_vault"/>
+      </properties>
+    </object>
+    <object id="144" name="door_garrison_descent_to_garrison_street" type="" x="4700" y="1000">
+      <properties>
+       <property name="fromRoomId" type="string" value="garrison_descent"/>
+       <property name="toRoomId" type="string" value="garrison_street"/>
+      </properties>
+    </object>
+    <object id="145" name="door_garrison_street_to_garrison_descent" type="" x="4700" y="1000">
+      <properties>
+       <property name="fromRoomId" type="string" value="garrison_street"/>
+       <property name="toRoomId" type="string" value="garrison_descent"/>
+      </properties>
+    </object>
+    <object id="146" name="door_garrison_street_to_garrison_keep" type="" x="5700" y="1000">
+      <properties>
+       <property name="fromRoomId" type="string" value="garrison_street"/>
+       <property name="toRoomId" type="string" value="garrison_keep"/>
+      </properties>
+    </object>
+    <object id="147" name="door_garrison_street_to_garrison_keep" type="" x="5700" y="590">
+      <properties>
+       <property name="fromRoomId" type="string" value="garrison_street"/>
+       <property name="toRoomId" type="string" value="garrison_keep"/>
+      </properties>
+    </object>
+    <object id="148" name="door_garrison_keep_to_garrison_street" type="" x="5700" y="1000">
+      <properties>
+       <property name="fromRoomId" type="string" value="garrison_keep"/>
+       <property name="toRoomId" type="string" value="garrison_street"/>
+      </properties>
+    </object>
+    <object id="149" name="door_garrison_keep_to_garrison_street" type="" x="5700" y="590">
+      <properties>
+       <property name="fromRoomId" type="string" value="garrison_keep"/>
+       <property name="toRoomId" type="string" value="garrison_street"/>
+      </properties>
+    </object>
+  </objectgroup>
+  <objectgroup id="159" name="GateTriggers">
+    <object id="150" name="gate_trigger_1" type="" x="5800" y="540" width="80" height="140">
+      <properties>
+       <property name="gateId" type="string" value="garrison_gate"/>
+      </properties>
+    </object>
+  </objectgroup>
+  <objectgroup id="160" name="Bosses">
+    <object id="151" name="siege_golem" type="" x="3500" y="260" width="0" height="0">
+      <properties>
+       <property name="boss" type="string" value="siege_golem"/>
+       <property name="triggerX" type="string" value="3200"/>
+       <property name="triggerMaxY" type="string" value="540"/>
+      </properties>
+    </object>
+    <object id="152" name="chimera" type="" x="5750" y="360" width="0" height="0">
+      <properties>
+       <property name="boss" type="string" value="chimera"/>
+       <property name="triggerX" type="string" value="5340"/>
+       <property name="triggerMaxY" type="string" value="540"/>
+      </properties>
+    </object>
+  </objectgroup>
+</map>
