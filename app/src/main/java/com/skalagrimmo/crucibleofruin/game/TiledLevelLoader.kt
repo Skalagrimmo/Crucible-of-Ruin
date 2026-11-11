@@ -6,9 +6,11 @@ import javax.xml.XMLConstants
 import javax.xml.parsers.DocumentBuilderFactory
 
 /**
- * Editable slice of a Tiled map. Stage 10a (#69) extends the prototype format
- * with the features a live level needs — moving platforms, gate identity,
- * explicit collision overrides, and map-level world bounds — while
+ * Editable slice of a Tiled map. Stage 10a (#69) extended the prototype
+ * format with the features a live level needs — moving platforms, gate
+ * identity, explicit collision overrides, and map-level world bounds.
+ * Stage 10b (#69) adds the meta layers — the room/door graph, the
+ * shortcut-gate unlock rectangles, and the boss encounter chain.
  * GameLevelFactory remains the runtime source of truth until the Stage 10d
  * switch.
  */
@@ -21,7 +23,27 @@ internal data class TiledLevelSection(
     // properties. The defaults keep the stock corridor bounds for sections
     // that carry no map-level bounds yet.
     val width: Float = 6200f,
-    val height: Float = 540f
+    val height: Float = 540f,
+    // Stage 10b (#69): the meta layers. Every default stays empty so the
+    // shipped prototype section and all existing callers keep loading.
+    val rooms: List<LevelRoom> = emptyList(),
+    val gateTriggers: List<GateTrigger> = emptyList(),
+    val bossEncounters: List<TiledBossEncounter> = emptyList()
+)
+
+/**
+ * Stage 10b (#69): a parsed boss encounter from the Bosses layer — the boss
+ * archetype id, its spawn point, and the arming line whose crossing arms
+ * the fight. Resolving [bossId] into a fresh BaseBoss instance is the
+ * Stage 10d switch's job through a closed factory map; the loader never
+ * reflects over classes.
+ */
+internal data class TiledBossEncounter(
+    val bossId: String,
+    val spawnX: Float,
+    val spawnY: Float,
+    val triggerX: Float,
+    val triggerMaxY: Float
 )
 
 /**
@@ -104,6 +126,39 @@ internal object TiledLevelLoader {
             )
         }
 
+        // Stage 10b (#69): the meta layers. Rooms carry their doors by
+        // reference (fromRoomId/toRoomId), so the graph validates itself at
+        // load time instead of failing later on the world map.
+        val rooms = parseRooms(
+            objectsInLayer(document, "Rooms"),
+            objectsInLayer(document, "Doors")
+        )
+        val gateTriggers = objectsInLayer(document, "GateTriggers").map { obj ->
+            GateTrigger(
+                gateId = obj.requiredProperty("gateId").trim(),
+                x = obj.floatAttribute("x"),
+                y = obj.floatAttribute("y"),
+                w = obj.floatAttribute("width"),
+                h = obj.floatAttribute("height")
+            )
+        }
+        val bossEncounters = objectsInLayer(document, "Bosses").map { obj ->
+            val objectName = obj.getAttribute("name")
+            TiledBossEncounter(
+                bossId = obj.requiredProperty("boss").trim(),
+                spawnX = obj.floatAttribute("x"),
+                spawnY = obj.floatAttribute("y"),
+                triggerX = requireFiniteFloat(obj.requiredProperty("triggerX"), "triggerX", objectName),
+                triggerMaxY = obj.optionalProperty("triggerMaxY")?.let { raw ->
+                    val bound = requireFiniteFloat(raw, "triggerMaxY", objectName)
+                    require(bound > 0f) {
+                        "'triggerMaxY' must be positive on Tiled object '" + objectName + "'"
+                    }
+                    bound
+                } ?: 540f
+            )
+        }
+
         return TiledLevelSection(
             platforms = platforms,
             hazards = hazards,
@@ -111,7 +166,10 @@ internal object TiledLevelLoader {
             breakables = breakables,
             // Stage 10a (#69): world bounds travel with the map properties.
             width = mapBounds(map, "levelWidth", 6200f),
-            height = mapBounds(map, "levelHeight", 540f)
+            height = mapBounds(map, "levelHeight", 540f),
+            rooms = rooms,
+            gateTriggers = gateTriggers,
+            bossEncounters = bossEncounters
         )
     }
 
@@ -127,6 +185,53 @@ internal object TiledLevelLoader {
 
         val objects = group.getElementsByTagName("object")
         return (0 until objects.length).mapNotNull { objects.item(it) as? Element }
+    }
+
+    /**
+     * Stage 10b (#69): rooms are world-space rectangles keyed by roomId;
+     * door objects anchor a transition at a world point and attach to the
+     * room named by fromRoomId. Unknown room references and duplicate ids
+     * fail fast — a broken graph must never reach the world map.
+     */
+    private fun parseRooms(
+        roomObjects: List<Element>,
+        doorObjects: List<Element>
+    ): List<LevelRoom> {
+        if (roomObjects.isEmpty() && doorObjects.isEmpty()) return emptyList()
+        val rooms = roomObjects.map { obj ->
+            LevelRoom(
+                id = obj.requiredProperty("roomId").trim(),
+                name = obj.requiredProperty("roomName").trim(),
+                x = obj.floatAttribute("x"),
+                y = obj.floatAttribute("y"),
+                w = obj.floatAttribute("width"),
+                h = obj.floatAttribute("height")
+            )
+        }
+        val duplicated = rooms.groupBy { it.id }.filterValues { it.size > 1 }.keys.firstOrNull()
+        require(duplicated == null) {
+            "Duplicate roomId '" + duplicated + "' in the Rooms layer"
+        }
+        val byId = rooms.associateBy { it.id }
+        val doorsByRoom = mutableMapOf<String, MutableList<RoomDoor>>()
+        for (obj in doorObjects) {
+            val from = obj.requiredProperty("fromRoomId").trim()
+            val to = obj.requiredProperty("toRoomId").trim()
+            require(byId.containsKey(from)) {
+                "Door references unknown room '" + from + "' in the Rooms layer"
+            }
+            require(byId.containsKey(to)) {
+                "Door references unknown room '" + to + "' in the Rooms layer"
+            }
+            doorsByRoom.getOrPut(from) { mutableListOf() }.add(
+                RoomDoor(
+                    x = obj.floatAttribute("x"),
+                    y = obj.floatAttribute("y"),
+                    toRoomId = to
+                )
+            )
+        }
+        return rooms.map { room -> room.copy(doors = doorsByRoom[room.id].orEmpty()) }
     }
 
     private fun Element.floatAttribute(name: String): Float {
