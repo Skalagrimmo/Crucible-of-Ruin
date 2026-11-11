@@ -6,7 +6,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.nativeCanvas
+import com.skalagrimmo.crucibleofruin.game.boss.BossPhase
+import com.skalagrimmo.crucibleofruin.game.boss.BossState
+import com.skalagrimmo.crucibleofruin.game.boss.SiegeGolemBoss
 import android.graphics.Paint
 import android.graphics.Typeface
 import kotlin.math.abs
@@ -315,6 +319,11 @@ object GameRenderer {
                 // Boss Body
                 if (boss.hurtTimer > 0f) {
                     drawRect(Color.White, topLeft = Offset(bx, by), size = Size(boss.w, boss.h))
+                } else if (boss is SiegeGolemBoss) {
+                    // Stage 9c (#62): the Siege Golem has no dedicated sprite yet —
+                    // draw its body procedurally as a foundry walker (riveted
+                    // plates, furnace chest around the crucible core).
+                    drawSiegeGolemBody(boss, bx, by)
                 } else {
                     val tex = if (boss.phase2) {
                         if (boss.facing > 0) AssetCache.texBossEnragedRight else AssetCache.texBossEnragedLeft
@@ -612,6 +621,112 @@ object GameRenderer {
                 fillPaint.color = android.graphics.Color.argb((alpha * 255).toInt(), r, g, b)
                 nativeCanvas.drawText(dn.text, dnx, dny, fillPaint)
             }
+        }
+    }
+
+    // --- Stage 9c (#62): procedural Siege Golem body (no dedicated sprite yet) ---
+
+    private val COLOR_GOLEM_PLATE = Color(0xFF3A3247)
+    private val COLOR_GOLEM_PLATE_LIT = Color(0xFF5A4E6E)
+    private val COLOR_GOLEM_DARK = Color(0xFF241C31)
+    private val COLOR_GOLEM_RIVET = Color(0xFF9A85B8)
+    private val COLOR_GOLEM_FURNACE = Color(0xFF160C12)
+    private val COLOR_GOLEM_MOLTEN = Color(0xFFFF7010)
+    private val COLOR_GOLEM_MOLTEN_HOT = Color(0xFFFFC040)
+
+    /**
+     * Draws the Siege Golem as a heavy foundry walker: two riveted leg columns,
+     * a tapered plate hull with molten seams that brighten as phases advance
+     * (magenta in the PHASE_3 overload), a visor slit tracking the player, and
+     * a furnace chest glowing around the crucible-core socket. The destructible
+     * arm cannons draw afterwards over the shoulder mounts (Stage 9b frames).
+     */
+    private fun DrawScope.drawSiegeGolemBody(boss: SiegeGolemBoss, bx: Float, by: Float) {
+        val t = System.currentTimeMillis() / 1000f
+        val bob = sin(t * 2.2f) * 2f
+        val w = boss.w
+        val h = boss.h
+        val facingRight = boss.facing > 0
+        val telegraphing = boss.state == BossState.TELEGRAPHING
+        val seamColor = if (boss.currentPhase == BossPhase.PHASE_3) Color(0xFFC020FF) else COLOR_GOLEM_MOLTEN
+        val seamAlpha = if (boss.currentPhase == BossPhase.PHASE_1) 0.35f else 0.8f
+
+        // Legs: two riveted foundry columns.
+        for (legX in listOf(bx + 10f, bx + w - 44f)) {
+            drawRect(COLOR_GOLEM_DARK, topLeft = Offset(legX, by + 118f), size = Size(34f, h - 118f))
+            drawRect(COLOR_GOLEM_PLATE, topLeft = Offset(legX + 4f, by + 122f), size = Size(26f, h - 128f))
+            drawRect(COLOR_GOLEM_RIVET.copy(alpha = 0.5f), topLeft = Offset(legX + 4f, by + 146f), size = Size(26f, 3f))
+        }
+
+        // Hip block.
+        drawRect(COLOR_GOLEM_PLATE, topLeft = Offset(bx + 16f, by + 104f + bob), size = Size(w - 32f, 22f))
+
+        // Tapered torso hull.
+        val hull = Path().apply {
+            moveTo(bx + 24f, by + 26f + bob)
+            lineTo(bx + w - 24f, by + 26f + bob)
+            lineTo(bx + w - 8f, by + 118f + bob)
+            lineTo(bx + 8f, by + 118f + bob)
+            close()
+        }
+        drawPath(hull, COLOR_GOLEM_PLATE)
+        drawRect(COLOR_GOLEM_PLATE_LIT, topLeft = Offset(bx + 24f, by + 26f + bob), size = Size(w - 48f, 5f))
+
+        // Shoulder pauldrons over the cannon mounts.
+        drawRect(COLOR_GOLEM_PLATE_LIT, topLeft = Offset(bx, by + 44f + bob), size = Size(30f, 26f))
+        drawRect(COLOR_GOLEM_PLATE_LIT, topLeft = Offset(bx + w - 30f, by + 44f + bob), size = Size(30f, 26f))
+
+        // Head block with a glowing visor slit looking at the player.
+        drawRect(COLOR_GOLEM_DARK, topLeft = Offset(bx + 42f, by + bob), size = Size(46f, 30f))
+        val visorY = by + 11f + bob
+        drawRect(
+            COLOR_GOLEM_MOLTEN.copy(alpha = if (telegraphing) 1f else 0.85f),
+            topLeft = Offset(bx + 48f, visorY),
+            size = Size(34f, 6f)
+        )
+        val eyeX = if (facingRight) bx + 74f else bx + 52f
+        drawCircle(Color.White, radius = 2.5f, center = Offset(eyeX, visorY + 3f))
+
+        // Furnace chest around the crucible core (the weak point socket).
+        val furnaceX = bx + w / 2f - 22f
+        val furnaceY = by + 62f + bob
+        drawRect(COLOR_GOLEM_FURNACE, topLeft = Offset(furnaceX, furnaceY), size = Size(44f, 46f))
+        val corePulse = (sin(t * 4f) * 0.25f + 0.65f).coerceIn(0f, 1f) * (if (telegraphing) 1.4f else 1f)
+        drawCircle(
+            COLOR_GOLEM_MOLTEN.copy(alpha = (corePulse * 0.5f).coerceIn(0f, 1f)),
+            radius = 14f,
+            center = Offset(bx + w / 2f, furnaceY + 23f)
+        )
+        drawCircle(
+            COLOR_GOLEM_MOLTEN_HOT.copy(alpha = (corePulse * 0.8f).coerceIn(0f, 1f)),
+            radius = 7f,
+            center = Offset(bx + w / 2f, furnaceY + 23f)
+        )
+        // Furnace grate bars.
+        var barY = furnaceY + 6f
+        while (barY < furnaceY + 44f) {
+            drawRect(COLOR_GOLEM_DARK, topLeft = Offset(furnaceX + 3f, barY), size = Size(38f, 3f))
+            barY += 9f
+        }
+        drawRect(
+            COLOR_GOLEM_RIVET.copy(alpha = 0.6f),
+            topLeft = Offset(furnaceX, furnaceY),
+            size = Size(44f, 46f),
+            style = Stroke(width = 1.5f)
+        )
+
+        // Molten seams across the hull — brighter as phases advance.
+        val seamAlphaF = seamAlpha * (0.75f + 0.25f * sin(t * 3f))
+        drawLine(seamColor.copy(alpha = seamAlphaF), Offset(bx + 20f, by + 44f + bob), Offset(bx + 46f, by + 44f + bob), strokeWidth = 2f)
+        drawLine(seamColor.copy(alpha = seamAlphaF), Offset(bx + w - 46f, by + 52f + bob), Offset(bx + w - 20f, by + 52f + bob), strokeWidth = 2f)
+        drawLine(seamColor.copy(alpha = seamAlphaF), Offset(bx + 16f, by + 96f + bob), Offset(bx + 40f, by + 96f + bob), strokeWidth = 2f)
+        drawLine(seamColor.copy(alpha = seamAlphaF), Offset(bx + w - 40f, by + 90f + bob), Offset(bx + w - 16f, by + 90f + bob), strokeWidth = 2f)
+
+        // Hull rivets.
+        var rv = bx + 14f
+        while (rv < bx + w - 10f) {
+            drawCircle(COLOR_GOLEM_RIVET.copy(alpha = 0.55f), radius = 1.8f, center = Offset(rv, by + 114f + bob))
+            rv += 18f
         }
     }
 }
