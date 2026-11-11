@@ -1,6 +1,10 @@
 package com.skalagrimmo.crucibleofruin
 
 import com.skalagrimmo.crucibleofruin.game.EnemyArchetype
+import com.skalagrimmo.crucibleofruin.game.GateTrigger
+import com.skalagrimmo.crucibleofruin.game.LevelRoom
+import com.skalagrimmo.crucibleofruin.game.RoomDoor
+import com.skalagrimmo.crucibleofruin.game.TiledBossEncounter
 import com.skalagrimmo.crucibleofruin.game.GameLevelFactory
 import com.skalagrimmo.crucibleofruin.game.Hazard
 import com.skalagrimmo.crucibleofruin.game.HazardType
@@ -39,6 +43,10 @@ class TiledLevelLoaderTest {
         assertEquals("Unexpected breakable count", 2, section.breakables.size)
         // Stage 10a (#69): the shipped section's map-level bounds flow in.
         assertEquals(1920f, section.width, 0f)
+        // Stage 10b (#69): the prototype section carries no meta layers yet.
+        assertTrue(section.rooms.isEmpty())
+        assertTrue(section.gateTriggers.isEmpty())
+        assertTrue(section.bossEncounters.isEmpty())
         assertEquals(540f, section.height, 0f)
 
         assertTrue(
@@ -382,6 +390,226 @@ class TiledLevelLoaderTest {
         assertTrue(exception.message!!.contains("levelWidth"))
     }
 
+    @Test
+    fun roomsAndDoorsParseIntoTheRoomGraph() {
+        // Stage 10b (#69): rooms are world rectangles keyed by roomId; door
+        // objects anchor a transition at a world point and attach to the
+        // room named by fromRoomId — both sides declare it, as the factory does.
+        val tmx = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <map orientation="orthogonal" width="40" height="20" tilewidth="16" tileheight="16">
+              <objectgroup name="Rooms">
+                <object name="hall" x="0" y="0" width="600" height="540">
+                  <properties>
+                    <property name="roomId" value="bastion_entry"/>
+                    <property name="roomName" value="Bastion Entry Hall"/>
+                  </properties>
+                </object>
+                <object name="ascent" x="600" y="0" width="600" height="540">
+                  <properties>
+                    <property name="roomId" value="bastion_ascent"/>
+                    <property name="roomName" value="The Bastion Ascent"/>
+                  </properties>
+                </object>
+              </objectgroup>
+              <objectgroup name="Doors">
+                <object name="door_out" x="600" y="460" width="8" height="80">
+                  <properties>
+                    <property name="fromRoomId" value="bastion_entry"/>
+                    <property name="toRoomId" value="bastion_ascent"/>
+                  </properties>
+                </object>
+                <object name="door_back" x="600" y="460" width="8" height="80">
+                  <properties>
+                    <property name="fromRoomId" value="bastion_ascent"/>
+                    <property name="toRoomId" value="bastion_entry"/>
+                  </properties>
+                </object>
+              </objectgroup>
+            </map>
+        """.trimIndent()
+
+        val section = TiledLevelLoader.load(ByteArrayInputStream(tmx.toByteArray(Charsets.UTF_8)))
+
+        assertEquals(2, section.rooms.size)
+        val entry = section.rooms.first { it.id == "bastion_entry" }
+        assertEquals("Bastion Entry Hall", entry.name)
+        assertEquals(600f, entry.w, 0f)
+        assertEquals(540f, entry.h, 0f)
+        assertEquals(
+            listOf(RoomDoor(x = 600f, y = 460f, toRoomId = "bastion_ascent")),
+            entry.doors
+        )
+        val ascent = section.rooms.first { it.id == "bastion_ascent" }
+        assertEquals(
+            listOf(RoomDoor(x = 600f, y = 460f, toRoomId = "bastion_entry")),
+            ascent.doors
+        )
+    }
+
+    @Test
+    fun unknownDoorRoomFailsFast() {
+        // Stage 10b (#69): a door into a room the layer never declares must
+        // fail at load time, not on the world map.
+        val tmx = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <map orientation="orthogonal" width="40" height="20" tilewidth="16" tileheight="16">
+              <objectgroup name="Rooms">
+                <object name="hall" x="0" y="0" width="600" height="540">
+                  <properties>
+                    <property name="roomId" value="bastion_entry"/>
+                    <property name="roomName" value="Bastion Entry Hall"/>
+                  </properties>
+                </object>
+              </objectgroup>
+              <objectgroup name="Doors">
+                <object name="door_nowhere" x="600" y="460" width="8" height="80">
+                  <properties>
+                    <property name="fromRoomId" value="bastion_entry"/>
+                    <property name="toRoomId" value="missing_room"/>
+                  </properties>
+                </object>
+              </objectgroup>
+            </map>
+        """.trimIndent()
+
+        val exception = loadExpectingFailure(tmx)
+        assertTrue(exception.message!!.contains("missing_room"))
+    }
+
+    @Test
+    fun duplicateRoomIdFailsFast() {
+        val tmx = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <map orientation="orthogonal" width="40" height="20" tilewidth="16" tileheight="16">
+              <objectgroup name="Rooms">
+                <object name="hall_a" x="0" y="0" width="300" height="540">
+                  <properties>
+                    <property name="roomId" value="bastion_entry"/>
+                    <property name="roomName" value="Bastion Entry Hall"/>
+                  </properties>
+                </object>
+                <object name="hall_b" x="300" y="0" width="300" height="540">
+                  <properties>
+                    <property name="roomId" value="bastion_entry"/>
+                    <property name="roomName" value="Impostor Hall"/>
+                  </properties>
+                </object>
+              </objectgroup>
+            </map>
+        """.trimIndent()
+
+        val exception = loadExpectingFailure(tmx)
+        assertTrue(exception.message!!.contains("bastion_entry"))
+    }
+
+    @Test
+    fun gateTriggersParseIntoUnlockRectangles() {
+        // Stage 10b (#69): the GateTriggers layer mirrors the Stage 8a
+        // shortcut unlock semantics.
+        val tmx = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <map orientation="orthogonal" width="40" height="20" tilewidth="16" tileheight="16">
+              <objectgroup name="GateTriggers">
+                <object name="gate_unlock" x="5800" y="540" width="80" height="140">
+                  <properties>
+                    <property name="gateId" value="garrison_gate"/>
+                  </properties>
+                </object>
+              </objectgroup>
+            </map>
+        """.trimIndent()
+
+        val section = TiledLevelLoader.load(ByteArrayInputStream(tmx.toByteArray(Charsets.UTF_8)))
+
+        assertEquals(
+            listOf(GateTrigger(gateId = "garrison_gate", x = 5800f, y = 540f, w = 80f, h = 140f)),
+            section.gateTriggers
+        )
+    }
+
+    @Test
+    fun gateTriggerWithoutGateIdFailsFast() {
+        val tmx = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <map orientation="orthogonal" width="40" height="20" tilewidth="16" tileheight="16">
+              <objectgroup name="GateTriggers">
+                <object name="anonymous_trigger" x="5800" y="540" width="80" height="140"/>
+              </objectgroup>
+            </map>
+        """.trimIndent()
+
+        val exception = loadExpectingFailure(tmx)
+        assertTrue(exception.message!!.contains("gateId"))
+    }
+
+    @Test
+    fun bossLayerParsesTheEncounterChain() {
+        // Stage 10b (#69): the first Bosses object is the opening encounter,
+        // the rest queue behind it in layer order; the object position is the
+        // spawn point and triggerMaxY defaults to the corridor height.
+        val tmx = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <map orientation="orthogonal" width="40" height="20" tilewidth="16" tileheight="16">
+              <objectgroup name="Bosses">
+                <object name="siege_golem" x="3500" y="260" width="130" height="170">
+                  <properties>
+                    <property name="boss" value="siege_golem"/>
+                    <property name="triggerX" value="3200"/>
+                    <property name="triggerMaxY" value="540"/>
+                  </properties>
+                </object>
+                <object name="chimera" x="5750" y="360" width="200" height="180">
+                  <properties>
+                    <property name="boss" value="chimera"/>
+                    <property name="triggerX" value="5340"/>
+                  </properties>
+                </object>
+              </objectgroup>
+            </map>
+        """.trimIndent()
+
+        val section = TiledLevelLoader.load(ByteArrayInputStream(tmx.toByteArray(Charsets.UTF_8)))
+
+        assertEquals(
+            listOf(
+                TiledBossEncounter(
+                    bossId = "siege_golem",
+                    spawnX = 3500f,
+                    spawnY = 260f,
+                    triggerX = 3200f,
+                    triggerMaxY = 540f
+                ),
+                TiledBossEncounter(
+                    bossId = "chimera",
+                    spawnX = 5750f,
+                    spawnY = 360f,
+                    triggerX = 5340f,
+                    triggerMaxY = 540f
+                )
+            ),
+            section.bossEncounters
+        )
+    }
+
+    @Test
+    fun bossWithoutArchetypeFailsFast() {
+        val tmx = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <map orientation="orthogonal" width="40" height="20" tilewidth="16" tileheight="16">
+              <objectgroup name="Bosses">
+                <object name="nameless" x="3500" y="260" width="130" height="170">
+                  <properties>
+                    <property name="triggerX" value="3200"/>
+                  </properties>
+                </object>
+              </objectgroup>
+            </map>
+        """.trimIndent()
+
+        val exception = loadExpectingFailure(tmx)
+        assertTrue(exception.message!!.contains("'boss'"))
+    }
     private fun loadExpectingFailure(tmx: String): IllegalArgumentException {
         val exception = try {
             TiledLevelLoader.load(ByteArrayInputStream(tmx.toByteArray(Charsets.UTF_8)))
