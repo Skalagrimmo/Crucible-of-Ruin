@@ -110,7 +110,21 @@ fun GameScreen(
             // Stage 10d (#69): the engine loads the live full-world TMX asset
             // through the Tiled pipeline. The source goes in before the explicit
             // initLevel() — the engine's own init{} already ran on the fallback.
-            levelSource = { LiveLevelLoader.loadFromAssets(context.assets) }
+            levelSource = {
+                // Stage 10d hotfix (#69): a broken live asset must never take
+                // down New Game — fall back to the parity-tested factory and
+                // scream into logcat so the root cause is still visible.
+                try {
+                    LiveLevelLoader.loadFromAssets(context.assets)
+                } catch (failure: Exception) {
+                    android.util.Log.e(
+                        "LiveLevelLoader",
+                        "Live TMX load failed — falling back to the parity-tested factory",
+                        failure
+                    )
+                    GameLevelFactory.create()
+                }
+            }
             initLevel()
             setStartCheckpoint(startCheckpoint)
             this.haptics = haptics

@@ -180,7 +180,6 @@ internal object TiledLevelLoader {
     internal fun createHardenedFactory(): DocumentBuilderFactory =
         DocumentBuilderFactory.newInstance().apply {
             isNamespaceAware = false
-            isXIncludeAware = false
             isExpandEntityReferences = false
             applyHardeningFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true)
             applyHardeningFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
@@ -188,7 +187,12 @@ internal object TiledLevelLoader {
             applyHardeningFeature("http://xml.org/sax/features/external-parameter-entities", false)
         }
 
-    /** Applies one XXE-hardening feature, tolerating parsers that reject it. */
+    /**
+     * Applies one XXE-hardening feature, tolerating parsers that reject it.
+     * Android's harmony factory throws ParserConfigurationException for unknown
+     * features; its base-class XInclude toggle can throw
+     * UnsupportedOperationException — both are skipped, never fatal.
+     */
     internal fun DocumentBuilderFactory.applyHardeningFeature(name: String, value: Boolean) {
         try {
             setFeature(name, value)
@@ -196,6 +200,8 @@ internal object TiledLevelLoader {
             // Android's built-in parser rejects unknown features; it also has
             // no external-entity surface for DocumentBuilder parses of our
             // trusted asset maps, so skipping is safe.
+        } catch (_: UnsupportedOperationException) {
+            // Same policy for runtime-unsupported toggles.
         }
     }
 
