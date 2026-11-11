@@ -320,7 +320,13 @@ typealias BossEntity = BaseBoss
 
 class GameEngine(
     /** Seed of the gameplay RNG (Stage 6a, #38): same seed = same drops, procs, and AI rolls. */
-    val rngSeed: Long = System.nanoTime()
+    val rngSeed: Long = System.nanoTime(),
+    /**
+     * Stage 10d (#69): where initLevel() pulls its layout from. GameScreen
+     * installs the live TMX asset loader; callers without a source (tests,
+     * previews) fall back to GameLevelFactory.
+     */
+    val levelSource: (() -> GameLevelLayout)? = null
 ) {
     companion object {
         /** Fixed simulation tick (Stage 1, #33): 1/60 s, immune to the frame-rate cap. */
@@ -533,7 +539,12 @@ class GameEngine(
         timeDebt = 0f
     }
 
-    fun initLevel() = initLevel(GameLevelFactory.create())
+    /**
+     * Stage 10d (#69): the live crucible_of_ruin.tmx asset is the default
+     * level source; GameLevelFactory remains the fallback for callers that
+     * install no source.
+     */
+    fun initLevel() = initLevel(levelSource?.invoke() ?: GameLevelFactory.create())
 
     /**
      * Stage 7a (#51): installs any layout, not only the factory's stock one.
