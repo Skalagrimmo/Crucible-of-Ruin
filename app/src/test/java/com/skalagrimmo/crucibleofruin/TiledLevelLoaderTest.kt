@@ -6,9 +6,11 @@ import com.skalagrimmo.crucibleofruin.game.Hazard
 import com.skalagrimmo.crucibleofruin.game.HazardType
 import com.skalagrimmo.crucibleofruin.game.Platform
 import com.skalagrimmo.crucibleofruin.game.PlatformCollision
+import com.skalagrimmo.crucibleofruin.game.PlatformMotion
 import com.skalagrimmo.crucibleofruin.game.PlatformStyle
 import com.skalagrimmo.crucibleofruin.game.TiledLevelLoader
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -35,6 +37,9 @@ class TiledLevelLoaderTest {
         assertEquals("Unexpected hazard count", 2, section.hazards.size)
         assertEquals("Unexpected enemy count", 5, section.enemies.size)
         assertEquals("Unexpected breakable count", 2, section.breakables.size)
+        // Stage 10a (#69): the shipped section's map-level bounds flow in.
+        assertEquals(1920f, section.width, 0f)
+        assertEquals(540f, section.height, 0f)
 
         assertTrue(
             "Starting floor geometry must retain the current world coordinates",
@@ -129,5 +134,262 @@ class TiledLevelLoaderTest {
             PlatformCollision.ONE_WAY,
             section.platforms[2].collision
         )
+    }
+
+    @Test
+    fun motionPropertiesBuildTheDeterministicPingPongMotion() {
+        // Stage 10a (#69): motionDx/motionDy/motionSpeed build the Stage 6c
+        // PlatformMotion with the object rectangle as its base; an explicit
+        // motionStartPhase flows through and the default is 0.
+        val tmx = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <map orientation="orthogonal" width="40" height="20" tilewidth="16" tileheight="16">
+              <objectgroup name="Platforms">
+                <object name="elevator" x="610" y="330" width="60" height="20">
+                  <properties>
+                    <property name="style" value="IRON_GIRDER"/>
+                    <property name="oneWay" value="true"/>
+                    <property name="motionDx" value="0"/>
+                    <property name="motionDy" value="120"/>
+                    <property name="motionSpeed" value="60"/>
+                  </properties>
+                </object>
+                <object name="phased_ferry" x="2800" y="250" width="80" height="20">
+                  <properties>
+                    <property name="style" value="IRON_GIRDER"/>
+                    <property name="oneWay" value="true"/>
+                    <property name="motionDx" value="60"/>
+                    <property name="motionDy" value="0"/>
+                    <property name="motionSpeed" value="60"/>
+                    <property name="motionStartPhase" value="0.25"/>
+                  </properties>
+                </object>
+              </objectgroup>
+            </map>
+        """.trimIndent()
+
+        val section = TiledLevelLoader.load(ByteArrayInputStream(tmx.toByteArray(Charsets.UTF_8)))
+
+        assertEquals(2, section.platforms.size)
+        assertEquals(
+            "The object rectangle is the motion base; the properties feed the ping-pong",
+            PlatformMotion(baseX = 610f, baseY = 330f, dx = 0f, dy = 120f, speed = 60f),
+            section.platforms[0].motion
+        )
+        assertEquals(
+            "An explicit motionStartPhase flows through",
+            PlatformMotion(baseX = 2800f, baseY = 250f, dx = 60f, dy = 0f, speed = 60f, startPhase = 0.25f),
+            section.platforms[1].motion
+        )
+    }
+
+    @Test
+    fun partialMotionPropertiesFailFast() {
+        // Stage 10a (#69): declaring only part of the motion triple must fail
+        // loudly instead of silently producing a static platform.
+        val tmx = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <map orientation="orthogonal" width="40" height="20" tilewidth="16" tileheight="16">
+              <objectgroup name="Platforms">
+                <object name="broken_elevator" x="0" y="330" width="60" height="20">
+                  <properties>
+                    <property name="style" value="IRON_GIRDER"/>
+                    <property name="motionDx" value="0"/>
+                    <property name="motionDy" value="120"/>
+                  </properties>
+                </object>
+              </objectgroup>
+            </map>
+        """.trimIndent()
+
+        val exception = loadExpectingFailure(tmx)
+        assertTrue(
+            "The error must name the full motion triple",
+            exception.message!!.contains("motionDx, motionDy and motionSpeed")
+        )
+    }
+
+    @Test
+    fun nonPositiveMotionSpeedFailsFast() {
+        // Stage 10a (#69): a degenerate speed would zero out the period and
+        // freeze the platform at its base — reject it at load time.
+        val tmx = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <map orientation="orthogonal" width="40" height="20" tilewidth="16" tileheight="16">
+              <objectgroup name="Platforms">
+                <object name="frozen_ferry" x="0" y="330" width="60" height="20">
+                  <properties>
+                    <property name="style" value="IRON_GIRDER"/>
+                    <property name="motionDx" value="0"/>
+                    <property name="motionDy" value="120"/>
+                    <property name="motionSpeed" value="0"/>
+                  </properties>
+                </object>
+              </objectgroup>
+            </map>
+        """.trimIndent()
+
+        val exception = loadExpectingFailure(tmx)
+        assertTrue(exception.message!!.contains("motionSpeed"))
+    }
+
+    @Test
+    fun gateIdPropertyFlowsIntoThePlatform() {
+        // Stage 10a (#69): the sealed shortcut gate carries its trigger
+        // identity; plain platforms keep a null gateId.
+        val tmx = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <map orientation="orthogonal" width="40" height="20" tilewidth="16" tileheight="16">
+              <objectgroup name="Platforms">
+                <object name="keep_gate" x="5700" y="880" width="30" height="120">
+                  <properties>
+                    <property name="style" value="IRON_GATE"/>
+                    <property name="gateId" value="garrison_gate"/>
+                  </properties>
+                </object>
+                <object name="plain_floor" x="0" y="460" width="600" height="80">
+                  <properties>
+                    <property name="style" value="STONE"/>
+                  </properties>
+                </object>
+              </objectgroup>
+            </map>
+        """.trimIndent()
+
+        val section = TiledLevelLoader.load(ByteArrayInputStream(tmx.toByteArray(Charsets.UTF_8)))
+
+        assertEquals(2, section.platforms.size)
+        assertEquals("garrison_gate", section.platforms[0].gateId)
+        assertEquals(PlatformCollision.SOLID, section.platforms[0].collision)
+        assertNull("A platform without gateId stays null", section.platforms[1].gateId)
+    }
+
+    @Test
+    fun collisionPropertyOverridesOneWayAndTheStyleDefault() {
+        // Stage 10a (#69): collision=OPEN reproduces the factory's boss-gate
+        // pattern; an explicit collision beats the oneWay shorthand; a missing
+        // property keeps the style default.
+        val tmx = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <map orientation="orthogonal" width="40" height="20" tilewidth="16" tileheight="16">
+              <objectgroup name="Platforms">
+                <object name="open_boss_gate" x="0" y="80" width="30" height="350">
+                  <properties>
+                    <property name="style" value="BOSS_GATE"/>
+                    <property name="collision" value="OPEN"/>
+                  </properties>
+                </object>
+                <object name="collision_beats_oneWay" x="100" y="80" width="30" height="350">
+                  <properties>
+                    <property name="style" value="BOSS_GATE"/>
+                    <property name="oneWay" value="true"/>
+                    <property name="collision" value="SOLID"/>
+                  </properties>
+                </object>
+                <object name="default_boss_gate" x="200" y="80" width="30" height="350">
+                  <properties>
+                    <property name="style" value="BOSS_GATE"/>
+                  </properties>
+                </object>
+              </objectgroup>
+            </map>
+        """.trimIndent()
+
+        val section = TiledLevelLoader.load(ByteArrayInputStream(tmx.toByteArray(Charsets.UTF_8)))
+
+        assertEquals(3, section.platforms.size)
+        assertEquals(
+            "collision=OPEN must reproduce the factory's boss-gate pattern",
+            PlatformCollision.OPEN,
+            section.platforms[0].collision
+        )
+        assertEquals(
+            "An explicit collision beats the oneWay shorthand",
+            PlatformCollision.SOLID,
+            section.platforms[1].collision
+        )
+        assertEquals(
+            "A missing collision property keeps the style default",
+            PlatformCollision.SOLID,
+            section.platforms[2].collision
+        )
+    }
+
+    @Test
+    fun invalidCollisionValueFailsFast() {
+        val tmx = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <map orientation="orthogonal" width="40" height="20" tilewidth="16" tileheight="16">
+              <objectgroup name="Platforms">
+                <object name="wet_gate" x="0" y="80" width="30" height="350">
+                  <properties>
+                    <property name="style" value="BOSS_GATE"/>
+                    <property name="collision" value="WATER"/>
+                  </properties>
+                </object>
+              </objectgroup>
+            </map>
+        """.trimIndent()
+
+        val exception = loadExpectingFailure(tmx)
+        assertTrue(exception.message!!.contains("'collision'"))
+    }
+
+    @Test
+    fun mapLevelBoundsFlowIntoTheSection() {
+        // Stage 10a (#69): levelWidth/levelHeight map properties become the
+        // section bounds; a map without them keeps the stock corridor defaults.
+        val withBounds = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <map orientation="orthogonal" width="40" height="20" tilewidth="16" tileheight="16">
+              <properties>
+                <property name="levelWidth" type="int" value="1920"/>
+                <property name="levelHeight" type="int" value="1080"/>
+              </properties>
+              <objectgroup name="Platforms"/>
+            </map>
+        """.trimIndent()
+
+        val section = TiledLevelLoader.load(ByteArrayInputStream(withBounds.toByteArray(Charsets.UTF_8)))
+        assertEquals(1920f, section.width, 0f)
+        assertEquals(1080f, section.height, 0f)
+
+        val withoutBounds = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <map orientation="orthogonal" width="40" height="20" tilewidth="16" tileheight="16">
+              <objectgroup name="Platforms"/>
+            </map>
+        """.trimIndent()
+
+        val fallback = TiledLevelLoader.load(ByteArrayInputStream(withoutBounds.toByteArray(Charsets.UTF_8)))
+        assertEquals(6200f, fallback.width, 0f)
+        assertEquals(540f, fallback.height, 0f)
+    }
+
+    @Test
+    fun invalidMapBoundsFailFast() {
+        val withBadBounds = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <map orientation="orthogonal" width="40" height="20" tilewidth="16" tileheight="16">
+              <properties>
+                <property name="levelWidth" type="int" value="wide"/>
+              </properties>
+              <objectgroup name="Platforms"/>
+            </map>
+        """.trimIndent()
+
+        val exception = loadExpectingFailure(withBadBounds)
+        assertTrue(exception.message!!.contains("levelWidth"))
+    }
+
+    private fun loadExpectingFailure(tmx: String): IllegalArgumentException {
+        val exception = try {
+            TiledLevelLoader.load(ByteArrayInputStream(tmx.toByteArray(Charsets.UTF_8)))
+            null
+        } catch (expected: IllegalArgumentException) {
+            expected
+        }
+        assertTrue("Expected an IllegalArgumentException for malformed TMX", exception != null)
+        return exception!!
     }
 }
