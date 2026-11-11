@@ -248,7 +248,8 @@ internal object GameLevelFactory {
         // ground run through the Bastion Ascent. The only way over is the
         // girder ladder (800 -> 1000) and a jump from the top girder onto
         // the wall cap, through the lurker and cherub holding the climb.
-        platforms.add(Platform(1140f, 240f, 40f, 220f, PlatformStyle.STONE))        platforms.add(Platform(1200f, 420f, 350f, 120f, PlatformStyle.STONE))
+        platforms.add(Platform(1140f, 240f, 40f, 220f, PlatformStyle.STONE))
+        platforms.add(Platform(1200f, 420f, 350f, 120f, PlatformStyle.STONE))
 
         platforms.add(Platform(1600f, 400f, 320f, 140f, PlatformStyle.STONE))
 
@@ -259,7 +260,8 @@ internal object GameLevelFactory {
         platforms.add(Platform(1690f, 330f, 100f, 20f, PlatformStyle.STONE_LEDGE, PlatformCollision.ONE_WAY))
         platforms.add(Platform(1810f, 250f, 100f, 20f, PlatformStyle.STONE_LEDGE, PlatformCollision.ONE_WAY))
         platforms.add(Platform(1880f, 180f, 40f, 220f, PlatformStyle.STONE))
-        platforms.add(Platform(1940f, 310f, 90f, 20f, PlatformStyle.STONE_LEDGE, PlatformCollision.ONE_WAY))        hazards.add(Hazard(1550f, 510f, 50f, 30f, HazardType.SPIKES))
+        platforms.add(Platform(1940f, 310f, 90f, 20f, PlatformStyle.STONE_LEDGE, PlatformCollision.ONE_WAY))
+        hazards.add(Hazard(1550f, 510f, 50f, 30f, HazardType.SPIKES))
 
         enemies.add(EnemyEntity(420f, 410f, EnemyArchetype.LURKER, 120f))
         enemies.add(EnemyEntity(920f, 410f, EnemyArchetype.LURKER, 140f))
@@ -272,7 +274,8 @@ internal object GameLevelFactory {
         breakables.add(BreakableUrn(380f, 296f, dropType = "health"))
 
         // Stage 11a (#77): the ascent wall cap's reward.
-        breakables.add(BreakableUrn(1150f, 216f, dropType = "flask"))        breakables.add(BreakableUrn(1240f, 396f, dropType = "flask"))
+        breakables.add(BreakableUrn(1150f, 216f, dropType = "flask"))
+        breakables.add(BreakableUrn(1240f, 396f, dropType = "flask"))
 
         // Stage 11a (#77): the ramparts wall cap's reward.
         breakables.add(BreakableUrn(1890f, 156f, dropType = "health"))
@@ -328,7 +331,8 @@ internal object GameLevelFactory {
         // cherub's patrol before the jump over the acid to the far floor.
         platforms.add(Platform(3840f, 350f, 100f, 20f, PlatformStyle.STONE_LEDGE, PlatformCollision.ONE_WAY))
         platforms.add(Platform(3960f, 240f, 40f, 200f, PlatformStyle.STONE))
-        platforms.add(Platform(4020f, 330f, 60f, 20f, PlatformStyle.STONE_LEDGE, PlatformCollision.ONE_WAY))        hazards.add(Hazard(4000f, 500f, 80f, 40f, HazardType.ACID))
+        platforms.add(Platform(4020f, 330f, 60f, 20f, PlatformStyle.STONE_LEDGE, PlatformCollision.ONE_WAY))
+        hazards.add(Hazard(4000f, 500f, 80f, 40f, HazardType.ACID))
         platforms.add(Platform(4080f, 420f, 240f, 120f, PlatformStyle.STONE))
         enemies.add(EnemyEntity(4140f, 360f, EnemyArchetype.CULTIST, 0f))
 
