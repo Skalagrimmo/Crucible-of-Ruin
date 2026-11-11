@@ -37,7 +37,7 @@ class LiveLevelLoaderTest {
     @Test
     fun liveTmxResolvesIntoTheEngineLayout() {
         val layout = loadLiveLayout()
-        assertEquals(66, layout.platforms.size)
+        assertEquals(65, layout.platforms.size)
         assertEquals(13, layout.hazards.size)
         assertEquals(20, layout.enemies.size)
         assertEquals(17, layout.breakables.size)
@@ -99,7 +99,7 @@ class LiveLevelLoaderTest {
         }
         assertEquals(6200f, engine.levelWidth, 0f)
         assertEquals(1080f, engine.levelHeight, 0f)
-        assertEquals(66, engine.platforms.size)
+        assertEquals(65, engine.platforms.size)
         assertEquals(20, engine.enemies.size)
         assertTrue(engine.boss is SiegeGolemBoss)
     }
