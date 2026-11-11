@@ -4,6 +4,7 @@ import org.w3c.dom.Element
 import java.io.InputStream
 import javax.xml.XMLConstants
 import javax.xml.parsers.DocumentBuilderFactory
+import javax.xml.parsers.ParserConfigurationException
 
 /**
  * Editable slice of a Tiled map. Stage 10a (#69) extended the prototype
@@ -54,15 +55,7 @@ internal data class TiledBossEncounter(
  */
 internal object TiledLevelLoader {
     fun load(input: InputStream): TiledLevelSection {
-        val factory = DocumentBuilderFactory.newInstance().apply {
-            isNamespaceAware = false
-            isXIncludeAware = false
-            isExpandEntityReferences = false
-            setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true)
-            setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
-            setFeature("http://xml.org/sax/features/external-general-entities", false)
-            setFeature("http://xml.org/sax/features/external-parameter-entities", false)
-        }
+        val factory = createHardenedFactory()
         val document = factory.newDocumentBuilder().parse(input)
         val map = document.documentElement
         require(map.tagName == "map") { "Expected a Tiled TMX <map> root element" }
@@ -172,6 +165,38 @@ internal object TiledLevelLoader {
             gateTriggers = gateTriggers,
             bossEncounters = bossEncounters
         )
+    }
+
+    /**
+     * Stage 10d hotfix (#69): a parser factory hardened against XXE. The JVM's
+     * Xerces implementation supports every hardening feature, but Android's
+     * harmony DocumentBuilderFactoryImpl throws a ParserConfigurationException
+     * for any feature it doesn't know — which crashed the live pipeline on
+     * device the moment the game booted the TMX asset. The features are
+     * therefore best-effort: the platform parser has no external-entity
+     * expansion surface for our trusted asset maps, so an unsupported feature
+     * is skipped instead of crashing the game.
+     */
+    internal fun createHardenedFactory(): DocumentBuilderFactory =
+        DocumentBuilderFactory.newInstance().apply {
+            isNamespaceAware = false
+            isXIncludeAware = false
+            isExpandEntityReferences = false
+            applyHardeningFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true)
+            applyHardeningFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
+            applyHardeningFeature("http://xml.org/sax/features/external-general-entities", false)
+            applyHardeningFeature("http://xml.org/sax/features/external-parameter-entities", false)
+        }
+
+    /** Applies one XXE-hardening feature, tolerating parsers that reject it. */
+    internal fun DocumentBuilderFactory.applyHardeningFeature(name: String, value: Boolean) {
+        try {
+            setFeature(name, value)
+        } catch (_: ParserConfigurationException) {
+            // Android's built-in parser rejects unknown features; it also has
+            // no external-entity surface for DocumentBuilder parses of our
+            // trusted asset maps, so skipping is safe.
+        }
     }
 
     private fun objectsInLayer(

@@ -620,4 +620,34 @@ class TiledLevelLoaderTest {
         assertTrue("Expected an IllegalArgumentException for malformed TMX", exception != null)
         return exception!!
     }
+
+    /**
+     * Stage 10d hotfix (#69): regression for the on-device crash. Android's
+     * harmony parser factory throws a ParserConfigurationException on the
+     * first hardening feature, while the JVM's Xerces accepts them all — so
+     * the loader must tolerate the rejection instead of crashing the live
+     * pipeline at New Game.
+     */
+    @Test
+    fun hardeningSurvivesTheAndroidParser() {
+        val androidFactory = try {
+            Class
+                .forName("org.apache.harmony.xml.parsers.DocumentBuilderFactoryImpl")
+                .getDeclaredConstructor()
+                .newInstance() as javax.xml.parsers.DocumentBuilderFactory
+        } catch (notOnThisClasspath: ClassNotFoundException) {
+            return // No Android parser on this classpath — nothing to tolerate.
+        }
+        try {
+            androidFactory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
+            return // This android-all accepts the feature — nothing to tolerate.
+        } catch (expected: javax.xml.parsers.ParserConfigurationException) {
+            // The exact throw that crashed the device pipeline.
+        }
+        with(TiledLevelLoader) {
+            androidFactory.applyHardeningFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
+            androidFactory.applyHardeningFeature(javax.xml.XMLConstants.FEATURE_SECURE_PROCESSING, true)
+            androidFactory.applyHardeningFeature("http://xml.org/sax/features/external-general-entities", false)
+        }
+    }
 }
