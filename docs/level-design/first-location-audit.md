@@ -134,3 +134,56 @@ For Crucible of Ruin, translate these ideas into a side-scrolling Gothic-industr
 - Keep the live TMX and fallback factory aligned when changing level layout.
 - Treat visible decoration and collision geometry as separate layers: bridges, pipes, braces, and machinery may enrich the silhouette without silently changing a landing surface.
 - Any new route must have a clear entry, exit, purpose, and camera-readable landing.
+
+## 7. Additional player-reported defects and source-level verification (2026-11-18)
+
+The current playthrough has also exposed three high-priority problems beyond the general platform spacing audit:
+- one checkpoint appears embedded in / misaligned with its platform;
+- the first boss occupies the same choke-point complex as the lift that leads to the lower level;
+- the lower tier is spatially chaotic and does not yet read as a deliberately designed route.
+
+### 7.1 Checkpoint anchor and sprite overlap
+
+The engine currently hardcodes five checkpoints, rather than loading their coordinates from TMX. The lower-tier checkpoints are:
+- Undercroft: `Checkpoint(3, x=3560, y=956)`
+- Iron Garrison: `Checkpoint(4, x=5850, y=956)`
+
+The player collision body is `26 × 44 px`. Both lower checkpoints therefore put the player's feet exactly at `y=1000`, matching the top of the lower floor. That is not a physical AABB penetration by itself.
+
+However, `GameRenderer` draws a `24 × 50 px` checkpoint texture at `(cp.x - 12, cp.y - 38)`. Its rectangle is thus `x=[cp.x-12, cp.x+12]`, `y=[cp.y-38, cp.y+12]`. The player respawns at `(cp.x, cp.y)`, with a 26 × 44 px body, so the checkpoint image and player body overlap by 12 px vertically and 12 px horizontally. The player is drawn later, so the checkpoint marker can be partially obscured by the respawning character.
+
+**Audit action:** treat the player-reported checkpoint/platform issue as confirmed UX/anchor misalignment, but do not yet claim the player collision body is buried in the floor. Check the marker's intended ground-contact point and re-anchor it relative to the platform top. Also move the checkpoint respawn position to a safe, tested standing point if its current spot is visually or mechanically obstructed. Because checkpoint coordinates live in `GameEngine.checkpoints`, a TMX layout revision alone will not fix them.
+
+### 7.2 The first boss and the lower-level lift share one choke-point complex
+
+Live TMX and engine data show:
+- First boss: `siege_golem` spawn `(3500, 260)`, dimensions `130 × 170`; its feet align with the upper Gallery floor at `y=430`.
+- Upper Gallery floor is split into `x=3100..3360` and `x=3450..3750`, leaving a 90 px shaft opening.
+- The vertical lift is `x=3370, y=960, w=70, h=20`, with `dy=-500` and speed `110 px/s`. It travels between `y=960` and `y=460`, a 500 px vertical stroke.
+- The lift is horizontally inside that 90 px gap, with 10 px clearance to either upper floor section.
+- At its upper endpoint the lift top is `y=460`, 30 px below the upper floor top `y=430`. At its lower endpoint its top is `y=960`, 40 px above the lower floor top `y=1000`.
+- The Golem encounter trigger is `x=3200` with `triggerMaxY=540`, so it arms while the player is on the upper band, before the player reaches the lift shaft.
+
+This means the first boss, its arena, and the vertical transition into the lower tier all occupy one shared spatial choke point. The boss is placed immediately to the right of the lift and the split floor; the lift's upper landing does not align flush with the adjacent floor. The 10 px lateral clearances and 30 px height step may be intentional traversal challenges, but their combination with a boss encounter can make the route feel like the boss has been inserted into the elevator entrance.
+
+**Audit action:** redesign and test this as one connected set piece, not as three unrelated objects. Decide what the boss is meant to guard, where the player stands during the fight, whether the lift can be used during the encounter, and how the player safely reaches the lift after the fight. Make the route into the Undercroft readable before and after the encounter. Do not simply move the boss or lift by intuition before testing the current build.
+
+### 7.3 Lower-tier layout needs a room-by-room reconstruction
+
+The lower tier contains five named rooms but currently has:
+- one shared floor line across most of the tier;
+- a 500 px lift stroke entering the tier near the western end;
+- one vertical climb of isolated girders/ledges;
+- a few large rectangular blocks acting as walls or raised masses;
+- repeated floor-level hazard strips and enemies placed near some of those strips.
+
+The area currently has a room graph, but its physical floor plan does not yet express five distinct spatial identities. Rebuild it from the room roles rather than moving individual hazards in isolation:
+
+1. **Sunken Descent:** arrival chamber and lift landing, with a safe space to orient and recover.
+2. **Undercroft Halls:** a large structural hall with a readable main route and one elevated maintenance route.
+3. **Reliquary Vault:** a distinct chamber with its own traversal/combat logic, not another segment of the same floor.
+4. **Garrison Descent:** a true transition/shaft space linking the upper Sanctum Approach, Vault, and lower Street.
+5. **Garrison Street / Keep:** a different spatial rhythm with intentional cover, elevated access, and gated return links.
+
+Keep the graph's existing connections unless a playtest demonstrates that a connection is redundant or confusing. Every new gap, hazard, bridge, or vertical shaft must have an explicit traversal role and a clear safe landing/recovery route.
+
