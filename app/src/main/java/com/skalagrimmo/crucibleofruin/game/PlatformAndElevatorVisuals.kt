@@ -50,6 +50,16 @@ class PlatformAndElevatorVisuals {
                     }
                     PlatformStyle.BOSS_GATE -> renderBossGate(platform, screenX, screenY, platform.w, platform.h)
                     PlatformStyle.IRON_GATE -> renderIronGate(platform, screenX, screenY, platform.w, platform.h)
+                    // Keep this renderer branch compatible with platform styles added
+                    // on the parallel level-design branch. The name check avoids a
+                    // compile-time dependency until that model change reaches main.
+                    else -> {
+                        if (platform.style.name == "BOSS_HATCH") {
+                            renderBossHatch(platform, screenX, screenY, platform.w, platform.h)
+                        } else {
+                            renderStonePlatform(screenX, screenY, platform.w, platform.h)
+                        }
+                    }
                 }
             }
         }
@@ -205,6 +215,30 @@ class PlatformAndElevatorVisuals {
                 radius = 6f,
                 center = Offset(x + w / 2f, y + h / 2f)
             )
+        }
+    }
+
+    private fun DrawScope.renderBossHatch(platform: Platform, x: Float, y: Float, w: Float, h: Float) {
+        val isOpen = platform.collision == PlatformCollision.OPEN
+
+        if (isOpen) {
+            // Open shaft mouth: keep the two stone/iron jambs visible while the
+            // center remains clear for the lift and falling player.
+            drawRect(gateSolidColor, Offset(x, y), Size(8f, h))
+            drawRect(gateSolidColor, Offset(x + w - 8f, y), Size(8f, h))
+            drawLine(portcullisBarsColor.copy(alpha = 0.55f), Offset(x + 8f, y + h - 2f), Offset(x + w - 8f, y + h - 2f), strokeWidth = 2f)
+        } else {
+            // Encounter state: a flush cover bridges the gallery floor opening.
+            drawRect(gateSolidColor, Offset(x, y), Size(w, h))
+            drawRect(stoneBorder, Offset(x, y), Size(w, h), style = Stroke(width = 2f))
+            drawRect(bossInnerPurple.copy(alpha = 0.40f), Offset(x + 5f, y + 4f), Size(w - 10f, h - 8f))
+            var seamX = x + 15f
+            while (seamX < x + w - 8f) {
+                drawLine(portcullisBarsColor, Offset(seamX, y + 4f), Offset(seamX, y + h - 4f), strokeWidth = 2f)
+                drawCircle(rivetColor, radius = 2f, center = Offset(seamX, y + h / 2f))
+                seamX += 18f
+            }
+            drawLine(bossBorderGlow.copy(alpha = 0.55f), Offset(x + 4f, y + 2f), Offset(x + w - 4f, y + 2f), strokeWidth = 1.5f)
         }
     }
 
