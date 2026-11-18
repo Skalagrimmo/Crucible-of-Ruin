@@ -2,6 +2,7 @@ package com.skalagrimmo.crucibleofruin
 
 import com.skalagrimmo.crucibleofruin.game.GameEngine
 import com.skalagrimmo.crucibleofruin.game.Platform
+import com.skalagrimmo.crucibleofruin.game.PlatformCollision
 import com.skalagrimmo.crucibleofruin.game.PlatformStyle
 import com.skalagrimmo.crucibleofruin.game.PhysicsTuning
 import org.junit.Assert.assertEquals
@@ -25,9 +26,9 @@ import org.robolectric.annotation.Config
 @Config(sdk = [36])
 class LevelReachabilityTest {
 
-    /** Standable surfaces: every platform except the boss-arena gate doors. */
+    /** Standable surfaces exclude every currently non-colliding/open platform. */
     private fun standables(engine: GameEngine): List<Platform> =
-        engine.platforms.filter { it.style != PlatformStyle.BOSS_GATE }
+        engine.platforms.filter { it.collision != PlatformCollision.OPEN }
 
     /** The platform a player standing at (x, feetY) would rest on. */
     private fun supportAt(x: Float, feetY: Float, platforms: List<Platform>): Platform? =
