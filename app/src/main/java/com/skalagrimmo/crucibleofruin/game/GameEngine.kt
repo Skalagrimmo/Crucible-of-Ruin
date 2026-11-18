@@ -618,7 +618,9 @@ class GameEngine(
     private fun setBossGatesCollision(collision: PlatformCollision) {
         for (index in platforms.indices) {
             val platform = platforms[index]
-            if (platform.style == PlatformStyle.BOSS_GATE && platform.collision != collision) {
+            if ((platform.style == PlatformStyle.BOSS_GATE || platform.style == PlatformStyle.BOSS_HATCH) &&
+                platform.collision != collision
+            ) {
                 platforms[index] = platform.copy(collision = collision)
                 // Stage 6b (#38): keep the tile grid in sync with the swapped entry.
                 levelGrid.syncPlatform(platforms[index], index)
