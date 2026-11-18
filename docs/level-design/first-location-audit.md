@@ -13,7 +13,7 @@ The game screen installs `LiveLevelLoader.loadFromAssets(context.assets)` as the
 |---|---:|
 | World bounds | 6200 × 1080 px |
 | Tiled object layers | 8 |
-| Platforms | 65 |
+| Platforms | 66 |
 | Hazards | 13 |
 | Enemies | 20 |
 | Breakables | 17 |
