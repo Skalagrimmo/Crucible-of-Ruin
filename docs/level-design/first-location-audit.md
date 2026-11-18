@@ -229,3 +229,20 @@ Pick one explicit encounter rule; do not mix the following behaviors:
 
 The current preferred direction is to treat the lift as a post-Golem progression route and seal it during the encounter. Confirm its staging during the full playthrough before choosing exact hatch coordinates.
 
+
+## 9. Implemented prototype — boss-controlled shaft hatch (2026-11-18)
+
+A first implementation is now on `first-location-audit` (not merged into `main`):
+- Added `PlatformStyle.BOSS_HATCH` as a separate platform style.
+- Added a 90 × 20 px Tiled object `golem_shaft_hatch` at `(3360, 430)`, filling the Gallery floor opening between `x=3360` and `x=3450`. Its initial collision state is `OPEN`.
+- Added the same platform to `GameLevelFactory` so the fallback geometry stays in parity with the live TMX.
+- Extended the existing boss-gate state switch so the hatch becomes `SOLID` when the boss encounter seals the arena, and `OPEN` again when the gates reopen (boss defeated or player-death reset).
+- Added distinct Canvas rendering: an open shaft mouth keeps visible side rails; the sealed state draws a riveted flush iron cover. No custom physics path was added; existing platform collision and tile-grid synchronization handle it.
+
+This is a deliberate first pass at the encounter rule, not final level polish. Validation still required:
+1. Android CI / unit tests and debug APK build.
+2. On-device check that the hatch closes immediately after the Golem trigger, forms a flush walkable surface, and does not trap the player or interfere with the lift.
+3. Confirm the hatch opens after Golem defeat and after a player death/reset.
+4. Confirm the live TMX and factory fallback parity test passes.
+
+The boss continues to receive status damage while active. The hatch prevents the observed normal retreat route; a future explicit retreat mechanic would need a defined boss-leash/reset rule rather than relying on off-screen damage-over-time.
