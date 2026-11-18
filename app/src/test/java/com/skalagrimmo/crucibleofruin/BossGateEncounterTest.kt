@@ -13,8 +13,9 @@ import org.robolectric.annotation.Config
 /**
  * Regression coverage for the boss-arena gate encounter state.
  *
- * The arena gates start open so the approach is walkable, seal when the boss
- * activates, and reopen with a fresh encounter after a death during the fight.
+ * The arena gates and Undercroft shaft hatch start open so the route is
+ * accessible, seal when the boss activates, and reopen with a fresh encounter
+ * after a death during the fight.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36])
