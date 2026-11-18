@@ -17,6 +17,9 @@ import kotlin.math.abs
 import kotlin.math.sin
 
 object GameRenderer {
+    private val environmentRenderer = EnvironmentRenderer()
+    private val platformAndElevatorVisuals = PlatformAndElevatorVisuals()
+
     private val COLOR_SKY_TOP = Color(0xFF0C0714)
     private val COLOR_SKY_BOT = Color(0xFF271738)
     private val COLOR_MOON = Color(0x1F78FFB4)
@@ -68,83 +71,17 @@ object GameRenderer {
 
             drawCircle(COLOR_MOON, radius = 65f, center = Offset(680f - camX * 0.05f, 120f))
 
-            // Background Ruin Spires (Speed: 0.15)
-            var rx = -100f
-            while (rx < 6400f) {
-                val sx = rx - camX * 0.15f
-                if (sx in -120f..1060f) {
-                    drawRect(COLOR_PARALLAX_RUIN, topLeft = Offset(sx, 160f), size = Size(90f, 380f))
-                    drawCircle(COLOR_PARALLAX_RUIN, radius = 45f, center = Offset(sx + 45f, 160f))
-                }
-                rx += 280f
-            }
+            // Gothic-industrial environment replaces the old repeating ruin/pillar loops.
+            environmentRenderer.render(this, camX, camY, engine.levelWidth)
 
-            // Midground Pre-loaded Textures: Stained Glass & Pillars (Speed: 0.35)
-            var px = 100f
-            while (px < 6100f) {
-                val dx = px - camX * 0.35f
-                if (dx in -80f..1040f) {
-                    if ((px.toInt() % 640) == 0) {
-                        drawImage(AssetCache.texStainedGlass, topLeft = Offset(dx, 140f))
-                    } else {
-                        drawImage(AssetCache.texPillar, topLeft = Offset(dx, 80f))
-                    }
-                }
-                px += 320f
-            }
-
-            // 2. Platforms (Spatial Culling)
-            for (p in engine.platforms) {
-                if (p.x + p.w < camX || p.x > camX + 960f) continue
-                val dx = p.x - camX
-                val dy = p.y - camY
-                when (p.style) {
-                    PlatformStyle.IRON_GIRDER -> {
-                        drawRect(COLOR_GIRDER_BASE, topLeft = Offset(dx, dy), size = Size(p.w, p.h))
-                        drawRect(COLOR_GIRDER_TOP, topLeft = Offset(dx, dy), size = Size(p.w, 4f))
-                        var rv = dx + 8f
-                        while (rv < dx + p.w - 4f) {
-                            drawRect(COLOR_RIVET, topLeft = Offset(rv, dy + 6f), size = Size(4f, 4f))
-                            rv += 24f
-                        }
-                    }
-                    PlatformStyle.BOSS_GATE -> {
-                        // Open gates show as a faint archway; the full gate appears
-                        // only once the encounter seals the arena.
-                        if (p.collision == PlatformCollision.SOLID) {
-                            drawRect(COLOR_BOSS_GATE, topLeft = Offset(dx, dy), size = Size(p.w, p.h))
-                            drawRect(COLOR_BOSS_GATE_INNER, topLeft = Offset(dx + 6f, dy), size = Size(p.w - 12f, p.h))
-                        } else {
-                            drawRect(COLOR_BOSS_GATE_INNER.copy(alpha = 0.22f), topLeft = Offset(dx + 10f, dy), size = Size(p.w - 20f, p.h))
-                        }
-                    }
-                    PlatformStyle.IRON_GATE -> {
-                        // Stage 8a (#56): a portcullis — the bars draw only while the
-                        // gate still blocks the way; unlocked, it fades to an archway.
-                        if (p.collision == PlatformCollision.SOLID) {
-                            drawRect(COLOR_GATE_BASE, topLeft = Offset(dx, dy), size = Size(p.w, p.h))
-                            var barY = dy + 6f
-                            while (barY < dy + p.h - 7f) {
-                                drawRect(COLOR_GATE_BAR, topLeft = Offset(dx + 6f, barY), size = Size(p.w - 12f, 5f))
-                                barY += 14f
-                            }
-                        } else {
-                            drawRect(
-                                COLOR_GATE_BAR.copy(alpha = 0.22f),
-                                topLeft = Offset(dx + 6f, dy),
-                                size = Size(p.w - 12f, p.h)
-                            )
-                        }
-                    }
-                    else -> {
-                        drawRect(COLOR_STONE_BASE, topLeft = Offset(dx, dy), size = Size(p.w, p.h))
-                        drawRect(COLOR_STONE_TOP, topLeft = Offset(dx, dy), size = Size(p.w, 5f))
-                        if (p.h > 24f) {
-                            drawRect(COLOR_STONE_LINE, topLeft = Offset(dx, dy + 20f), size = Size(p.w, 2f))
-                        }
-                    }
-                }
-            }
+            // Platform visuals replace the legacy primitive platform loop.
+            // Elevator shafts remain stationary; only the Platform carriage follows its physics position.
+            platformAndElevatorVisuals.renderPlatforms(
+                this,
+                engine.platforms,
+                camX,
+                camY
+            )
 
             // 3. Hazards (Acid / Spikes)
             for (h in engine.hazards) {
