@@ -76,6 +76,12 @@ The following pairs deserve in-game inspection. These are proximity flags, not c
 
 The hazard sequence at `x=4950..5540` also breaks up the same flat floor into repeated acid/spike strips. It needs to be designed as a deliberate traversal/arena sequence, rather than a row of damage rectangles on an otherwise continuous plane.
 
+### 2.5 The room graph is already connected
+
+All 15 room records have valid references and form one connected graph. The 32 directed door records form 16 reciprocal passage pairs. One room pair (Garrison Street ↔ Garrison Keep) has two different connector positions, so the metadata already describes both the street-level route and an elevated/alternate connection.
+
+This is a useful foundation: the first location does not need an arbitrary new maze. Its existing room graph and loop should be made legible in the actual platforms, shafts, bridges, and return paths.
+
 ## 3. Traversal areas requiring a device playtest
 
 Static coordinates cannot prove a jump is fair. The following segments need measured playtesting against the actual player physics, camera, enemy behavior, and touch controls.
