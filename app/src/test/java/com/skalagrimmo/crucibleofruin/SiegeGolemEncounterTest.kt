@@ -58,6 +58,11 @@ class SiegeGolemEncounterTest {
             4,
             engine.platforms.count { it.style == PlatformStyle.BOSS_GATE }
         )
+        assertEquals(
+            "The lift shaft starts open before the Golem encounter",
+            PlatformCollision.OPEN,
+            engine.platforms.single { it.style == PlatformStyle.BOSS_HATCH }.collision
+        )
     }
 
     @Test
@@ -70,6 +75,11 @@ class SiegeGolemEncounterTest {
             engine.platforms.all {
                 it.style != PlatformStyle.BOSS_GATE || it.collision == PlatformCollision.SOLID
             }
+        )
+        assertEquals(
+            "The shaft hatch seals while the Golem fight is active",
+            PlatformCollision.SOLID,
+            engine.platforms.single { it.style == PlatformStyle.BOSS_HATCH }.collision
         )
     }
 
@@ -142,6 +152,11 @@ class SiegeGolemEncounterTest {
             engine.platforms.all {
                 it.style != PlatformStyle.BOSS_GATE || it.collision == PlatformCollision.OPEN
             }
+        )
+        assertEquals(
+            "The shaft hatch must reopen after the Golem is defeated",
+            PlatformCollision.OPEN,
+            engine.platforms.single { it.style == PlatformStyle.BOSS_HATCH }.collision
         )
 
         // Walk the corridor into the Grand Sanctum: crossing 5340 arms the Chimera.
