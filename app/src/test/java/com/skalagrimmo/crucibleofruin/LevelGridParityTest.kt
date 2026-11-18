@@ -411,6 +411,20 @@ class LevelGridParityTest {
         engine.platforms[gate] = engine.platforms[gate].copy(collision = PlatformCollision.OPEN)
         engine.levelGrid.syncPlatform(engine.platforms[gate], gate)
         assertEquals("Reopened gate clears the cells", 0, engine.levelGrid.collisionAt(5285f, 300f))
+
+        // The encounter-controlled shaft hatch uses the same grid transition:
+        // open at level start, solid for the boss fight, then open after it.
+        val hatch = engine.platforms.indexOfFirst { it.style == PlatformStyle.BOSS_HATCH }
+        assertTrue("The Undercroft shaft hatch must be in the level grid source", hatch >= 0)
+        assertEquals("Open hatch leaves the shaft cells empty", 0, engine.levelGrid.collisionAt(3400f, 440f))
+
+        engine.platforms[hatch] = engine.platforms[hatch].copy(collision = PlatformCollision.SOLID)
+        engine.levelGrid.syncPlatform(engine.platforms[hatch], hatch)
+        assertEquals("Sealed hatch paints solid cells", 1, engine.levelGrid.collisionAt(3400f, 440f))
+
+        engine.platforms[hatch] = engine.platforms[hatch].copy(collision = PlatformCollision.OPEN)
+        engine.levelGrid.syncPlatform(engine.platforms[hatch], hatch)
+        assertEquals("Reopened hatch clears the shaft cells", 0, engine.levelGrid.collisionAt(3400f, 440f))
     }
 
     @Test
