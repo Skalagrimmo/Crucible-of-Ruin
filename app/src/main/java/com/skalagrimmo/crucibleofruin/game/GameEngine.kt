@@ -612,7 +612,8 @@ class GameEngine(
     }
 
     /**
-     * Swaps the collision behavior of the boss-arena gates. Platform is immutable,
+     * Swaps the collision behavior of boss-arena gates and encounter-controlled
+     * shaft hatches. Platform is immutable,
      * so the entries are replaced through [copy] instead of being mutated in place.
      */
     private fun setBossGatesCollision(collision: PlatformCollision) {
