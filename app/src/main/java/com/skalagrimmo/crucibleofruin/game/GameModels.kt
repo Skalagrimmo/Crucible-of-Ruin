@@ -21,6 +21,9 @@ enum class PlatformStyle {
     IRON_GIRDER,
     STONE_LEDGE,
     BOSS_GATE,
+    // First-location traversal: encounter-controlled horizontal hatch over the
+    // Undercroft lift shaft. It is open before the Golem fight and solid during it.
+    BOSS_HATCH,
     // Stage 8a (#56): the sealed street gate of a fortress district — solid
     // until its layout trigger unlocks it.
     IRON_GATE
@@ -51,7 +54,8 @@ enum class HazardType {
 val PlatformStyle.defaultCollision: PlatformCollision
     get() = when (this) {
         PlatformStyle.STONE_LEDGE, PlatformStyle.IRON_GIRDER -> PlatformCollision.ONE_WAY
-        PlatformStyle.STONE, PlatformStyle.BOSS_GATE, PlatformStyle.IRON_GATE -> PlatformCollision.SOLID
+        PlatformStyle.STONE, PlatformStyle.BOSS_GATE, PlatformStyle.BOSS_HATCH,
+        PlatformStyle.IRON_GATE -> PlatformCollision.SOLID
     }
 
 /** True when the platform only catches descending actors (Stage 3, #35). */
