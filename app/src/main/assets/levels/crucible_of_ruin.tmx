@@ -126,6 +126,12 @@
        <property name="style" type="string" value="STONE"/>
       </properties>
     </object>
+    <object id="166" name="golem_shaft_hatch" type="" x="3360" y="430" width="90" height="20">
+      <properties>
+       <property name="style" type="string" value="BOSS_HATCH"/>
+       <property name="collision" type="string" value="OPEN"/>
+      </properties>
+    </object>
     <object id="19" name="platform_19" type="" x="3250" y="320" width="140" height="20">
       <properties>
        <property name="style" type="string" value="IRON_GIRDER"/>
