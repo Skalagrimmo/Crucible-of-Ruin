@@ -49,7 +49,7 @@ enum class HazardType {
 /**
  * Collision behavior a platform of this style receives when no explicit override
  * is supplied (Stage 3, #35): thin girders and ledges are pass-through one-way
- * surfaces, floors and arena gates are solid.
+ * surfaces, floors, arena gates, and shaft hatches are solid.
  */
 val PlatformStyle.defaultCollision: PlatformCollision
     get() = when (this) {
