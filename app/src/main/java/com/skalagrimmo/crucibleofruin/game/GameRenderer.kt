@@ -118,6 +118,26 @@ object GameRenderer {
                             drawRect(COLOR_BOSS_GATE_INNER.copy(alpha = 0.22f), topLeft = Offset(dx + 10f, dy), size = Size(p.w - 20f, p.h))
                         }
                     }
+                    PlatformStyle.BOSS_HATCH -> {
+                        // The open hatch leaves the shaft mouth clear but keeps its
+                        // side frame visible. During an encounter it becomes a load-bearing
+                        // iron cover flush with the surrounding Gallery floor.
+                        if (p.collision == PlatformCollision.SOLID) {
+                            drawRect(COLOR_GATE_BASE, topLeft = Offset(dx, dy), size = Size(p.w, p.h))
+                            drawRect(COLOR_GIRDER_TOP, topLeft = Offset(dx, dy), size = Size(p.w, 4f))
+                            drawRect(COLOR_GATE_BAR, topLeft = Offset(dx + 4f, dy + 5f), size = Size(p.w - 8f, 3f))
+                            drawRect(COLOR_GATE_BAR, topLeft = Offset(dx + 4f, dy + p.h - 5f), size = Size(p.w - 8f, 3f))
+                            var seamX = dx + 18f
+                            while (seamX < dx + p.w - 8f) {
+                                drawRect(COLOR_RIVET, topLeft = Offset(seamX, dy + 8f), size = Size(3f, 4f))
+                                seamX += 18f
+                            }
+                        } else {
+                            drawRect(COLOR_GATE_BASE.copy(alpha = 0.78f), topLeft = Offset(dx, dy), size = Size(8f, p.h))
+                            drawRect(COLOR_GATE_BASE.copy(alpha = 0.78f), topLeft = Offset(dx + p.w - 8f, dy), size = Size(8f, p.h))
+                            drawRect(COLOR_GATE_BAR.copy(alpha = 0.5f), topLeft = Offset(dx + 8f, dy + p.h - 3f), size = Size(p.w - 16f, 3f))
+                        }
+                    }
                     PlatformStyle.IRON_GATE -> {
                         // Stage 8a (#56): a portcullis — the bars draw only while the
                         // gate still blocks the way; unlocked, it fades to an archway.
