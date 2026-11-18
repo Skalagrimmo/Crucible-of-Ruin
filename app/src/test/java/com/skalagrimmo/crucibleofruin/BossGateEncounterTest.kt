@@ -13,8 +13,9 @@ import org.robolectric.annotation.Config
 /**
  * Regression coverage for the boss-arena gate encounter state.
  *
- * The arena gates start open so the approach is walkable, seal when the boss
- * activates, and reopen with a fresh encounter after a death during the fight.
+ * The arena gates and Undercroft shaft hatch start open so the route is
+ * accessible, seal when the boss activates, and reopen with a fresh encounter
+ * after a death during the fight.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36])
@@ -22,6 +23,9 @@ class BossGateEncounterTest {
 
     private fun arenaGates(engine: GameEngine) =
         engine.platforms.filter { it.style == PlatformStyle.BOSS_GATE }
+
+    private fun shaftHatch(engine: GameEngine) =
+        engine.platforms.single { it.style == PlatformStyle.BOSS_HATCH }
 
     private fun walkRightIntoTheArena(engine: GameEngine) {
         // Isolate traversal: neutralize the enemies on the approach stretch.
@@ -51,6 +55,10 @@ class BossGateEncounterTest {
             "Gates must start open so the arena is reachable",
             arenaGates(engine).all { it.collision == PlatformCollision.OPEN }
         )
+        assertTrue(
+            "The Undercroft shaft must start open before an encounter",
+            shaftHatch(engine).collision == PlatformCollision.OPEN
+        )
     }
 
     @Test
@@ -62,6 +70,10 @@ class BossGateEncounterTest {
         assertTrue(
             "Both gates must be solid once the boss activates",
             arenaGates(engine).all { it.collision == PlatformCollision.SOLID }
+        )
+        assertTrue(
+            "The shaft hatch must seal with the active boss encounter",
+            shaftHatch(engine).collision == PlatformCollision.SOLID
         )
     }
 
@@ -100,6 +112,10 @@ class BossGateEncounterTest {
         assertTrue(
             "Gates must reopen after a boss-fight death",
             arenaGates(engine).all { it.collision == PlatformCollision.OPEN }
+        )
+        assertTrue(
+            "The shaft hatch must reopen when the encounter resets",
+            shaftHatch(engine).collision == PlatformCollision.OPEN
         )
         assertFalse("The encounter must reset so the trigger can fire again", engine.boss.active)
     }

@@ -612,13 +612,16 @@ class GameEngine(
     }
 
     /**
-     * Swaps the collision behavior of the boss-arena gates. Platform is immutable,
+     * Swaps the collision behavior of boss-arena gates and encounter-controlled
+     * shaft hatches. Platform is immutable,
      * so the entries are replaced through [copy] instead of being mutated in place.
      */
     private fun setBossGatesCollision(collision: PlatformCollision) {
         for (index in platforms.indices) {
             val platform = platforms[index]
-            if (platform.style == PlatformStyle.BOSS_GATE && platform.collision != collision) {
+            if ((platform.style == PlatformStyle.BOSS_GATE || platform.style == PlatformStyle.BOSS_HATCH) &&
+                platform.collision != collision
+            ) {
                 platforms[index] = platform.copy(collision = collision)
                 // Stage 6b (#38): keep the tile grid in sync with the swapped entry.
                 levelGrid.syncPlatform(platforms[index], index)

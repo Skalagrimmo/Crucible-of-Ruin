@@ -308,6 +308,9 @@ internal object GameLevelFactory {
         // and the lift riding the shaft is the way back up.
         platforms.add(Platform(3100f, 430f, 260f, 110f, PlatformStyle.STONE))
         platforms.add(Platform(3450f, 430f, 300f, 110f, PlatformStyle.STONE))
+        // The shaft hatch closes the 90 px opening when a boss encounter seals
+        // the arena, then reopens after the fight so the lift can be reached.
+        platforms.add(Platform(3360f, 430f, 90f, 20f, PlatformStyle.BOSS_HATCH, PlatformCollision.OPEN))
         // Stage 9c (#62): the Foundry Yard between the floor halves is the
         // Siege Golem's arena — the regular garrison here is gone, and a
         // health urn waits just inside the entry gate.

@@ -74,9 +74,10 @@ class GameLevelLayoutTest {
         // girder climb, and a vault perch.
         // Stage 9c (#62): the Foundry Yard arena adds two boss gates and a
         // health urn, and clears the yard's regular garrison for the golem.
+        // First-location traversal adds the encounter-controlled shaft hatch.
         // Stage 11a (#77): three anti-skip barriers add 8 platforms (3 walls
         // plus 5 ledges), 2 cherub guards, and 3 wall-cap urns.
-        assertEquals("Unexpected number of platforms", 65, engine.platforms.size)
+        assertEquals("Unexpected number of platforms", 66, engine.platforms.size)
         assertEquals("Unexpected number of hazards", 13, engine.hazards.size)
         assertEquals("Unexpected number of enemies", 20, engine.enemies.size)
         assertEquals("Unexpected number of breakable urns", 17, engine.breakables.size)
@@ -98,6 +99,12 @@ class GameLevelLayoutTest {
             "The gallery floor must split around the Undercroft shaft",
             engine.platforms.contains(Platform(3100f, 430f, 260f, 110f, PlatformStyle.STONE)) &&
                 engine.platforms.contains(Platform(3450f, 430f, 300f, 110f, PlatformStyle.STONE))
+        )
+        assertTrue(
+            "The shaft hatch must occupy the full floor opening but start non-colliding",
+            engine.platforms.contains(
+                Platform(3360f, 430f, 90f, 20f, PlatformStyle.BOSS_HATCH, PlatformCollision.OPEN)
+            )
         )
         assertTrue(
             "No corridor geometry may block the shaft drop (x 3360-3450)",
