@@ -187,3 +187,45 @@ The area currently has a room graph, but its physical floor plan does not yet ex
 
 Keep the graph's existing connections unless a playtest demonstrates that a connection is redundant or confusing. Every new gap, hazard, bridge, or vertical shaft must have an explicit traversal role and a clear safe landing/recovery route.
 
+
+## 8. Boss arena escape exploit (player reproduction, 2026-11-18)
+
+**Observed in play:** during the Siege Golem encounter, the player can step onto the vertical lift and ride it down to the lower tier. The player can later return to the Gallery and find the Golem already dead.
+
+### 8.1 Confirmed code path
+
+- The upper arena's two `BOSS_GATE` objects seal the horizontal exits when the boss activates, but the vertical lift shaft remains usable. There is no hatch/lock or encounter-state check on the lift.
+- `GameEngine.step()` calls `updateBoss(dt)` every simulation tick, regardless of the player's distance, room, camera visibility, or vertical tier.
+- `BaseBoss.update()` continues to tick the boss's `statusController` while the boss is active. Periodic status damage is subtracted directly from boss HP, and calls `onDefeated()` when HP reaches zero.
+- The player can apply Alchemy-Burn and Corrosion during melee; a weak-point hit applies both. Their timers are not suspended when the player leaves the arena.
+- A generic boss does not die merely from falling out of bounds: the examined `BaseBoss` has no world-bound death rule. HP reaching zero is the relevant death condition in this path.
+- When an intermediate boss is dead and another encounter remains queued, `GameEngine.updateBoss()` immediately advances the encounter and replaces the active boss with the next one. The Siege Golem can therefore disappear from his arena while the Chimera is created at its later spawn.
+- If the player dies during an active boss fight, a separate respawn path explicitly calls `resetBossEncounter()`; that is not the behavior observed in a living retreat.
+
+**Most likely explanation for the reported sequence:** after the player retreats down the lift, one or both applied damage-over-time effects continue draining the Golem's remaining HP. Once it reaches zero, the engine advances the encounter to the Chimera. On returning to the Gallery, the player no longer sees the Golem. This is strongly supported by the source flow, although the exact historical HP/status state from the reported run cannot be reconstructed from the repository.
+
+### 8.2 Why this is a real encounter-design defect
+
+The player has found a way to leave an encounter whose exits appear sealed but whose vertical route is not. This can:
+- turn retreat into an unintended damage-over-time kill strategy;
+- make the boss vanish without the player witnessing the defeat or receiving clear encounter feedback;
+- make the arena's gate logic inconsistent, because the side exits lock while the lift shaft remains open;
+- leave the player uncertain whether the boss was killed, reset, despawned, or skipped.
+
+### 8.3 Required design decision before patching
+
+Pick one explicit encounter rule; do not mix the following behaviors:
+
+**Preferred for this set piece — hard-lock the shaft during the boss fight.**
+- Add a physical, readable shaft hatch/bridge at the upper Gallery floor gap, activated by the same boss-encounter state as the two arena gates.
+- Keep the lift and lower tier inaccessible until the Golem is defeated; then open the hatch and restore lift access.
+- Ensure the player cannot become trapped below the hatch when the encounter starts: the encounter trigger and hatch transition must be spatially ordered so the player enters the arena before the lock closes, or the lock must have a safe, one-way return behavior.
+- The hatch must be part of the environment (visible machinery/gate), not an invisible collision patch.
+
+**Alternative if retreat is intentional — boss leash/reset.**
+- Define a clear arena boundary and exit condition.
+- On leaving the arena, pause/clear the boss's temporary status effects and reset the encounter (HP, components, phase, attacks, projectiles, gates) to a known state, with player feedback.
+- Do not allow the boss to die off-screen from previously applied damage-over-time unless that is an explicitly designed, communicated feature.
+
+The current preferred direction is to treat the lift as a post-Golem progression route and seal it during the encounter. Confirm its staging during the full playthrough before choosing exact hatch coordinates.
+
